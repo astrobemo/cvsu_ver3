@@ -1,0 +1,26 @@
+SELECT route_list.id as route_id, description, price,price_add 
+			FROM (
+				SELECT * 
+				from vehicle
+				where id = 41
+				) as vehicle
+			LEFT JOIN
+			(
+				SELECT * 
+				from route_list
+				where customer_id = 1 ) as route_list
+			ON route_list.fuel_type = vehicle.fuel_type
+			LEFT JOIN (
+			    select * 
+			    from route_period
+			    WHERE customer_id = 1
+			) as route_period 
+			ON (
+				SELECT route_period.period 
+			    FROM route_period 
+			    WHERE route_period.period <= '2016-03-15' 
+			    ORDER BY route_period.period desc
+			    LIMIT 1) = route_period.period
+			LEFT JOIN route_detail
+			ON route_detail.route_list_id = route_list.id 
+			AND route_detail.route_period_id = route_period.id

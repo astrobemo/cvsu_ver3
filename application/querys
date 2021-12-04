@@ -1,0 +1,39 @@
+SELECT tbl_a.*, tbl_b. tbl_b.date as date_start, customer.name as customer_name, date_distribute, qty_distribute, date_stock, qty_stock 
+from (
+	SELECT *
+	from order_list_detail_item
+	where delivery_date <= '2016-06-01'
+	) as tbl_a
+LEFT JOIN (
+	SELECT *
+	from order_list
+	where order_list.date >= '2016-05-01'
+	) as tbl_b
+ON tbl_a.order_list_id = tbl_b.id
+LEFT JOIN(
+	SELECT *
+	FROM customer
+	) as customer
+ON tbl_b.customer_id = customer.id
+LEFT JOIN (
+	SELECT id, order_list_detail_item_id, group_concat(date) as date_distribute, group_concat(qty) as qty_distribute  
+	FROM production_list
+	group by order_list_detail_item_id
+	) as tbl_c
+ON tbl_c.order_list_detail_item_id = tbl_a.id
+LEFT JOIN (
+	SELECT order_list_detail_item_id, pl.id, group_concat(date_stock) as date_stock, group_concat(qty_stock) as qty_stock
+	FROM (
+		select id, order_list_detail_item_id
+		from production_list
+		) as pl
+	LEFT JOIN(
+		select production_list_id, group_concat(date) as date_stock, group_concat(qty) as qty_stock
+		from production_to_stock
+		group by production_list_id
+		) as pts
+	ON pl.id = pts.production_list_id
+	group by order_list_detail_item_id
+) as tbl_d
+on tbl_d.order_list_detail_item_id = tbl_a.id
+order by priority
