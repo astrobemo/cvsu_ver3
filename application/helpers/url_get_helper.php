@@ -394,3 +394,17 @@ if ( ! function_exists('get_jatuh_tempo')){
 		// return $result;
 	}
 }
+
+if ( ! function_exists('get_ppn_berlaku')){
+	function get_ppn_berlaku($tanggal){
+		$CI =& get_instance();
+		$ppn = 10;
+		$get = $CI->common_model->db_select("nd_ppn WHERE tanggal <='".$tanggal."' ORDER BY tanggal desc LIMIT 1");
+		foreach ($get as $row) {
+			$ppn = $row->ppn;
+		}
+
+		return $ppn;
+		// return $result;
+	}
+}

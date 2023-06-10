@@ -33,6 +33,10 @@
 	border: 1px solid #ddd;
 }
 
+#qty-table .nama_supplier{
+	font-size:0.8em;
+}
+
 .stok-info{
 	font-size: 1.5em;
 	/*position: absolute;*/
@@ -80,6 +84,15 @@
 	background:yellow;
 }
 
+.row-stok:hover{
+	background:lightblue;
+}
+
+.habis{
+	cursor:no-drop;
+	color:#666;
+}
+
 </style>
 
 <div class="page-content">
@@ -93,7 +106,7 @@
 			$no_faktur = '';
 			$tanggal = date('d/m/Y');
 			$tanggal_print = '';
-			$ori_tanggal = '';
+			$ori_tanggal = date('Y-m-d');
 			$po_number = '';
 
 			$jatuh_tempo = date('d/m/Y', strtotime("+60 days") );
@@ -121,6 +134,10 @@
 			$disabled_status = '';
 			$alamat_customer = '';
 			$npwp_customer = '';
+
+			$ppn_berlaku = 11;
+			$ppn_pengali = $ppn_berlaku/100;
+			$ppn_pembagi = 1+$ppn_pengali;
 
 			foreach ($penjualan_data as $row) {
 				$tipe_penjualan = $row->tipe_penjualan;
@@ -164,6 +181,9 @@
 				$no_faktur_lengkap = $row->no_faktur_lengkap;
 				$revisi = $row->revisi - 1;
 				$no_surat_jalan = $row->no_surat_jalan;
+				$ppn_berlaku = get_ppn_berlaku($ori_tanggal);
+				$ppn_pengali = $ppn_berlaku/100;
+				$ppn_pembagi = 1+$ppn_pengali;
 			}
 
 			$nama_bank = '';
@@ -253,783 +273,7 @@
 			}
 		?>
 
-
-		<div class="modal fade" id="portlet-config" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-body">
-						<form action="<?=base_url('transaction/penjualan_list_insert')?>" class="form-horizontal" id="form_add_data" method="post">
-							<h3 class='block'> Penjualan Baru</h3>
-							
-							<div class="form-group">
-			                    <label class="control-label col-md-3">Type<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<select class='form-control input1' name='penjualan_type_id'>
-			                    		<?foreach ($penjualan_type as $row) { ?>
-			                    			<option <?if ($row->id == 3) {echo 'selected';}?> value='<?=$row->id;?>'><?=$row->text;?></option>
-			                    		<?}?>
-			                    	</select>
-			                    </div>
-			                </div>			                
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">Tanggal<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<input name='tanggal' class='form-control date-picker' value="<?=date('d/m/Y')?>" >
-			                    </div>
-			                </div> 
-			                <div class="form-group" hidden>
-			                    <label class="control-label col-md-3">Jatuh Tempo<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<input name='jatuh_tempo' class='form-control date-picker' value="<?=date('d/m/Y')?>" >
-			                    </div>
-			                </div> 
-
-			                <div class="form-group">
-			                	<!-- po_section -->
-			                    <label class="control-label col-md-3">PO/Ket
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<input name='po_number' maxlength='38' class='form-control'>
-			                    </div>
-			                </div> 
-
-			                <div class="form-group customer_section">
-			                    <label class="control-label col-md-3">Customer<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<div id='add-select-customer'  hidden>
-			                    		<select name="customer_id" class='form-control' id='customer_id_select'>
-			                				<option value=''>Pilih</option>
-			                				<?foreach ($this->customer_list_aktif as $row) { ?>
-				                    			<option value="<?=$row->id?>"><?=$row->nama;?></option>
-				                    		<? } ?>
-				                    	</select>
-			                    	</div>
-			                    	<div id='add-nama-keterangan'>
-				                    	<input name='nama_keterangan' class='form-control'>
-			                    	</div>
-			                    </div>
-			                </div>
-
-			                <div class="form-group add-alamat-keterangan">
-			                    <label class="control-label col-md-3">Alamat
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<input name='alamat_keterangan' class='form-control'>
-			                    </div>
-			                </div>
-
-			                <div class="form-group add-alamat-keterangan">
-			                    <label class="control-label col-md-3">Keterangan
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<input name='keterangan' maxlength='80' class='form-control'>
-			                    </div>
-			                </div>
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">FP Status
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<label>
-			                    	<input type='checkbox' name='fp_status' class='form-control' id='fp_status_add' value='1'>Ya</label>
-			                    </div>
-			                </div>
-			                
-						</form>
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-active btn-save-tab" title='Save & Buka di Tab Baru'>Save & New Tab</button>
-						<button type="button" class="btn blue btn-active btn-trigger btn-save" title='Save & Buka di Tab Ini'>Save</button>
-						<button type="button" class="btn btn-active default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade" id="portlet-config-edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-body">
-						<form action="<?=base_url('transaction/penjualan_list_update')?>" class="form-horizontal" id="form_edit_data" method="post">
-							<h3 class='block'> Penjualan Edit</h3>
-							
-							<div class="form-group">
-			                    <label class="control-label col-md-3">Type<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<input name='id' value='<?=$penjualan_id;?>' hidden>
-			                    	<select class='form-control input1' name='penjualan_type_id'>
-			                    		<?foreach ($penjualan_type as $row) { ?>
-			                    			<option <?if ($penjualan_type_id == $row->id) {echo 'selected';}?> value='<?=$row->id;?>'><?=$row->text;?></option>
-			                    		<?}?>
-			                    	</select>
-			                    </div>
-			                </div>			                
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">Tanggal<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<input name='tanggal' class='form-control date-picker' value="<?=$tanggal;?>" >
-			                    </div>
-			                </div> 
-
-			                <div class="form-group"  <?=($penjualan_type_id != 2 ? 'hidden' : '' )?> >
-			                    <label class="control-label col-md-3">Jatuh Tempo<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<input name='jatuh_tempo' class='form-control date-picker' value="<?=$jatuh_tempo;?>" >
-			                    </div>
-			                </div> 
-
-			                <div class="form-group">
-			                	<!-- po_section -->
-			                    <label class="control-label col-md-3">PO/Ket
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<input name='po_number' maxlength='38' class='form-control' value='<?=$po_number?>'>
-			                    </div>
-			                </div> 
-
-			                <div class="form-group customer_section">
-			                    <label class="control-label col-md-3">Customer<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<div id='edit-select-customer'  <?if ($penjualan_type_id == 3) { ?> hidden <?}?> >
-			                    		<select name="customer_id" class='form-control' id='customer_id_select2'>
-			                				<option value=''>Pilih</option>
-			                				<?foreach ($this->customer_list_aktif as $row) { ?>
-				                    			<option <?if ($customer_id == $row->id) {?>selected<?}?> value="<?=$row->id?>"><?=$row->nama;?></option>
-				                    		<? } ?>
-				                    	</select>
-			                    	</div>
-			                    	<div id='edit-nama-keterangan' <?if ($penjualan_type_id != 3) { ?> hidden <?}?> >
-				                    	<input name='nama_keterangan' class='form-control' value="<?=$nama_keterangan;?>">
-			                    	</div>
-			                    </div>
-			                </div> 
-
-			                <div class="form-group edit-alamat-keterangan">
-			                    <label class="control-label col-md-3">Alamat
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<textarea name='alamat_keterangan' maxlength='90' rows='4' class='form-control'><?=$alamat_keterangan;?></textarea>
-			                    	<!-- <div>
-				                    	<input name='alamat_keterangan' class='form-control' value="">
-			                    	</div> -->
-			                    </div>
-			                </div>
-
-			                <div class="form-group add-alamat-keterangan">
-			                    <label class="control-label col-md-3">Catatan
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<input name='keterangan' maxlength='90' class='form-control' value="<?=$keterangan;?>">
-			                    </div>
-			                </div>
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">FP Status
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<label>
-			                    	<input type='checkbox' <?=($fp_status == 1 ? 'checked' : '');?> name='fp_status' class='form-control' id='fp_status_edit' value='1'>Ya</label>
-			                    </div>
-			                </div>
-			                
-
-			                
-						</form>
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-active btn-trigger btn-edit-save">Save</button>
-						<button type="button" class="btn btn-active default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-		
-		<div class="modal fade bs-modal-lg" id="portlet-config-detail" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog modal-lg">
-				<div class="modal-content">
-					<div class="modal-body">
-						<form action="<?=base_url('transaction/penjualan_list_detail_insert')?>" class="form-horizontal" id="form_add_barang" method="post">
-							<h3 class='block'> Tambah Barang</h3>
-							
-							<div class="form-group">
-			                    <label class="control-label col-md-3">Gudang<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<span class='barang_id_before' hidden></span>
-			                    	<span class='warna_id_before' hidden></span>
-			                    	<span class='gudang_id_before' hidden></span>
-			                    	<span class='eceran_before' hidden></span>
-			                    	<input name="pengali_harga" class='pengali_harga' hidden>
-			                    	<input name='penjualan_id' value='<?=$penjualan_id;?>' hidden>
-			                    	<input name='tanggal' value='<?=$tanggal;?>' hidden>
-	                    			<select name="gudang_id" class='form-control' id='gudang_id_select'>
-		                				<?foreach ($this->gudang_list_aktif as $row) { ?>
-			                    			<option <?if ($row->status_default == 1) {echo "selected";}?> value="<?=$row->id?>"><?=$row->nama;?></option>
-			                    		<? } ?>
-			                    	</select>
-			                    </div>
-			                </div> 
-
-							<div class="form-group">
-			                    <label class="control-label col-md-3">Kode Barang<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<select name="barang_id" class='form-control input1' id='barang_id_select'>
-		                				<option value=''>Pilih</option>
-		                				<?foreach ($this->barang_list_aktif as $row) { ?>
-			                    			<option value="<?=$row->id?>"><?=$row->nama_jual;?></option>
-			                    		<? } ?>
-			                    	</select>
-			                    	<select name='data_barang' hidden>
-			                    		<?foreach ($this->barang_list_aktif as $row) { ?>
-			                    			<option value="<?=$row->id?>"><?=$row->nama_satuan;?>??<?=$row->nama_packaging;?>??<?=$row->harga_jual;?>??<?=$row->pengali_harga_jual?>??<?=$row->harga_ecer?></option>
-			                    		<? } ?>
-			                    	</select>
-			                    </div>
-			                </div>			                
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">Keterangan<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-	                    			<select name="warna_id" class='form-control' id='warna_id_select'>
-		                				<option value=''>Pilihan..</option>
-			                    		<?foreach ($this->warna_list_aktif as $row) { ?>
-			                    			<option value="<?=$row->id?>"><?=$row->warna_jual;?></option>
-			                    		<?}?>
-			                    	</select>
-			                    </div>
-			                </div>
-
-							<div class="form-group eceran-form eceran-active">
-								<label class="control-label col-md-3">Eceran</label>
-								<div class="col-md-6">
-								<div class="checkbox-list">
-									<label class='checkbox-inline'>
-										<input checked type="checkbox" name='is_eceran' id='eceran-cek' />Yes</label>
-									</div>
-								</div>
-							</div>
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">Harga Jual<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-		                    		<input type="text" class='form-control harga_jual_add_noppn amount_number_comma' id='harga_jual_add_noppn' name="harga_jual_noppn"/>
-			                    	<input name='rekap_qty' <?=(is_posisi_id() != 1 ? 'hidden' : 'hidden' )?> >
-			                    </div>
-			                </div> 
-
-			                <div class="form-group">
-			                    <label class="control-label col-md-3">Harga Jual + PPN<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<div class='input-group'>
-			                    		<input type="text" class='form-control harga_jual_add' id='harga_jual_add' name="harga_jual"/>
-			                			<span class="input-group-btn" >
-											<a data-toggle="popover" class='btn btn-md default btn-cek-harga amount_number_comma' data-trigger='click' title="History Pembelian Customer" data-html="true" data-content="<div id='data-harga'>loading...</div>"><i class='fa fa-search'></i></a>
-										</span>
-			                    	</div>
-			                    </div>
-			                </div> 
-							<input name='rekap_qty' hidden>
-						</form>
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-add-qty">Add Qty</button>
-						<button type="button" class="btn default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade" id="portlet-config-qty" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog ">
-				<div class="modal-content">
-					<div class="modal-body">
-						<div class='note note-danger'>gunakan titik untuk decimal</div>
-
-						<table width='100%'>
-							<tr>
-								<td width='50%' style='vertical-align:top' class='table-qty'>
-									<span style='font-size:1.2em'>AMBIL</span>
-									<table id='qty-table'>
-										<thead>
-											<tr>
-												<th class='nama_satuan'>Yard</th>
-												<th class='nama_packaging'>Roll</th>
-												<th></th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-													<td><input name='qty' value='' class='input1'></td>
-													<td><input name='jumlah_roll' value=''></td>
-													<td hidden>
-														<span class='qty-get'></span><span class='roll-get'></span>
-													</td>
-													<td>
-														<button tabindex='-1' class='btn btn-xs blue btn-add-qty-row'><i class='fa fa-plus'></i></button>
-													</td>
-												</tr>
-											<?for($i = 0 ; $i < 9 ; $i++){?>
-												<tr>
-													<td><input name='qty' value=''></td>
-													<td><input name='jumlah_roll' value=''></td>
-													<td hidden><span class='qty-get'></span><span class='roll-get'></span></td>
-												</tr>
-											<?} ?>
-										</tbody>
-									</table>
-
-									<div class='yard-info'>
-										TOTAL QTY: <span class='yard_total' >0</span> <span class='nama_satuan'>yard</span> <br/>
-										TOTAL ROLL: <span class='jumlah_roll_total' >0</span> <span class='nama_packaging'>yard</span>
-									</div>
-								</td>
-								<td style='vertical-align:top'>
-									<table width='100%'>
-										<tr>
-											<td class='add-eceran' style='vertical-align:top'>
-												<span style='font-size:1.2em'>STOK ECERAN</span>
-												<div style="overflow:auto;">
-													<table id='qty-table-eceran'>
-														<thead>
-															<tr>
-																<th class='nama_satuan'  style='width:45px'></th>
-																<th class='text-center'>AMBIL</th>
-																<th class='text-center'>SISA</th>
-															</tr>
-														</thead>
-														<tbody></tbody>
-														<tfoot style='font-size:1.2em'>
-															<tr>
-																<th style='width:45px'>TOTAL</th>
-																<th class='text-center total-ambil'></th>
-																<th class='text-center'></th>
-															</tr>
-														</tfoot>
-													</table>
-													Info : <br/>
-													- Ketika klik <button>add to eceran</button> <br/>Maka stok besar akan dirubah ke eceran <br/>
-													- Mohon klik tombol <button class='btn btn-xs red'><i class='fa fa-times'></i></button> jika ingin membatalkan 
-
-												</div>
-												
-											</td>
-											<td>
-												<span style='font-size:1.2em'>STOK BESAR</span>
-												<div style='height:340px; overflow:auto; padding-left:5px'>
-													<table id='qty-table-stok'>
-														<thead>
-															<tr>
-																<th class='nama_satuan'  style='width:45px'></th>
-																<th class='nama_packaging' style='width:45px'></th>
-															</tr>
-														</thead>
-														<tbody></tbody>
-														
-													</table>
-
-												</div>
-											</td>
-										</tr>
-									</table>
-									
-									<div class='stok-info add-eceran' id='stok-eceran-add' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
-										STOK Eceran : <span class='stok-qty-eceran'>0</span>
-									</div>
-
-									<div class='stok-info' id='stok-info-add' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
-										STOK QTY : <span class='stok-qty'>0</span><br/>
-										STOK ROLL : <span class='stok-roll'>0</span>
-									</div>
-
-								</td>
-							</tr>
-						</table>
-
-						
-					</div>
-
-					<div class="modal-footer">
-						<button disabled type="button" class="btn blue btn-active btn-trigger btn-brg-save">Save</button>
-						<button type="button" class="btn btn-active default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade" id="portlet-config-qty-edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-body">
-						<?//GA BISA JADI EDIT BIASA KARENA TAKUT QTY NYA NGACO?>
-						<form id="form_qty_edit" method='post' action="<?=base_url()?>transaction/penjualan_qty_detail_update">
-	                    	<table>
-	                    		<tr>
-	                    			<td>HARGA JUAL</td>
-	                    			<td class='padding-rl-5'></td>
-	                    			<td><input name='harga_jual_noppn' class='form-control amount_number_comma harga_jual_add_noppn' ></td>
-	                    		</tr>
-	                    		<tr>
-	                    			<td>HARGA JUAL + PPN</td>
-	                    			<td class='padding-rl-5'></td>
-	                    			<td><input name='harga_jual' class='form-control amount_number_comma harga_jual_add' ></td>
-	                    		</tr>
-	                    	</table>
-							<input name='rekap_qty' <?=(is_posisi_id() != 1 ? 'hidden' : 'hidden' )?> >
-	                    	<input name='penjualan_list_detail_id' hidden >
-	                    	<input name='penjualan_id' hidden >
-	                    	<input name='is_eceran' id='eceran-cek-edit' hidden >
-						</form>
-						<hr/>
-						<div class='note note-danger'>gunakan titik untuk decimal</div>
-						<table width='80%'>
-							<tr>
-								<td class='table-qty-edit' width='50%' style='vertical-align:top'>
-									<span style='font-size:1.2em'>AMBIL</span>
-									<table id='qty-table-edit'>
-										<thead>
-											<tr>
-												<th class='nama_satuan'></th>
-												<th class='nama_packaging'></th>
-												<th></th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-													<td><input name='qty' value='' class='input1'></td>
-													<td><input name='jumlah_roll' value=''></td>
-													<td hidden><input name='penjualan_qty_detail_id' class='penjualan_qty_detail_id'></td>
-													<td hidden>
-														<span class='qty-get'></span><span class='roll-get'></span>
-													</td>
-													<td>
-														<button tabindex='-1' class='btn btn-xs blue btn-add-qty-row'><i class='fa fa-plus'></i></button>
-													</td>
-												</tr>
-											<?for($i = 0 ; $i < 6 ; $i++){?>
-												<tr>
-													<td><input name='qty' value=''></td>
-													<td><input name='jumlah_roll' value=''></td>
-													<td hidden><input name='penjualan_qty_detail_id' class='penjualan_qty_detail_id'></td>
-													<td hidden><span class='qty-get'></span><span class='roll-get'></span></td>
-												</tr>
-											<?} ?>
-										</tbody>
-									</table>
-
-									<div class='yard-info-edit'>
-										TOTAL QTY: <span class='yard_total' >0</span> <span class='nama_satuan'>yard</span> <br/>
-										TOTAL ROLL: <span class='jumlah_roll_total' >0</span> <span class='nama_packaging'>roll</span>
-									</div>
-								</td>
-								<td class='table-qty-edit' style='vertical-align:top'>
-									<span style='font-size:1.2em'>STOK</span>
-									<div style='height:240px; overflow:auto'>
-										<table id='qty-table-edit'>
-											<thead>
-												<tr>
-													<th class='nama_satuan'  style='width:45px'></th>
-													<th class='nama_packaging' style='width:45px'></th>
-												</tr>
-											</thead>
-											<tbody></tbody>
-											
-										</table>
-									</div>
-									
-									<div class='stok-info' id='stok-info-edit' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
-										STOK QTY : <span class='stok-qty'>0</span><br/>
-										STOK ROLL : <span class='stok-roll'>0</span>
-									</div>
-								</td>
-								<td class='edit-eceran-col'>
-									<table width='100%'>
-										<tr>
-											<td class='edit-eceran' style="vertical-align:top" >
-												<span style='font-size:1.2em'>STOK ECERAN</span>
-												<div style="overflow:auto;">
-													<table id='qty-table-eceran-edit'>
-														<thead>
-															<tr>
-																<th class='text-center'>STOK</th>
-																<th class='text-center'>AMBIL</th>
-																<th class='text-center'>SISA</th>
-															</tr>
-														</thead>
-														<tbody></tbody>
-														<tfoot style='font-size:1.2em'>
-															<tr>
-																<th style='width:45px'>TOTAL</th>
-																<th class='text-center total-ambil'></th>
-																<th class='text-center'></th>
-															</tr>
-														</tfoot>
-													</table>
-												</div>
-												
-											</td>
-											<td>
-												<span style='font-size:1.2em'>STOK BESAR</span>
-												<div style='min-height:200px; overflow:auto; padding-left:5px'>
-													<table id='qty-table-stok-edit'>
-														<thead>
-															<tr>
-																<th class='nama_satuan'  style='width:45px'></th>
-																<th class='nama_packaging' style='width:45px'></th>
-															</tr>
-														</thead>
-														<tbody></tbody>
-														
-													</table>
-
-												</div>
-											</td>
-										</tr>
-									</table>
-									
-									<div class='stok-info edit-eceran' id='stok-eceran-add' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
-										STOK Eceran : <span class='stok-qty-eceran'>0</span>
-									</div>
-
-									<div class='stok-info' id='stok-info-edit' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
-										STOK QTY : <span class='stok-qty'>0</span><br/>
-										STOK ROLL : <span class='stok-roll'>0</span>
-									</div>
-								</td>
-							</tr>
-						</table>
-					</div>
-
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-brg-edit-save">Save</button>
-						<button type="button" class="btn default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade" id="portlet-config-faktur" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-body">
-						<form action="" class="form-horizontal" id="form_search_faktur" method="get">
-							<h3 class='block'> Cari Faktur</h3>
-							
-							<div class="form-group">
-			                    <label class="control-label col-md-3">No Faktur<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-									<input type="hidden" name='id' id="search_no_faktur" class="form-control select2">
-			                    </div>
-			                </div>	
-		                </form>                
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-search-faktur">GO!</button>
-						<button type="button" class="btn default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade" id="portlet-config-pin" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-body">
-						<form action="<?=base_url('transaction/penjualan_request_open');?>" class="form-horizontal" id="form-request-open" method="post">
-							<h3 class='block'> Request Open</h3>
-							
-							<div class="form-group">
-			                    <label class="control-label col-md-3">PIN<span class="required">
-			                    * </span>
-			                    </label>
-			                    <div class="col-md-6">
-			                    	<input name='penjualan_id' value='<?=$penjualan_id;?>' hidden>
-									<input name='pin' type='password' id="pin_user" class="form-control">
-			                    </div>
-			                </div>	
-		                </form>		                
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-request-open">OPEN</button>
-						<button type="button" class="btn default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade" id="portlet-config-print" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-body">
-						<h3 class='block'> Penjualan Baru</h3>
-						
-						<div class="form-group">
-		                    <label class="control-label col-md-3">Type<span class="required">
-		                    * </span>
-		                    </label>
-		                    <div class="col-md-6">
-		                    	<input name='print_target' hidden>
-		                    	<select class='form-control' id='printer-name'>
-		                    		<?foreach ($printer_list as $row) { ?>
-		                    			<option value='<?=$row->id;?>'><?=$row->nama;?></option>
-		                    		<?}?>
-		                    	</select>
-		                    </div>
-		                </div>
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn blue btn-active btn-print-action" data-dismiss="modal">Print</button>
-						<button type="button" class="btn btn-active default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
-
-		<div class="modal fade bd-modal-lg" id="portlet-config-dp" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog modal-lg">
-				<div class="modal-content">
-					<div class="modal-body">
-						<b style='font-size:2em'>DAFTAR DP</b><hr/>
-						<table class="table table-striped table-bordered table-hover" id='dp_list_table'>
-							<thead>
-								<tr>
-									<th scope="col">
-										Tanggal
-									</th>
-									<th scope="col">
-										Deskripsi
-									</th>
-									<th scope="col">
-										No Transaksi DP
-									</th>
-									<th scope="col">
-										Nilai
-									</th>
-									<th scope="col">
-										Dibayar
-									</th>
-									<th scope="col" style="min-width:150px !important">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								<form id='form-dp' action="<?=base_url('transaction/pembayaran_penjualan_dp_update');?>" method="POST">
-									<?
-									$dp_bayar = 0;
-									foreach ($dp_list_detail as $row) { ?>
-										<tr>
-											<td>
-												<?=is_reverse_date($row->tanggal);?>
-											</td>
-											<td>
-												<?=$row->bayar_dp;?> : 
-												<?
-												$type_2 = '';
-												$type_3 = '';
-												$type_4 = '';
-												$type_6 = '';
-												${'type_'.$row->pembayaran_type_id} = 'hidden';
-												?>
-												<ul>
-													<li <?=$type_3;?> <?=$type_4;?> <?=$type_6;?> >Penerima :<b><span class='nama_penerima' ><?=$row->nama_penerima?></span></b></li>
-													<li <?=$type_2;?> >Bank : <b><span class='nama_bank'><?=$row->nama_bank?></span></b></li>
-													<li <?=$type_2;?> <?=$type_6;?> >No Rek : <b><span class='no_rek_bank'><?=$row->no_rek_bank?></span></b></li>
-													<li <?=$type_3;?> <?=$type_4;?> <?=$type_2;?>>Jatuh Tempo : <b><span class='jatuh_tempo' ><?=is_reverse_date($row->jatuh_tempo);?></span></b></li>
-													<li <?=$type_3;?> <?=$type_4;?> <?=$type_2;?> >No Giro : <b><span class='no_giro' ><?=$row->no_giro;?></span></b></li>
-													<li>Keterangan : <b><span class='keterangan'><?=$row->keterangan;?></span></li></b>
-
-												</ul>
-											</td>
-											<td>
-												<span class='no_faktur_lengkap'><?=$row->no_faktur_lengkap;?></span>
-											</td>
-											<td>
-												<span class='amount'><?=number_format($row->amount,'0','.',',');?></span>
-											</td>
-											<td>
-												<?$dp_bayar += $row->amount_bayar;?>
-												<input name="amount_<?=$row->id;?>" class='amount-bayar amount_number_comma' value='<?=number_format($row->amount_bayar,'0','.',',');?>' <?=($row->amount_bayar == 0 ? 'readonly' : '');?> style="width:80px">
-											</td>
-											<td>
-												<input name="penjualan_id" value="<?=$penjualan_id;?>" hidden>
-												<span class='id' hidden="hidden"><?=$row->id;?></span>
-												<input type="checkbox" class='dp-check' <?=($row->amount_bayar != 0 ? 'checked' : '');?> >
-											</td>
-										</tr>
-									<? } ?>
-									<tr>
-										<td colspan='3'></td>
-										<td><b>TOTAL</b></td>
-										<td><span class='dp-total' style='font-size:1.3em'><?=number_format($dp_bayar,'0','.',',');?></span></td>
-										<td></td>
-									</tr>
-								</form>
-
-							</tbody>
-						</table>
-					</div>
-
-					<div class="modal-footer">
-						<button type="button" class="btn btn-active green btn-save-dp" >Save</button>
-						<button type="button" class="btn btn-active default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-				<!-- /.modal-content -->
-			</div>
-			<!-- /.modal-dialog -->
-		</div>
+		<?include_once 'penjualan_list_modal.php';?>
 
 		<div class="row margin-top-10">
 			<div class="col-md-12">
@@ -1175,11 +419,14 @@
 							<thead>
 								<tr>
 									<th scope="col">
-										No
+										Nos
 									</th>
 									<th scope="col">
 										Nama Barang
 										<?if ($penjualan_id !='' && $status == 1 && is_posisi_id() != 6 ) {?>
+											<a href="#portlet-config-detail" data-toggle='modal' class="btn btn-xs blue btn-brg-add">
+											<i class="fa fa-plus"></i> </a>
+										<?}else if (is_posisi_id()==1) {?>
 											<a href="#portlet-config-detail" data-toggle='modal' class="btn btn-xs blue btn-brg-add">
 											<i class="fa fa-plus"></i> </a>
 										<?}?>
@@ -1202,8 +449,14 @@
 									<th scope="col">
 										PPN
 									</th>
-									<th scope="col" hidden>
-										Total Harga
+									<th scope="col" >
+										Subtotal
+									</th>
+									<th scope="col" >
+										Diskon
+									</th>
+									<th scope="col" >
+										Total
 									</th>
 									<th scope="col" class='hidden-print'>
 										Action
@@ -1212,9 +465,12 @@
 							</thead>
 							<tbody>
 								<?
-								$idx =1; $barang_id = ''; $gudang_id_last = ''; $harga_jual = 0; $qty_total = 0; $roll_total = 0;
-								$g_total_blmppn = 0; $ppn_total = 0;
+								$idx =1; $barang_id = ''; $gudang_id_last = ''; $toko_id_last = '';
+								$harga_jual = 0; $qty_total = 0; $roll_total = 0;
+								$g_total_blmppn = 0; $ppn_total = 0; $diskon_total = 0; 
+								$g_total_after = 0;
 								foreach ($penjualan_detail as $row) { ?>
+									 
 									<tr id='id_<?=$row->id;?>' style="background-color:<?=$row->color_code;?>">
 										<td>
 											<?=$idx;?> 
@@ -1238,38 +494,73 @@
 										</td>
 										<td>
 											<span class='harga_jual' hidden><?=$row->harga_jual;?></span> 
-											<span style="color:blue;font-weight:bold"><?=number_format($row->harga_jual/1.1,'2','.',',');?></span>  
+											<?if ($row->use_ppn == 1) {?>
+												<span style="color:blue;font-weight:bold"><?=number_format($row->harga_jual/$ppn_pembagi,'2','.',',');?></span>
+											<?}else{?>
+												<span style="color:blue;font-weight:bold"><?=number_format($row->harga_jual,'2','.',',');?></span>
+											<?}?>
 										</td>
 										<td>
 											<?
-												$subtotal = ( $row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) * $row->harga_jual;
+											$total_after = 0;
+												if ($row->is_eceran) {
+													$subtotal = ( $row->is_eceran == 1 ? $row->qty : $row->jumlah_roll ) * $row->harga_jual;
+												}else{
+													$subtotal = ( $row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) * $row->harga_jual;
+												}
 												$g_total += $subtotal;
 												$harga_jual = (float)$row->harga_jual;
 												$qty_total += $row->qty;
 												$roll_total += $row->jumlah_roll;
-												$harga_raw = (float)$subtotal/1.1;
+												if ($row->use_ppn == 1) {
+													$harga_raw = (float)$subtotal/$ppn_pembagi;
+													$ppn = $subtotal - ($harga_raw);
+													$ppn_total += $ppn;
+												}else{
+													$harga_raw = (float)$subtotal;
+													$ppn = '';;
+												}
 												$g_total_blmppn += $harga_raw;
-												$ppn = $subtotal - ($harga_raw);
-												$ppn_total += $ppn;
+												$diskon_total += $row->subdiskon;
+												$total_after += $subtotal - $row->subdiskon;
+												$g_total_after += $total_after;
 											?>
 											<span style="color:blue;font-weight:bold" ><?=number_format($harga_raw,'2','.',',');?></span> 
 										</td>
 										<td>
-											<span class='PPN' style="color:blue;font-weight:bold" ><?=number_format($ppn,'2','.',',');?></span> 
+											<?if ($row->use_ppn == 1) {?>
+												<span class='PPN' style="color:blue;font-weight:bold" ><?=number_format($ppn,'2','.',',');?></span> 
+											<?}?>
 										</td>
-										<td hidden>
-											<span class='subtotal'><?=number_format($subtotal,'0','.',',');?></span> 
+										<td>
+											<?=number_format($subtotal,'0','.',',');?> 
+											<span class='subtotal' hidden><?=$subtotal;?> </span> 
+										</td>
+										<td>
+											<?=number_format($row->subdiskon,'0','.',',');?> 
+											<span class='diskon' hidden><?=$row->subdiskon;?> </span> 
+										</td>
+										<td>
+											<?=number_format($total_after,'0','.',',');?>
+											<span class='s_total' hidden><?=$total_after;?></span> 
 										</td>
 										<td class='hidden-print'>
-											<?$gudang_id_last=$row->gudang_id;?>
+											<?
+											$gudang_id_last=$row->gudang_id;
+											$toko_id_last=$row->toko_id;
+											$hidden = (is_posisi_id()!=1 ? 'hidden' : 'hidden');
+											?>
 											<?if ($status == 1 || is_posisi_id() == 1) { ?>
 												<?if (is_posisi_id() != 6) { ?>
-													<span class='gudang_id' hidden><?=$row->gudang_id;?></span>
-													<span class='barang_id' hidden><?=$row->barang_id;?></span>
-													<span class='warna_id' hidden><?=$row->warna_id;?></span>
-													<span class='data_qty' hidden><?=$row->data_qty;?></span>
-													<span class='is_eceran' hidden><?=$row->is_eceran;?></span>
-													<span class='id' hidden><?=$row->id;?></span>
+													<span class='toko_id' <?=$hidden;?>><?=$row->toko_id;?></span>
+													<span class='use_ppn' <?=$hidden;?>><?=$row->use_ppn;?></span>
+													<span class='gudang_id' <?=$hidden;?>><?=$row->gudang_id;?></span>
+													<span class='barang_id' <?=$hidden;?>><?=$row->barang_id;?></span>
+													<span class='warna_id' <?=$hidden;?>><?=$row->warna_id;?></span>
+													<span class='data_qty' <?=$hidden;?>><?=$row->data_qty;?></span>
+													<span class='data_supplier' <?=$hidden;?>><?=$row->data_supplier;?></span>
+													<span class='is_eceran' <?=$hidden;?>><?=$row->is_eceran;?></span>
+													<span class='id' <?=$hidden;?>><?=$row->id;?></span>
 													<a href='#portlet-config-qty-edit' data-toggle='modal' class="btn-xs btn green btn-edit"><i class="fa fa-edit"></i> </a>
 													<a class="btn-xs btn red btn-detail-remove"><i class="fa fa-times"></i> </a>
 												<?}?>
@@ -1280,20 +571,31 @@
 								$idx++; 
 								} ?>
 
-								<tr>
+								<tr class='subtotal-data' >
 									<td colspan='5' class='text-right'><b></b></td>
 									<td class='text-left'><b>TOTAL<?//=str_replace('.00', '',$qty_total);?></b></td>
 									<td class='text-left'><b><?=number_format($g_total_blmppn,'2','.',',');?></b></td>
 									<td class='text-left'><b><?=number_format($ppn_total,'2','.',',');?></b></td>
+									<td class='text-left'><b><?=number_format($g_total,'2','.',',');?></b></td>
+									<td>
+										<?=number_format($diskon,'0','.',',')?> / <?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?>
+										<?/* if ($status == 1 ) {?>
+												<b>Rp. </b><input <?=($status != 1 ? 'readonly' : '');?> class='diskon amount_number_comma text-center' name='diskon' style='width:120px'  value="<?=number_format($diskon,'0','.',',')?>"> /
+												<input <?=($status != 1 ? 'readonly' : '');?> class='diskon-persen text-center' name='diskon_persen' style='width:60px' value="<?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?>"> %
+											<?}else{?>
+												Rp.<?=number_format($diskon,'0','.',',')?> /<?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?> %
+											<?} */?>
+									</td>
+									<td class='text-left'><b><?=number_format($g_total_after,'2','.',',');?></b></td>
 									<td class='hidden-print'></td>
 								</tr>
-								<tr class='subtotal-data'>
+								<tr class='subtotal-data' hidden>
 									<td colspan='5' class='text-right'><b></b></td>
 									<td class='text-right'><b>SUBTOTAL<?//=str_replace('.00', '',$qty_total);?></b></td>
-									<td class='text-center' colspan='2'><b id='subtotal-all'><?=number_format($g_total,'2','.',',');?></b></td>
+									<td class='text-center' colspan='3'><b id='subtotal-all'><?=number_format($g_total,'2','.',',');?></b></td>
 									<td class='hidden-print'></td>
 								</tr>
-								<tr class='subtotal-data'>
+								<!-- <tr class='subtotal-data'>
 									<td colspan='6' class='text-right'><b>DISKON</b></td>
 									<td colspan='2' class='text-center'>
 										<?if ($status == 1 ) {?>
@@ -1305,8 +607,8 @@
 
 									</td>
 									<td class='hidden-print'></td>
-								</tr>
-								<tr class='subtotal-data'>
+								</tr> -->
+								<tr class='subtotal-data' hidden>
 									<td colspan='6' class='text-right'><b>GRAND TOTAL</b></td>
 									<td colspan='2' class='text-center'><b class='total'><?=number_format($g_total - $diskon,'0','.',',');?> </b> </td>
 									<td class='hidden-print'></td>
@@ -1542,9 +844,18 @@
 <script>
 
 var table_stok_page = 1;
+var use_ppn = 1;
+var ppn_berlaku = "<?=get_ppn_berlaku($ori_tanggal);?>";
+var ppn_persen = ppn_berlaku/100;
+var ppn_pembagi = 1+parseFloat(ppn_persen);
+/*
 
+1. qty-table itu table qty yang diambil BUKAN table stok
+2. qty-table-stok itu table qty stok 
+ */
 jQuery(document).ready(function() {	
 
+//===========================change toko================================
 //===========================general=================================
 			eceranFilter();
 
@@ -1829,9 +1140,9 @@ jQuery(document).ready(function() {
 				let harga_jual = 0;
 				ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
 					if (data_respond > 0) {
-						$('#form_add_barang [name=harga_jual]').val(change_number_comma(data_respond));
+						$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data_respond));
 					}else if(data[2] > 0){
-						$('#form_add_barang [name=harga_jual]').val(change_number_comma(data[2]));
+						$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data[2]));
 						<?if (is_posisi_id() == 1) {?>
 							// alert(data);
 						<?}?>
@@ -1850,6 +1161,7 @@ jQuery(document).ready(function() {
 			}
 
 			$('#form_add_barang [name=satuan]').val(data[0]);
+			$('#nama-satuan-keterangan').html('per '+data[0]);
 			$('#form_add_barang [name=pengali_harga]').val(data[3]);
 			$('#warna_id_select').select2('open');
 			$('#qty-table-eceran').closest('td').find('.nama_satuan').html(data[0]);
@@ -1874,6 +1186,13 @@ jQuery(document).ready(function() {
 
 	    $('#warna_id_select').change(function(){
 	    	$('#form_add_barang [name=harga_jual]').focus();
+			const w = $('#warna_id_select').val();
+			if (w == 888) {
+				// alert(w);	
+				$("#eceran-cek").prop('checked',true);
+				$.uniform.update($('#eceran-cek'));
+				// $("#eceran_cek")
+			}
 			eceranFilter()
 	    });
 
@@ -1897,7 +1216,7 @@ jQuery(document).ready(function() {
 						isi_tbl += "<tr>"+
 							"<td>"+date_formatter(v.tanggal)+"</td>"+
 							"<td> : </td>"+
-							"<td>"+change_number_comma(v.harga_jual)+"</td>"+
+							"<td>"+currency.rupiah(v.harga_jual)+"</td>"+
 							"</tr>";
 					});
 
@@ -1920,6 +1239,7 @@ jQuery(document).ready(function() {
 	
 		var barang_id = "<?=$barang_id;?>";
 		var gudang_id_last = "<?=$gudang_id_last;?>";
+		var toko_id_last = "<?=$toko_id_last;?>";
 		var idx = "<?=$idx;?>";
 		var harga_jual = "<?=number_format($harga_jual,'0','.',',');?>";
 
@@ -1937,7 +1257,7 @@ jQuery(document).ready(function() {
 					    		$('#barang_id_select').select2("open");
 					    	},700);
 			            }else{
-			            	cek_last_input(gudang_id_last,barang_id, harga_jual);
+			            	cek_last_input(gudang_id_last,barang_id, harga_jual, toko_id_last);
 			            }
 			        }
 			    }
@@ -1956,7 +1276,7 @@ jQuery(document).ready(function() {
 		    		$('#barang_id_select').select2("open");
 		    	},700);
 	        }else{
-	        	cek_last_input(gudang_id_last,barang_id, harga_jual);
+	        	cek_last_input(gudang_id_last,barang_id, harga_jual, toko_id_last);
 	        }
 	    });
 
@@ -1973,7 +1293,7 @@ jQuery(document).ready(function() {
 			ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
 				if (data_respond == 'OK') {
 					var subtotal = qty*data['harga_jual'];
-					ini.find('.subtotal').html(change_number_comma(subtotal));
+					ini.find('.subtotal').html(currency.rupiah(subtotal));
 					update_table();
 				}else{
 					bootbox.confirm("Error, tolong muat ulang halaman", function(respond){
@@ -2298,34 +1618,51 @@ jQuery(document).ready(function() {
 
 //======================================qty add manage====================================
 
+		// nambah baris table kalo kurang
 	    $(".btn-add-qty-row").click(function(){
-	    	var baris = "<tr><td><input name='qty'></td>"+
-							"<td><input name='jumlah_roll'></td>"+
-							"<td></td></tr>";
+	    	var baris = `<tr><td><input name='qty'></td>
+							<td><input name='jumlah_roll'></td>
+							<td><span class='nama_supplier'></span></td>
+							<td hidden>
+								<input name='supplier_id' value=''>
+								<span class='qty-get'></span>
+								<span class='roll-get'></span>
+							</td>
+						</tr>`;
 	    	$('#qty-table').append(baris);
 	    });
-		
-	    $("#qty-table").on('change','[name=qty]',function(){
-	    	let ini = $(this);
-			// subtotal_on_change(ini);
-			
-			change_qty_update(ini,'#qty-table-stok');
 
+		function setQtyAdd(){
 			data_result = table_qty_update('#qty-table').split('=*=');
-			console.log(data_result);
+			// console.log('ds', data_result);
 	    	let total = parseFloat(data_result[0]);
 	    	let total_roll = parseFloat(data_result[1]);
 	    	let rekap = data_result[2];
 	    	if (total > 0) {
+				$("#qty-add-dismiss").attr('disabled',false);
 			    $('.btn-brg-save').attr('disabled',false);
 	    	}else{
+				$("#qty-add-dismiss").attr('disabled',true);
 	    		$('.btn-brg-save').attr('disabled',true);
 	    	}
 
 	    	$('.yard_total').html(total.toFixed(2));
 	    	$('.jumlah_roll_total').html(total_roll);
 	    	$('#form_add_barang [name=rekap_qty]').val(rekap);
-	    	table_stok_update('#stok-info-add');
+			$('#qty-add').val(total);
+			$('#subqty-add').val(total);
+			$('#subroll-add').val(total_roll);
+			
+			table_stok_update('#stok-info-add');
+			setDiskonAdd();
+		}
+		
+	    $("#qty-table").on('change','[name=qty]',function(){
+	    	let ini = $(this);
+			// subtotal_on_change(ini);
+			
+			change_qty_update(ini,'#qty-table-stok');
+			setQtyAdd();
 
 	    });
 
@@ -2333,52 +1670,22 @@ jQuery(document).ready(function() {
 	    	let ini = $(this).closest('tr');
 			
 			change_roll_update($(this), '#qty-table-stok');
-
-			data_result = table_qty_update('#qty-table').split('=*=');
-			console.log(data_result);
-	    	let total = parseFloat(data_result[0]);
-	    	let total_roll = parseFloat(data_result[1]);
-	    	let rekap = data_result[2];
-	    	if (total > 0) {
-			    $('.btn-brg-save').attr('disabled',false);
-	    	}else{
-	    		$('.btn-brg-save').attr('disabled',true);
-	    	}
-
-	    	$('.yard_total').html(total.toFixed(2));
-	    	$('.jumlah_roll_total').html(total_roll);
-	    	$('#form_add_barang [name=rekap_qty]').val(rekap);
-	    	table_stok_update('#stok-info-add');
+			setQtyAdd();
 
 	    });
 
 		
-
 	    $('#qty-table-stok').on('click','tr', function(){
 	    	var ini = $(this);
 			let isEceran = $('#eceran-cek').is(':checked');
 			
 			if(!isEceran){
 				change_click_stok(ini, '#qty-table');
-				
-				data_result = table_qty_update('#qty-table').split('=*=');
-				let total = parseFloat(data_result[0]);
-				let total_roll = parseFloat(data_result[1]);
-				let rekap = data_result[2];
-				if (total > 0) {
-					$('.btn-brg-save').attr('disabled',false);
-				}else{
-					$('.btn-brg-save').attr('disabled',true);
-				}
-	
-				$('.yard_total').html(total.toFixed(2));
-				$('.jumlah_roll_total').html(total_roll);
-				$('#form_add_barang [name=rekap_qty]').val(rekap);
-				table_stok_update('#stok-info-add');
+				setQtyAdd();
+
 			}else{
 
-			}
-	    	
+			}	    	
 
 	    });
 
@@ -2403,6 +1710,20 @@ jQuery(document).ready(function() {
 
 
 //=====================================qty edit=========================================
+	
+	// nambah baris table edit kalo kurang
+	$(".btn-add-qty-row-edit").click(function(){
+		var baris = `<tr><td><input name='qty'></td>
+						<td><input name='jumlah_roll'></td>
+						<td><span class='nama_supplier'></span></td>
+						<td hidden>
+							<input name='supplier_id' value=''>
+							<span class='qty-get'></span>
+							<span class='roll-get'></span>
+						</td>
+					</tr>`;
+		$('#qty-table-edit').append(baris);
+	});
 
 	$('#general_table').on('click','.btn-edit', function () {
 		let ini = $(this).closest('tr');
@@ -2410,14 +1731,23 @@ jQuery(document).ready(function() {
 		let table_qty = $("#qty-table-edit");
 		let table_stok = $("#qty-table-stok-edit");
 		let data_qty = ini.find('.data_qty').html().split('=?=');
+		let data_supplier = ini.find('.data_supplier').html().split('=?=');
 
+		let toko_id = ini.find('.toko_id').html();
 		let gudang_id = ini.find('.gudang_id').html();
         let warna_id = ini.find('.warna_id').html();
         let barang_id = ini.find('.barang_id').html();
         var isEceran = ini.find('.is_eceran').html();
+        const use_ppn = ini.find('.use_ppn').html();
 
 		let harga_jual = ini.find('.harga_jual').html();
-		let harga_noppn = harga_jual/1.1;
+		
+		let subqty = ini.find('.qty').html();
+		let subroll = ini.find('.jumlah_roll').html();
+
+		let subtotal = ini.find('.subtotal').html();
+		let diskon = ini.find('.diskon').html();
+		let harga_noppn = harga_jual/ppn_pembagi;
 
 		table_qty.find('[name=qty]').each(function(){
 			var itu = $(this).closest('tr');
@@ -2434,8 +1764,30 @@ jQuery(document).ready(function() {
 		table_stok.closest('td').find('.nama_satuan').html(ini.find('.nama_satuan').html());
 		table_stok.closest('td').find('.nama_packaging').html(ini.find('.nama_packaging').html());
 
-		$(form+" [name=harga_jual]").val(change_number_comma(harga_jual));
+		diskon = (diskon.length == 0 ? 0 : diskon);
+
+		const tnp = harga_jual/ppn_pembagi;
+		console.log(tnp.toFixed(2));
+		$("#harga_jual_edit_noppn").val((tnp.toFixed(2)));
+		$("#harga_jual_edit").val(currency.rupiah(harga_jual));
+
+		$("#subtotal-edit-text").val(currency.rupiah(subtotal));
+		$("#subtotal-edit").val(subtotal);
+		$("#subdiskon-edit").val(currency.rupiah(diskon));
+		$("#subtotal-grand-edit").val(currency.rupiah(subtotal-diskon));
+		$("#subqty-edit").val(subqty);
+		$("#subroll-edit").val(subroll);
+		$("#ppn-value-edit").val(use_ppn);
+		
+		// console.log('stot', $("#subqty-edit").val(),subroll);
+
 		harga_jual_add_change($(form+" [name=harga_jual]"));
+
+		if (use_ppn != 1) {
+			$("#harga-dpp-group-edit").hide('fast')
+		}else {
+			$("#harga-dpp-group-edit").show('slow')
+		}
 
 		var penjualan_list_detail_id = ini.find('.id').html();
 		$(form+' [name=penjualan_list_detail_id]').val(penjualan_list_detail_id);
@@ -2446,14 +1798,18 @@ jQuery(document).ready(function() {
 			var urai = v.split('??');
     		var qty_get = parseFloat(urai[0]);
     		var roll_get = urai[1];
+    		var supplier_id = urai[3];
     		var penjualan_qty_detail_id = urai[2];
-    		
+    		var nama_supplier = data_supplier[i];
+
     		$('#qty-table-edit tbody tr').each(function(){
 	    		var qty = $(this).find('[name=qty]').val();
 	    		var jumlah_roll = $(this).find('[name=jumlah_roll]').val();
 	    		if (jumlah_roll == '' && qty == '') {
 	    			$(this).find('[name=qty]').val(qty_get);
 	    			$(this).find('[name=jumlah_roll]').val(roll_get);
+	    			$(this).find('[name=supplier_id]').val(supplier_id);
+	    			$(this).find('.nama_supplier').html(nama_supplier);
 	    			$(this).find('.qty-get').html(qty_get);
 	    			$(this).find('.roll-get').html(roll_get);
 	    			$(this).find('.penjualan_qty_detail_id').val(penjualan_qty_detail_id);
@@ -2465,6 +1821,7 @@ jQuery(document).ready(function() {
 		let data = {};
         
 
+        data['toko_id'] = toko_id;
         data['gudang_id'] = gudang_id;
         data['barang_id'] = barang_id;
         data['warna_id'] = warna_id;
@@ -2472,18 +1829,24 @@ jQuery(document).ready(function() {
 		data['penjualan_list_detail_id'] = penjualan_list_detail_id;
 		data['tanggal'] = "<?=$tanggal;?>";
 
-        var url = "transaction/get_qty_stock_by_barang_detail";
+		// alert(isEceran);
+
+        // var url = "transaction/get_qty_stock_by_barang_detail";
+        var url = "stok/stok_general/get_qty_stock_by_barang_detail";
         ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
             var qty = 0;
             var jumlah_roll = 0;
             let table_stok = '';
+            let table_stok_array = [];
 			let qty_eceran = 0;
+			let btn_supplier = '';
             let idx = 1;
             let qty_row = 0;
             let qty_stok = 0;
             let status = '';
             let total_page = 1;
             let tombol_page = '';
+			var supplier_id = '';
             $("#qty-table-stok-edit tbody").html('');
 			var tp = 0;
 			if (parseInt(isEceran) ) {
@@ -2493,25 +1856,15 @@ jQuery(document).ready(function() {
 			eceranEditFilter(tp);
             $.each(JSON.parse(data_respond), function(k,v){
 				if (k==0) {
-					// qty += parseFloat(v[0].qty);
-					// jumlah_roll += parseFloat(v[0].jumlah_roll);
-					// status = ((v[0].jumlah_roll <= 0) ? 'habis' : '');
-					// page_idx = parseInt(idx/10) +  parseInt((idx % 10 != 0 ) ? 1 : 0);
-					// var class_qty = parseFloat(v[0].qty);
-					// class_qty = class_qty.toString().replace('.','');
-
-					// let btnEcer = '';
-					// if(isEceran && parseFloat(v[0].jumlah_roll) > 0){
-					// 	btnEcer = `<button onclick="mutasiToEceran('${class_qty}','${v[0].qty}')">add to eceran</button>`;
-					// }
-
-					// table_stok += `<tr class='row-${idx} page-${page_idx} baris-table ${status} '><td class='idx-${class_qty}'><span class='qty-stok'>${parseFloat(v[0].qty)}</span></td><td><span class='roll-stok'>${parseFloat(v[0].jumlah_roll)}</span> </td></tr>`;
-					// qty_stok += parseFloat(v[0].qty*v[0].jumlah_roll);
-					// qty_row = idx;
-					// idx++;
 
 					for (let i = 0; i < v.length; i++) {
-						console.log(v[i]);
+						// console.log(v[i]);
+						supplier_id = v[i].supplier_id;
+						if (typeof table_stok_array[supplier_id] === 'undefined') {
+							table_stok_array[supplier_id] = [];
+							const nama_supplier = (supplier_id != 0 ? v[i].nama_supplier : 'none');
+							btn_supplier += `<button style='margin:0px 10px 5px 0px' class="btn btn-xs default btn-show-stok-edit" id='btn-edit-supplier-${supplier_id}' onclick="showStokSupplierEdit('${supplier_id}')">${nama_supplier}</button>`
+						}
 						qty += parseFloat(v[i].qty);
 						jumlah_roll += parseFloat(v[i].jumlah_roll);
 						status = ((v[i].jumlah_roll <= 0) ? 'habis' : '');
@@ -2519,14 +1872,26 @@ jQuery(document).ready(function() {
 						var class_qty = parseFloat(v[i].qty);
 						class_qty = class_qty.toString().replace('.','');
 						let btnEcer = '';
-						if(isEceran && parseFloat(v[i].jumlah_roll) > 0){
+						// console.log(isEceran==true && parseFloat(v[i].jumlah_roll) > 0);
+						if(isEceran == true && parseFloat(v[i].jumlah_roll) > 0){
 							btnEcer = `<button onclick="mutasiToEceranEdit('${class_qty}','${v[i].qty}')">add to eceran</button>`;
 							$("#eceran-cek-edit").val('1')
 						}else{
 							$("#eceran-cek-edit").val(0)
 						}
 
-						table_stok += `<tr class='row-${v[i].qty} page-${v[i].qty} baris-table ${status} '><td class='idx-${class_qty}'><span class='qty-stok'>${parseFloat(v[i].qty)}</span></td><td><span class='roll-stok'>${parseFloat(v[i].jumlah_roll)}</span> </td><td>${btnEcer}</td></tr>`;
+						console.log('1',v[i].nama_supplier);
+
+						table_stok += `<tr data-supplier='${supplier_id}' class='row-stok row-${v[i].qty} page-${v[i].qty} baris-table ${status} '>
+							<td class='idx-${class_qty}'><span class='qty-stok'>${parseFloat(v[i].qty)}</span></td>
+							<td><span class='roll-stok'>${parseFloat(v[i].jumlah_roll)}</span> </td>
+							<td>
+								<span class='nama_supplier'> ${(v[i].nama_supplier != null ? v[i].nama_supplier : 'none') }</span>
+								<span class='supplier_id' hidden>${supplier_id}</span> 
+							</td>
+							<td>${btnEcer}</td>
+						</tr>`;
+						
 						qty_stok += parseFloat(v[i].qty*v[i].jumlah_roll);
 						qty_row = idx;
 						idx++;
@@ -2536,6 +1901,7 @@ jQuery(document).ready(function() {
 					if (isEceran) {
 						var table_eceran = '';
 						for (let i = 0; i < v.length; i++) {
+							console.log('2',v[i].nama_supplier);
 							qty_eceran += parseFloat(v[i].qty);
 							table_eceran += `<tr style="font-size:1.2em;">
 								<td class='eceran-stok' style='padding:2px 10px'>${parseFloat(v[i].qty)}</td>
@@ -2543,6 +1909,10 @@ jQuery(document).ready(function() {
 								<td class='eceran-sisa' style='padding:2px 10px'>${v[i].qty - v[i].qty_jual}</td>
 								<td hidden><span class='stok_eceran_qty_tipe'>${v[i].tipe}</span> </td>
 								<td hidden><span class='stok_eceran_qty_id'>${v[i].stok_eceran_qty_id}</span></td>
+								<td >
+									<span class='nama_supplier'> ${(v[i].nama_supplier != null ? v[i].nama_supplier : 'none') }</span>
+									<span hidden class='supplier_id'>${v[i].supplier_id}</span> 
+								</td>
 								<td hidden><span class='penjualan_qty_detail_id'>${v[i].penjualan_qty_detail_id}</span></td>
 								</tr>`;
 						}
@@ -2552,9 +1922,13 @@ jQuery(document).ready(function() {
 				}
             });
 
-			ambilEceranEdit();
+			if (parseInt(isEceran)) {
+				ambilEceranEdit();
+			}
+			$('#btn-stok-div-edit').html(btn_supplier);
 
 			// console.log(table_stok);
+            // $("#qty-table-edit tbody").html(table_stok);
             $("#qty-table-stok-edit tbody").html(table_stok);
 
             $('#stok-info-edit').find('.stok-qty').html(qty_stok);
@@ -2584,27 +1958,11 @@ jQuery(document).ready(function() {
         });
 	});
 
-	$('#qty-table-edit').on('input', 'input', function(){
-    	var qty = $(this).val();
-    	if ($(this).val() != '') {
-    		qty = qty.replace(',','.');
-    		$(this).val(qty);
-	    	var class_qty = qty.replace('.','');
-	    	$('#qty-table-edit tbody tr').hide();
-	    	$('[class*=main]')
-	    	$('#qty-table-edit tbody [class*='+class_qty+']').closest('tr').not('.habis').show();
-    	};
-
-    });
-
-    $("#qty-table-edit").on('change','[name=qty]',function(){
-    	let ini = $(this);
-		// subtotal_on_change(ini);
-		change_qty_update(ini,'#qty-table-edit');
+	function setQtyEdit(){
 
 		data_result = table_qty_update('#qty-table-edit').split('=*=');
-		console.log(data_result);
-    	let total = parseFloat(data_result[0]);
+		// console.log('ds', data_result);
+		let total = parseFloat(data_result[0]);
     	let total_roll = parseFloat(data_result[1]);
     	let rekap = data_result[2];
     	if (total > 0) {
@@ -2613,32 +1971,30 @@ jQuery(document).ready(function() {
     		$('.btn-brg-save').attr('disabled',true);
     	}
 
+		
     	$('.yard_total').html(total.toFixed(2));
     	$('.jumlah_roll_total').html(total_roll);
     	$('#form_qty_edit [name=rekap_qty]').val(rekap);
-    	table_stok_update('#stok-info-edit');
+		$('#subqty-edit').val(total);
+		$('#subroll-edit').val(total_roll);
+		
+		table_stok_update('#stok-info-edit');
+		setDiskonEdit();
+	}
+
+    $("#qty-table-edit").on('change','[name=qty]',function(){
+    	let ini = $(this);
+		// subtotal_on_change(ini);
+		
+		change_qty_update(ini,'#qty-table-stok-edit');
+		setQtyEdit();
 
     });
 
     $("#qty-table-edit").on('change','[name=jumlah_roll]',function(){
     	let ini = $(this).closest('tr');
-		change_roll_update($(this), '#qty-table-edit');
-
-		data_result = table_qty_update('#qty-table-edit').split('=*=');
-		// console.log(data_result);
-    	let total = parseFloat(data_result[0]);
-    	let total_roll = parseFloat(data_result[1]);
-    	let rekap = data_result[2];
-    	if (total > 0) {
-		    $('.btn-brg-save').attr('disabled',false);
-    	}else{
-    		$('.btn-brg-save').attr('disabled',true);
-    	}
-
-    	$('.yard_total').html(total.toFixed(2));
-    	$('.jumlah_roll_total').html(total_roll);
-    	$('#form_qty_edit [name=rekap_qty]').val(rekap);
-    	table_stok_update('#stok-info-add');
+		change_roll_update($(this), '#qty-table-stok-edit');
+		setQtyEdit();
 
     });
 
@@ -2646,25 +2002,26 @@ jQuery(document).ready(function() {
     	$('#form_qty_edit').submit();
     });
 
-    $('#qty-table-edit').on('click','tr', function(){
+    $('#qty-table-stok-edit').on('click','tr', function(){
     	var ini = $(this);
     	
     	change_click_stok(ini, '#qty-table-edit');
+		setQtyEdit();
     	
-    	data_result = table_qty_update('#qty-table-edit').split('=*=');
-    	let total = parseFloat(data_result[0]);
-    	let total_roll = parseFloat(data_result[1]);
-    	let rekap = data_result[2];
-    	if (total > 0) {
-		    $('.btn-brg-save').attr('disabled',false);
-    	}else{
-    		$('.btn-brg-save').attr('disabled',true);
-    	}
+    	// data_result = table_qty_update('#qty-table-edit').split('=*=');
+    	// let total = parseFloat(data_result[0]);
+    	// let total_roll = parseFloat(data_result[1]);
+    	// let rekap = data_result[2];
+    	// if (total > 0) {
+		//     $('.btn-brg-save').attr('disabled',false);
+    	// }else{
+    	// 	$('.btn-brg-save').attr('disabled',true);
+    	// }
 
-    	$('.yard_total').html(total.toFixed(2));
-    	$('.jumlah_roll_total').html(total_roll);
-    	$('#form_qty_edit [name=rekap_qty]').val(rekap);
-    	table_stok_update('#stok-info-add');
+    	// $('.yard_total').html(total.toFixed(2));
+    	// $('.jumlah_roll_total').html(total_roll);
+    	// $('#form_qty_edit [name=rekap_qty]').val(rekap);
+    	// table_stok_update('#stok-info-add');
     	
 
     });
@@ -2729,23 +2086,806 @@ jQuery(document).ready(function() {
 });
 </script>
 
+<!-- script buat penambahan barang -->
+<script>
+	function setDiskonAdd(){
+
+		const total = $('#qty-add').val();
+		const hrg = $('#harga_jual_add').val();
+		let diskon = $('#subdiskon-add').val();
+		let subtotal = hrg*total;
+		$('#subtotal-add').val(subtotal.toFixed(0));
+		$('#subtotal-add-text').val(currency.rupiah(subtotal));
+
+		subtotal = subtotal - diskon;
+		$('#subtotal-grand').val(currency.rupiah(subtotal));
+	}
+
+	function harga_jual_add_change(ini){
+		let harga = reset_number_comma(ini.val())/ppn_pembagi;
+		harga = harga.toFixed(2);
+		// alert(harga);
+		var form = '#'+ini.closest('form').attr('id');
+		$(form).find('.harga_jual_add_noppn').val(currency.rupiah(harga));
+		setDiskonAdd();
+	}
+
+	function harga_jual_add_noppn_change(ini){
+		let harga = reset_number_comma(ini.val())*ppn_pembagi;
+		var form = '#'+ini.closest('form').attr('id');
+		$(form).find('.harga_jual_add').val(currency.rupiah(harga));
+		setDiskonAdd();
+	}
+
+	//=========ajax untuk get qty=======================================================================================
+	function get_qty(){
+		var data = {};
+		var toko_id = $('#form_add_barang [name=toko_id]').val();
+		var gudang_id = $('#form_add_barang [name=gudang_id]').val();
+		var barang_id = $('#form_add_barang [name=barang_id]').val();
+		var warna_id = $('#form_add_barang [name=warna_id]').val();
+		let isEceran = $('#eceran-cek').is(':checked');
+
+		data['toko_id'] = toko_id;
+		data['gudang_id'] = gudang_id;
+		data['barang_id'] = barang_id;
+		data['warna_id'] = warna_id;
+		data['is_eceran'] = isEceran;
+		data['tanggal'] = $('#form_add_barang [name=tanggal]').val();
+
+		var barang_before = $('#form_add_barang .barang_id_before').html();
+		var warna_before = $('#form_add_barang .warna_id_before').html();
+		var gudang_before = $('#form_add_barang .gudang_id_before').html();
+		var eceran_before = $('#form_add_barang .eceran_before').html();
+
+		// console.log(barang_id+'='+barang_before);
+
+		
+		const eceranBeforeTrue = (eceran_before === 'true');
+		if (warna_id != 888) {
+			if (barang_id != barang_before || warna_id != warna_before || gudang_id != gudang_before || eceranBeforeTrue != isEceran) {
+				var url = "stok/stok_general/get_qty_stock_by_barang_detail";
+				
+				//alert('test');
+				ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
+					// alert(data_respond);
+					var qty = 0;
+					var jumlah_roll = 0;
+					let table_stok = '';
+					let table_stok_array = [];
+					let btn_supplier = '';
+					let table_eceran = '';
+					let idx = 1;
+					let qty_row = 0;
+					let supplier_id = '';
+					let qty_stok = 0;
+					let qty_eceran = 0;
+					let status = '';
+					let total_page = 1;
+					let tombol_page = '';
+					$("#qty-table-stok tbody").html('');
+					$.each(JSON.parse(data_respond), function(k,v){
+						if(k==0){
+							for (let i = 0; i < v.length; i++) {
+								
+								supplier_id = v[i].supplier_id;
+								if (typeof table_stok_array[supplier_id] === 'undefined') {
+									table_stok_array[supplier_id] = [];
+									const nama_supplier = (supplier_id != 0 ? v[i].nama_supplier : 'not assigned');
+									btn_supplier += `<button style='margin:0px 10px 5px 0px' class="btn btn-xs default btn-show-stok" id='btn-supplier-${supplier_id}' onclick="showStokSupplier('${supplier_id}')">${nama_supplier}</button>`
+								}
+								qty += parseFloat(v[i].qty);
+								jumlah_roll += parseFloat(v[i].jumlah_roll);
+								status = ((v[i].jumlah_roll <= 0) ? 'habis' : '');
+								page_idx = parseInt(idx/10) +  parseInt((idx % 10 != 0 ) ? 1 : 0);
+								var class_qty = parseFloat(v[i].qty);
+								class_qty = class_qty.toString().replace('.','');
+								let btnEcer = '';
+								if(isEceran && parseFloat(v[i].jumlah_roll) > 0){
+									btnEcer = `<button onclick="mutasiToEceran('${class_qty}','${v[i].qty}','${supplier_id}')">add to eceran</button>`;
+								}
+	
+								console.log('3',v[i].nama_supplier);
+								const content = `<tr data-supplier='${supplier_id}' class='row-stok row-${v[i].qty} page-${v[i].qty} baris-table ${status} '>
+									<td class='idx-${class_qty}' ><span class='qty-stok' >${parseFloat(v[i].qty)}</span></td>
+									<td><span class='roll-stok'>${parseFloat(v[i].jumlah_roll)}</span> </td>
+									<td>
+										<span class='nama_supplier'> ${v[i].nama_supplier}</span>
+										<span class='supplier_id' hidden>${supplier_id}</span> 
+									</td>
+									<td>${btnEcer}</td>
+								</tr>`;
+	
+	
+								table_stok_array[supplier_id] += content; 
+								table_stok += content;
+								qty_stok += parseFloat(v[i].qty*v[i].jumlah_roll);
+								qty_row = idx;
+								idx++;
+								
+							}
+						}else if(k==1){
+							if(isEceran){
+								console.log('asd',v, v.length);
+								for (let i = 0; i < v.length; i++) {
+									qty_eceran += parseFloat(v[i].qty);
+								console.log('4',v[i].nama_supplier);
+									table_eceran += `<tr >
+										<td class='eceran-stok' style='padding:2px 10px'>${parseFloat(v[i].qty)}</td>
+										<td><input class='text-center eceran-qty' style='width:55px; border:none' onchange="ambilEceran()"></td>
+										<td class='eceran-sisa' style='padding:2px 10px'></td>
+										<td hidden><span class='stok_eceran_qty_tipe'>${v[i].tipe}</span> </td>
+										<td hidden><span class='stok_eceran_qty_id'>${v[i].stok_eceran_qty_id}</span></td>
+										<td >
+											<span class='nama_supplier'> ${(typeof v[i].nama_supplier !== 'undefined' ? v[i].nama_supplier : 'none' )}</span>
+											<span hidden class='supplier_id'>${v[i].supplier_id}</span> 
+										</td>
+										</tr>`;
+								}
+								$("#qty-table-eceran tbody").html(table_eceran);
+								$("#stok-eceran-add").find(".stok-qty-eceran").text(parseFloat(qty_eceran));
+							}else{
+								$(".add-eceran").hide();
+							}
+						}
+						// alert(v.qty);
+					});
+					
+	
+					$('#btn-stok-div').html(btn_supplier);
+					// total_page = ((qty_row <= 10) ? 1 : parseInt(qty_row/10));
+					// total_page = ((qty_row % 10 != 0 ) ? total_page + 1 : total_page);
+					// for (var i = 1; i <= total_page; i++) {
+					//     tombol_page += "<a class='btn btn-xs default btn-page-qty-stok' style='padding:1px 5px' >"+i+"</a>";
+					// };
+					// $('#qty-table-stok_page').html(tombol_page);
+					$("#qty-table-stok tbody").html(table_stok);
+					$('#qty-table-stok .habis').hide();
+	
+	
+					$('#stok-info-add').find('.stok-qty').html(qty_stok);
+					$('#stok-info-add').find('.stok-roll').html(jumlah_roll);
+					$('#qty-table input').val();
+					// alert(data_respond);
+					console.log(data_respond);
+	
+					$('#form_add_barang .barang_id_before').html(barang_id);
+					$('#form_add_barang .warna_id_before').html(warna_id);
+					$('#form_add_barang .gudang_id_before').html(gudang_id);
+					$('#form_add_barang .eceran_before').html(isEceran);
+				});
+				
+			}
+		}else{
+			$("#qty-table-eceran tbody").html(`<tr data-supplier='0' class=''>
+					<td><input class='qty-row' style='width:80px'></td>
+					<td>
+						<span class='nama_supplier'> none</span>
+						<span class='supplier_id' hidden>0</span> 
+					</td>
+					<td><button class='btn-xs btn green' onclick="addRow()"><i class='fa fa-plus' ></i></button></td>
+				</tr>`)
+		}
+		// var url = "transaction/get_qty_stock_by_barang";
+	}
+</script>
+
+<!-- script buat update dan hitung qty table barang -->
 <script>
 
-function harga_jual_add_change(ini){
-	let harga = reset_number_comma(ini.val())/1.1;
-	harga = harga.toFixed(2);
-	// alert(harga);
-	var form = '#'+ini.closest('form').attr('id');
-	// harga = harga.toFixed(2).toString().replace('.',',');
-	// alert(change_number_comma(harga));
-	$(form).find('.harga_jual_add_noppn').val(change_number_comma(harga));
-}
+	function addRow(){
+		$("#qty-table-eceran tbody").append(`<tr data-supplier='0' class=''>
+					<td><input class='qty-row' style='width:80px'></td>
+					<td>
+						<span class='nama_supplier'> none</span>
+						<span class='supplier_id' hidden>0</span> 
+					</td>
+					<td></td>
+				</tr>`)
+	}
+	function table_qty_update(table){
+		var total = 0; 
+		var idx = 0; 
+		var rekap = [];
+		var total_roll = 0;
+		// console.log($(table).html());
+		$(table+" [name=qty]").each(function(){
+			var ini = $(this).closest('tr');
+			var qty = $(this).val();
+			var roll = ini.find('[name=jumlah_roll]').val();
+			var supplier_id = ini.find('[name=supplier_id]').val();
+			// console.log(qty, roll, supplier_id);
+			var id = ini.find('.penjualan_qty_detail_id').val();
+			if ($(this).val() != '' || id != '' ) {
+				if (typeof id === 'undefined' || id == '' ) {
+					id = '0';
+				};
 
-function harga_jual_add_noppn_change(ini){
-	let harga = reset_number_comma(ini.val())*1.1;
-	var form = '#'+ini.closest('form').attr('id');
-	$(form).find('.harga_jual_add').val(change_number_comma(harga));
-}
+				roll = (roll == '' ? 0 : roll);
+				var subtotal = parseFloat(qty*roll);
+				total_roll += parseFloat(roll);
+				console.log('trol',total_roll, roll);
+
+				
+				if (qty != '' && roll != '' && id != '') {
+					rekap[idx] = qty+'??'+roll+'??'+id+'??'+supplier_id;
+				}else if(id != 0){
+					rekap[idx] = 0+'??'+0+'??'+id+'??'+supplier_id;
+				}
+				
+				idx++; 
+				total += subtotal;
+				ini.find('[name=subtotal]').val(qty*roll);
+			};
+
+		});
+
+		rekap_str = rekap.join('--');
+		// console.log(total+'=*='+total_roll+'=*='+rekap_str);
+
+		return total+'=*='+total_roll+'=*='+rekap_str;
+	}
+
+	function table_stok_update(table_stok_id){
+		var total= 0 ;
+		var total_roll = 0;
+		$(table_stok_id+".qty-stok").each(function(){
+			let ini = $(this).closest('tr');
+			var qty = parseFloat($(this).html());
+			var jumlah_roll = parseFloat(ini.find('.roll-stok').html());
+			total += (qty*jumlah_roll);
+			total_roll += jumlah_roll;
+		});
+
+		$(table_stok_id).find('.stok-qty').html(total);
+		$(table_stok_id).find('.stok-roll').html(total_roll);
+
+	}
+
+	function change_qty_update(pointer, table_stok_id){
+		let ini = pointer.closest('tr');
+		let qty = pointer.val();
+		
+		let jumlah_roll = ini.find('[name=jumlah_roll]').val();
+		let supplier_id = ini.find('.supplier_id').html();
+		let toko_id = ini.find('[name=toko_id]').val();
+		let penjualan_qty_detail_id = ini.find('.penjualan_qty_detail_id').val();
+		if (jumlah_roll == '') {
+			jumlah_roll = 1; 
+			ini.find('[name=jumlah_roll]').val(1);
+		}else if(qty == ''){jumlah_roll = '';};
+		if (typeof penjualan_qty_detail_id === 'undefined' || penjualan_qty_detail_id == '' ) {ini.find('.penjualan_qty_detail_id').val(0);};
+
+		var qty_before = ini.find('.qty-get').html();
+		var roll_before = ini.find('.roll-get').html();
+
+		if (qty_before != '' && roll_before != '' ) {
+			$(table_stok_id+" .qty-stok").filter(function(){
+				const s_id = $(this).closest('tr').find('.supplier_id').html();
+				if ($(this).text() == qty_before && supplier_id == s_id) {
+					var baris_before = $(this).closest('tr');
+					var roll_stok = baris_before.find('.roll-stok').html();
+					var roll_now = parseFloat(roll_before) + parseFloat(roll_stok);
+					baris_before.find('.roll-stok').html(roll_now);
+					baris_before.removeClass('habis');
+					$(table_stok_id+' tbody tr').not('.habis').show();
+
+				};
+			});
+		};
+		
+		var result = filter_stok($(table_stok_id+' .qty-stok'), qty, supplier_id, toko_id);
+		if (result) {
+			ini.find('[name=jumlah_roll]').val(1);
+			ini.find('.qty-get').html(qty);
+			ini.find('.roll-get').html(1);
+
+		}else{
+			if (qty != '') {
+				ini.find('[name=qty]').val(qty_before);
+				ini.find('[name=jumlah_roll]').val(roll_before);
+			}else{
+				ini.find('[name=jumlah_roll]').val('');
+				ini.find('[name=supplier_id]').val('');
+				ini.find('[name=toko_id]').val('');
+				ini.find('.nama_supplier').html('');
+				ini.find('.qty-get').html('');
+				ini.find('.roll-get').html('');
+			}
+		}
+	}
+
+	function change_roll_update(pointer_ini, table_stok_id){
+		
+		var ini = pointer_ini.closest('tr');
+		let supplier_id = ini.find('.supplier_id').html();
+		var roll_now = pointer_ini.val();
+		var qty = ini.find('[name=qty]').val();
+		var roll_before = ini.find('.roll-get').html();
+
+		// console.log(table_stok_id);
+		$(table_stok_id+" .qty-stok").filter(function(){
+			const s_id = $(this).closest('tr').find('.supplier_id').html();
+			if ($(this).text() == qty && s_id == supplier_id) {
+				var pointer = $(this).closest('tr');
+				roll_stok = pointer.find('.roll-stok').html();
+				var roll_max = parseFloat(roll_before) + parseFloat(roll_stok);
+				console.log("=================");
+				console.log('stok:'+roll_stok);
+				console.log('max:'+roll_max);
+				console.log('now:'+roll_now);
+
+				if (roll_now == '') {roll_now = 1; ini.find('[name=jumlah_roll]').val(roll_now) };
+				if (roll_now > roll_max) {
+					roll_now = roll_max;
+					ini.find("[name=jumlah_roll]").val(roll_now);
+					notific8("ruby","Sisa Stok "+roll_max+" Roll")
+					var roll_sisa = 0;
+				}else{
+					var roll_sisa = parseFloat(roll_max) - parseFloat(roll_now);
+				}
+
+				// console.log('sisa',roll_sisa);
+				if (roll_sisa == 0) {
+					pointer.addClass('habis');
+				}else{
+					pointer.removeClass('habis');
+				}
+				pointer.find('.roll-stok').html(roll_sisa);
+				ini.find('.roll-get').html(roll_now);
+			};
+		});
+	}
+
+	function change_click_stok(pointer, table_id, table_stok_id){
+		var ini = pointer;
+		var qty_get = ini.find('.qty-stok').html();
+		var roll_get = 1;
+		var roll_sisa = ini.find('.roll-stok').html() - 1;
+		console.log(roll_sisa);
+		var toko_id = ini.find('.toko_id').html();
+		let supplier_id = ini.find('.supplier_id').html();
+		var nama_supplier = ini.find('.nama_supplier').html();
+		
+		var compare = false;
+		if (roll_sisa >= 0) {
+			
+			$(table_id+" .qty-get").filter(function(){
+				const s_id = $(this).closest('tr').find('[name=supplier_id]').val();
+				if ($(this).text() == qty_get && s_id == supplier_id) {
+					// console.log(s_id+'=='+ supplier_id);
+					var baris_get = $(this).closest('tr');
+					var jumlah_roll = parseFloat(baris_get.find('[name=jumlah_roll]').val());
+					jumlah_roll += parseFloat(roll_get);
+					baris_get.find('.roll-get').html(jumlah_roll);
+					baris_get.find('[name=jumlah_roll]').val(jumlah_roll);
+					compare = true;
+					return true;
+				};
+			});
+		
+			if (!compare) {
+		
+				$(table_id+' tbody tr').each(function(){
+					var qty = $(this).find('[name=qty]').val();
+					var jumlah_roll = $(this).find('[name=jumlah_roll]').val();
+					if (jumlah_roll == '' && qty == '') {
+						$(this).find('[name=qty]').val(qty_get);
+						$(this).find('[name=jumlah_roll]').val(roll_get);
+						$(this).find('.nama_supplier').html(nama_supplier);
+						$(this).find('[name=supplier_id]').val(supplier_id);
+						$(this).find('.qty-get').html(qty_get);
+						$(this).find('.roll-get').html(roll_get);
+						return false;
+					};
+				});
+			};
+		
+			ini.find('.roll-stok').html(roll_sisa);
+			if (roll_sisa == 0) {
+				ini.addClass('habis');
+				ini.hide();
+			}
+		}
+
+	}
+
+	function change_click_stok_all(pointer, table_id, table_stok_id){
+		var ini = pointer;
+		var qty_get = ini.find('.qty-stok').html();
+		var roll_get = ini.find('.roll-stok').html();
+		var toko_id = ini.find('.toko_id').html();
+		var supplier_id = ini.find('.supplier_id').html();
+		var nama_supplier = ini.find('.nama_supplier').html();
+		
+		var compare = false;
+
+		$(table_id+" .qty-get").filter(function(){
+			if ($(this).text() == qty_get) {
+				var baris_get = $(this).closest('tr');
+				var jumlah_roll = parseFloat(baris_get.find('[name=jumlah_roll]').val());
+				jumlah_roll += parseFloat(roll_get);
+				baris_get.find('.roll-get').html(jumlah_roll);
+				baris_get.find('[name=jumlah_roll]').val(jumlah_roll);
+				compare = true;
+				return true;
+			};
+		});
+
+		if (!compare) {
+
+			$(table_id+' tbody tr').each(function(){
+				var qty = $(this).find('[name=qty]').val();
+				var jumlah_roll = $(this).find('[name=jumlah_roll]').val();
+				if (jumlah_roll == '' && qty == '') {
+					$(this).find('[name=qty]').val(qty_get);
+					$(this).find('[name=jumlah_roll]').val(roll_get);
+					$(this).find('.qty-get').html(qty_get);
+					$(this).find('.roll-get').html(roll_get);
+					return false;
+				};
+			});
+		};
+
+		ini.find('.roll-stok').html(roll_get);
+		ini.addClass('habis');
+		ini.hide();
+	}
+</script>
+
+
+<!-- script buat edit barang -->
+<script>
+
+	function setHargaEdit(tipe) {
+		if (tipe==1) {
+			const m = $(`#harga_jual_edit_noppn`).val().replaceAll(".","").replace(",",".");
+			const t = m*ppn_pembagi;
+			$("#harga_jual_edit").val(currency.rupiah(t));	
+		}else{
+			const m = $(`#harga_jual_edit`).val().replaceAll(".","").replace(",",".");
+			const t = m/ppn_pembagi;
+			$("#harga_jual_edit_noppn").val(currency.rupiah(t));
+		}
+
+		setDiskonEdit();
+	}
+
+	function setDiskonEdit(){
+
+		const total = $('#subqty-edit').val();
+		const hrg = $('#harga_jual_edit').val().toString().replaceAll(".","");
+		let diskon = $('#subdiskon-edit').val().toString().replaceAll(".","");
+		
+		let subtotal = hrg*total;
+		console.log(subtotal);
+		$('#subtotal-edit').val(subtotal);
+		$('#subtotal-edit-text').val(currency.rupiah(subtotal));
+		diskon = diskon.toString().replaceAll(",","");
+		subtotal = subtotal - diskon;
+		$('#subtotal-grand-edit').val(currency.rupiah(subtotal));
+	}
+
+	function dp_table_update(){
+		let total_dp = 0;
+		$('#dp_list_table .amount-bayar').each(function(){
+			total_dp += parseFloat(reset_number_comma($(this).val()));
+		});
+
+		$('.dp-total').html(currency.rupiah(total_dp));
+	}
+
+	function eceranEditFilter(tipe){
+		var penjualan_type_id = '<?=$penjualan_type_id;?>';
+
+		// console.log($('#eceran-cek').is(':checked'));
+		// $('.eceran-form').addClass("eceran-active");
+		// alert(tipe);
+		if (tipe) {
+			$(".table-qty-edit").hide();
+			$(".edit-eceran-col").show();
+		}else{
+			$(".table-qty-edit").show();
+			$(".edit-eceran-col").hide();	
+		}
+	}
+
+
+	function update_qty_edit(){
+		var total = 0; var idx = 0; var rekap = [];
+		var total_roll = 0;
+		$("#qty-table-edit [name=qty]").each(function(){
+			var ini = $(this).closest('tr');
+			var qty = $(this).val();
+			var roll = ini.find('[name=jumlah_roll]').val();
+			if (qty != '' && roll == '') {
+				roll = 1;
+			}else if(roll == 0){
+				// alert('test');
+				if (qty == '') {
+					qty = 0;
+				};
+			}else if(qty == '' && roll == ''){
+				roll = 0;
+				qty = 0;
+			}
+
+			if (roll == 0) {
+				var subtotal = parseFloat(qty);
+				total_roll += 0;
+			}else{
+				var subtotal = parseFloat(qty*roll);
+				// alert(qty+'*'+roll);
+				total_roll += parseInt(roll);
+				console.log(subtotal);
+			};
+
+			if (qty != '' && roll != '') {
+				rekap[idx] = qty+'??'+roll;
+			};
+			idx++;  
+			total += subtotal;
+
+		});
+
+		if (total > 0) {
+			$('.btn-brg-edit-save').attr('disabled',false);
+		}else{
+			$('.btn-brg-edit-save').attr('disabled',true);
+		}
+
+		$('#portlet-config-qty-edit .jumlah_roll_total').html(total_roll);
+		$('#portlet-config-qty-edit .yard_total').html(total.toFixed(2));
+
+		$('#form-qty-update [name=rekap_qty]').val(rekap.join('--'));
+
+	}
+
+	function ambilEceranEdit(){
+		let totalAmbil = 0;
+		let dataQty = [];
+		$('#qty-table-eceran-edit .eceran-qty').each(function(){
+			let ini = $(this).closest('tr');
+			let stok = ini.find('.eceran-stok').text();
+			let supplier_id = ini.find('.supplier_id').html();
+			let id = ini.find('.stok_eceran_qty_id').html();
+			let tipe = ini.find('.stok_eceran_qty_tipe').html();
+			let qty_detail_id = ini.find('.penjualan_qty_detail_id').html();
+			
+			let ambil = $(this).val();
+			if(ambil != ''){
+				totalAmbil += parseFloat(ambil);
+				let sisa = stok - ambil;
+				ini.find('.eceran-sisa').html(sisa);
+				dataQty.push(ambil+'??'+id+'??'+stok+'??'+supplier_id+'??'+tipe+'??'+qty_detail_id);
+			}
+		});
+
+		// console.log('daki',dataQty);
+
+		$('#form_qty_edit [name=rekap_qty]').val(dataQty.join('--'));
+		$("#qty-table-eceran-edit .total-ambil").html(totalAmbil);
+		$('#qty-edit').val(totalAmbil);
+		$('#subqty-edit').val(totalAmbil);
+		$('#subroll-edit').val(0);
+		if(totalAmbil > 0){
+			$(".btn-brg-edit-save").prop('disabled',false);
+		}
+	}
+</script>
+
+
+<!-- script buat cek pin akses level -->
+<script>
+	function cek_pin(){
+		// alert('test');
+		var data = {};
+		data['pin'] = $('#pin_user').val();
+		var url = 'transaction/cek_pin';
+		ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
+			if (data_respond == "OK") {
+				$('#form-request-open').submit();
+			}else{
+				alert("PIN Invalid");
+			}
+		}); 
+	}
+</script>
+
+<!-- script buat data pembayaran -->
+<script>
+	function update_db_bayar(url,data){
+		ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
+			if (data_respond == 'OK') {
+				update_bayar();
+				if (data['pembayaran_type_id'] == 6 ) {
+					$("#portlet-config-giro").modal('toggle');
+				};
+			}else{
+				bootbox.confirm("Error, tolong muat ulang halaman", function(respond){
+					if(respond){
+						window.location.reload();
+					}
+				});
+			};
+		});
+	}
+
+
+	function update_bayar(){
+		var bayar = 0;
+		var g_total = reset_number_comma($('.g_total').html()) ;
+		$('#bayar-data tr td input').each(function(){
+			if ($(this).attr('class') != 'keterangan_bayar') {
+				// alert(reset_number_comma($(this).val()));
+				bayar += parseFloat(reset_number_comma($(this).val()));
+			};
+		});
+		// alert(currency.rupiah(bayar));
+
+		var kembali = bayar - g_total ;
+		// alert(currency.rupiah(bayar));
+		$('.total_bayar').html(currency.rupiah(bayar) );
+		$('.kembali').html(currency.rupiah(kembali));
+
+		if (kembali < 0) {
+			$('.kembali').css('color','red');
+		}else{
+			$('.kembali').css('color','#333');
+		}
+
+	}
+
+</script>
+
+<!-- script buat eceran -->
+<script>
+	function ambilEceran(){
+		let totalAmbil = 0;
+		let dataQty = [];
+		$('#qty-table-eceran .eceran-qty').each(function(){
+			let ini = $(this).closest('tr');
+			let stok = ini.find('.eceran-stok').text();
+			let supplier_id = ini.find('.supplier_id').html();
+			let id = ini.find('.stok_eceran_qty_id').html();
+			let tipe = ini.find('.stok_eceran_qty_tipe').html();
+			
+			let ambil = $(this).val();
+			if(ambil != ''){
+				totalAmbil += parseFloat(ambil);
+				let sisa = stok - ambil;
+				ini.find('.eceran-sisa').html(sisa);
+				dataQty.push(ambil+'??'+id+'??'+stok+'??'+supplier_id+'??'+tipe);
+			}
+		});
+
+		$('#form_add_barang [name=rekap_qty]').val(dataQty.join('--'));
+		$("#qty-table-eceran .total-ambil").html(totalAmbil);
+		$('#qty-add').val(totalAmbil);
+		$('#subqty-add').val(totalAmbil);
+		$('#subroll-add').val(0);
+		setDiskonAdd();
+		if(totalAmbil > 0){
+			$(".btn-brg-save").prop('disabled',false);
+		}
+	}
+
+	function mutasiToEceran(idx, numberQty, supplier_id){
+		// let ini = $('#qty-table-stok').find(`.idx-${idx}`).closest('tr');
+		let ini = $('#qty-table-stok').find(`[data-supplier='${supplier_id}']`).find(`.idx-${idx}`).closest('tr');
+		let roll_stok = ini.find('.roll-stok').html();
+		const nama_supplier = ini.find('.nama_supplier').html();
+		console.log('cek',ini.html());
+		if(roll_stok > 0){
+			roll_stok--;
+			ini.find('.roll-stok').html(roll_stok);
+			if(roll_stok == 0){
+				ini.addClass('habis');
+			}
+
+			console.log('5',nama_supplier);
+			let newBaris = `<tr >
+				<td class='eceran-stok' style='padding:2px 10px'>${numberQty}</td>
+				<td><input type='numberQty' class='text-center eceran-qty' style='width:55px; border:none' onchange="ambilEceran()"></td>
+				<td class='eceran-sisa' style='padding:2px 10px'></td>
+				<td hidden><span class='stok_eceran_qty_id'>0</span> </td>
+				<td hidden><span class='stok_eceran_qty_tipe'>1</span> </td>
+				<td >
+					<span class='nama_supplier'>${nama_supplier}</span>
+					<span hidden class='supplier_id'>${supplier_id}</span>
+				</td>
+				<td style='border:none; padding-left:5px'><button class='btn btn-xs red remove-stok-to-eceran'><i class='fa fa-times'></i></button></td>
+				</tr>`;
+
+			$('#qty-table-eceran tbody').prepend(newBaris);
+
+			let sec = $('#stok-eceran-add').find('.stok-qty-eceran').html();
+			let seb = $('#stok-info-add').find('.stok-qty').html();
+			let reb = $('#stok-info-add').find('.stok-roll').html();
+
+			sec = parseFloat(sec) + parseFloat(numberQty);
+			seb = parseFloat(seb) - parseFloat(numberQty);
+			reb--;
+
+			$('#stok-eceran-add').find('.stok-qty-eceran').html(sec);
+			$('#stok-info-add').find('.stok-qty').html(seb);
+			$('#stok-info-add').find('.stok-roll').html(reb);
+
+		}else{
+			alert("no stok");
+		}
+	}
+
+	function mutasiToEceranEdit(idx, numberQty){
+		let ini = $('#qty-table-stok-edit').find(`.idx-${idx}`).closest('tr');
+		let roll_stok = ini.find('.roll-stok').html();
+		const supplier_id = ini.find('.supplier_id').html();
+		const nama_supplier = ini.find('.nama_supplier').html();
+
+		console.log(roll_stok);
+		if(roll_stok > 0){
+			roll_stok--;
+			ini.find('.roll-stok').html(roll_stok);
+			
+			if(roll_stok == 0){
+				ini.addClass('habis');
+			}
+
+			let newBaris = `<tr >
+				<td class='eceran-stok' style='padding:2px 10px'>${numberQty}</td>
+				<td><input type='numberQty' class='text-center eceran-qty' style='width:55px; border:none' onchange="ambilEceranEdit()"></td>
+				<td class='eceran-sisa' style='padding:2px 10px'></td>
+				<td hidden><span class='stok_eceran_qty_id'>0</span> </td>
+				<td hidden><span class='stok_eceran_qty_tipe'>1</span> </td>
+				<td hidden>
+					<span class='supplier_id'>${supplier_id}</span> 
+					<span class='supplier_id'>${nama_supplier}</span> 
+				</td>
+				<td style='border:none; padding-left:5px'><button class='btn btn-xs red remove-stok-to-eceran-edit'><i class='fa fa-times'></i></button></td>
+				</tr>`;
+
+			$('#qty-table-eceran-edit tbody').prepend(newBaris);
+
+			let sec = $('#stok-eceran-edit').find('.stok-qty-eceran').html();
+			let seb = $('#stok-info-edit').find('.stok-qty').html();
+			let reb = $('#stok-info-edit').find('.stok-roll').html();
+
+			sec = parseFloat(sec) + parseFloat(numberQty);
+			seb = parseFloat(seb) - parseFloat(numberQty);
+			reb--;
+
+			$('#stok-eceran-edit').find('.stok-qty-eceran').html(sec);
+			$('#stok-info-edit').find('.stok-qty').html(seb);
+			$('#stok-info-edit').find('.stok-roll').html(reb);
+
+		}else{
+			alert("no stok");
+		}
+	}
+</script>
+
+
+<!-- script buat ambil data stok per supplier -->
+<script>
+	function showStokSupplier(supplier_id){
+		$(`.btn-show-stok`).removeClass('green');
+		$(`#btn-supplier-${supplier_id}`).addClass('green');
+		$(`#qty-table-stok .row-stok`).hide();
+		$(`#qty-table-stok [data-supplier=${supplier_id}]`).show();
+	}
+
+	function showStokSupplierEdit(supplier_id){
+		$(`.btn-show-stok-edit`).removeClass('green');
+		$(`#btn-edit-supplier-${supplier_id}`).addClass('green');
+		$(`#qty-table-stok-edit .row-stok`).hide();
+		$(`#qty-table-stok-edit [data-supplier=${supplier_id}]`).show();
+		
+	}
+</script>
+
+<!-- script buat lain-lain  -->
+
+<script>
 
 function subtotal_on_change(pointer){
 	var ini = pointer.closest('tr');
@@ -2765,22 +2905,15 @@ function subtotal_on_change(pointer){
 	};
 }
 
-function dp_table_update(){
-	let total_dp = 0;
-	$('#dp_list_table .amount-bayar').each(function(){
-		total_dp += parseFloat(reset_number_comma($(this).val()));
-	});
 
-	$('.dp-total').html(change_number_comma(total_dp));
-}
-
-
-function cek_last_input(gudang_id_last,barang_id, harga_jual){
+function cek_last_input(gudang_id_last,barang_id, harga_jual, toko_id_last){
 	setTimeout(function(){
 		// $('#barang_id_select').select2("open");
 		$('#gudang_id_select').val(gudang_id_last);
 		$('#barang_id_select').val(barang_id);
+		$('#toko_id_select').val(toko_id_last);
     	$('#barang_id_select, #gudang_id_select').change();
+		tokoChange(1);
     	/*setTimeout(function(){
         	$('.harga_jual_add').val(harga_jual);
         	harga_jual_add_change(harga_jual);
@@ -2798,177 +2931,8 @@ function save_penjualan_baru(ini){
 	},2000);
 }
 
-function startConnection(config) {
-    qz.websocket.connect().then(function() {
-	   	alert("Connected!");
-		find_printer();
-	});
 
-}
-
-function cek_pin(){
-	// alert('test');
-	var data = {};
-	data['pin'] = $('#pin_user').val();
-	var url = 'transaction/cek_pin';
-	ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
-		if (data_respond == "OK") {
-			$('#form-request-open').submit();
-		}else{
-			alert("PIN Invalid");
-		}
-	}); 
-}
-
-function update_db_bayar(url,data){
-	ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
-		if (data_respond == 'OK') {
-			update_bayar();
-			if (data['pembayaran_type_id'] == 6 ) {
-				$("#portlet-config-giro").modal('toggle');
-			};
-		}else{
-			bootbox.confirm("Error, tolong muat ulang halaman", function(respond){
-				if(respond){
-					window.location.reload();
-				}
-			});
-		};
-	});
-}
-
-
-function update_bayar(){
-	var bayar = 0;
-	var g_total = reset_number_comma($('.g_total').html()) ;
-	$('#bayar-data tr td input').each(function(){
-		if ($(this).attr('class') != 'keterangan_bayar') {
-			// alert(reset_number_comma($(this).val()));
-			bayar += parseFloat(reset_number_comma($(this).val()));
-		};
-	});
-	// alert(change_number_comma(bayar));
-
-	var kembali = bayar - g_total ;
-	// alert(change_number_comma(bayar));
-	$('.total_bayar').html(change_number_comma(bayar) );
-	$('.kembali').html(change_number_comma(kembali));
-
-	if (kembali < 0) {
-		$('.kembali').css('color','red');
-	}else{
-		$('.kembali').css('color','#333');
-	}
-
-}
-
-//================================================================================================
-function get_qty(){
-	var data = {};
-	var gudang_id = $('#form_add_barang [name=gudang_id]').val();
-	var barang_id = $('#form_add_barang [name=barang_id]').val();
-	var warna_id = $('#form_add_barang [name=warna_id]').val();
-	let isEceran = $('#eceran-cek').is(':checked');
-
-	data['gudang_id'] = gudang_id;
-	data['barang_id'] = barang_id;
-	data['warna_id'] = warna_id;
-	data['is_eceran'] = isEceran;
-	data['tanggal'] = $('#form_add_barang [name=tanggal]').val();
-
-	var barang_before = $('#form_add_barang .barang_id_before').html();
-	var warna_before = $('#form_add_barang .warna_id_before').html();
-	var gudang_before = $('#form_add_barang .gudang_id_before').html();
-	var eceran_before = $('#form_add_barang .eceran_before').html();
-
-	// console.log(barang_id+'='+barang_before);
-
-	if (barang_id != barang_before || warna_id != warna_before || gudang_id != gudang_before || eceran_before != isEceran) {
-		var url = "transaction/get_qty_stock_by_barang_detail";
-		//alert('test');
-		ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
-			// alert(data_respond);
-			var qty = 0;
-			var jumlah_roll = 0;
-			let table_stok = '';
-			let table_eceran = '';
-			let idx = 1;
-			let qty_row = 0;
-			let qty_stok = 0;
-			let qty_eceran = 0;
-			let status = '';
-			let total_page = 1;
-			let tombol_page = '';
-			$("#qty-table-stok tbody").html('');
-			$.each(JSON.parse(data_respond), function(k,v){
-				if(k==0){
-					for (let i = 0; i < v.length; i++) {
-						console.log(v[i]);
-						qty += parseFloat(v[i].qty);
-						jumlah_roll += parseFloat(v[i].jumlah_roll);
-						status = ((v[i].jumlah_roll <= 0) ? 'habis' : '');
-						page_idx = parseInt(idx/10) +  parseInt((idx % 10 != 0 ) ? 1 : 0);
-						var class_qty = parseFloat(v[i].qty);
-						class_qty = class_qty.toString().replace('.','');
-						let btnEcer = '';
-						if(isEceran && parseFloat(v[i].jumlah_roll) > 0){
-							btnEcer = `<button onclick="mutasiToEceran('${class_qty}','${v[i].qty}')">add to eceran</button>`;
-						}
-
-						table_stok += `<tr class='row-${v[i].qty} page-${v[i].qty} baris-table ${status} '><td class='idx-${class_qty}'><span class='qty-stok'>${parseFloat(v[i].qty)}</span></td><td><span class='roll-stok'>${parseFloat(v[i].jumlah_roll)}</span> </td><td>${btnEcer}</td></tr>`;
-						qty_stok += parseFloat(v[i].qty*v[i].jumlah_roll);
-						qty_row = idx;
-						idx++;
-						
-					}
-				}else if(k==1){
-					if(isEceran){
-						console.log(v, v.length);
-						for (let i = 0; i < v.length; i++) {
-							qty_eceran += parseFloat(v[i].qty);
-							table_eceran += `<tr >
-								<td class='eceran-stok' style='padding:2px 10px'>${parseFloat(v[i].qty)}</td>
-								<td><input class='text-center eceran-qty' style='width:55px; border:none' onchange="ambilEceran()"></td>
-								<td class='eceran-sisa' style='padding:2px 10px'></td>
-								<td hidden><span class='stok_eceran_qty_tipe'>${v[i].tipe}</span> </td>
-								<td hidden><span class='stok_eceran_qty_id'>${v[i].stok_eceran_qty_id}</span></td>
-								</tr>`;
-						}
-						$("#qty-table-eceran tbody").html(table_eceran);
-						$("#stok-eceran-add").find(".stok-qty-eceran").text(parseFloat(qty_eceran));
-					}else{
-						$(".add-eceran").hide();
-					}
-				}
-				// alert(v.qty);
-			});
-			// total_page = ((qty_row <= 10) ? 1 : parseInt(qty_row/10));
-			// total_page = ((qty_row % 10 != 0 ) ? total_page + 1 : total_page);
-			// for (var i = 1; i <= total_page; i++) {
-			//     tombol_page += "<a class='btn btn-xs default btn-page-qty-stok' style='padding:1px 5px' >"+i+"</a>";
-			// };
-			// $('#qty-table-stok_page').html(tombol_page);
-			$("#qty-table-stok tbody").html(table_stok);
-            $('#qty-table-stok .habis').hide();
-
-
-			$('#stok-info-add').find('.stok-qty').html(qty_stok);
-			$('#stok-info-add').find('.stok-roll').html(jumlah_roll);
-			$('#qty-table input').val();
-			// alert(data_respond);
-			console.log(data_respond);
-
-			$('#form_add_barang .barang_id_before').html(barang_id);
-			$('#form_add_barang .warna_id_before').html(warna_id);
-			$('#form_add_barang .gudang_id_before').html(gudang_id);
-			$('#form_add_barang .eceran_before').html(isEceran);
-		});
-		
-	};
-	// var url = "transaction/get_qty_stock_by_barang";
-}
-
-//=================================================================================================
+//============ecerab=====================================================================================
 
 function eceranFilter(){
 	var barang_id = $('#barang_id_select').val();
@@ -3010,9 +2974,9 @@ function eceranFilter(){
 				let harga_jual = 0;
 				ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
 					if (data_respond > 0) {
-						$('#form_add_barang [name=harga_jual]').val(change_number_comma(data_respond));
+						$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data_respond));
 					}else if(data[2] > 0){
-						$('#form_add_barang [name=harga_jual]').val(change_number_comma(data[2]));
+						$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data[2]));
 						<?if (is_posisi_id() == 1) {?>
 							// alert(data);
 						<?}?>
@@ -3034,28 +2998,16 @@ function eceranFilter(){
 	}
 }
 
-function eceranEditFilter(tipe){
-	var penjualan_type_id = '<?=$penjualan_type_id;?>';
 
-	// console.log($('#eceran-cek').is(':checked'));
-	// $('.eceran-form').addClass("eceran-active");
-	// alert(tipe);
-	if (tipe) {
-		$(".table-qty-edit").hide();
-		$(".edit-eceran-col").show();
-	}else{
-		$(".table-qty-edit").show();
-		$(".edit-eceran-col").hide();	
-	}
-}
-//=================================================================================================
+//=============filter stok====================================================================================
 
-function filter_stok(ini, text){
+function filter_stok(ini, qty, supplier_id){
 	// console.log(ini);
 	var result = false;
 	var jumlah_roll = 0;
 	ini.filter(function(index){
-		if ($(this).text() === text.toString()) {
+		const s_id = $(this).closest('tr').find('.supplier_id').html();
+		if ($(this).text() === qty.toString() && s_id == supplier_id) {
 			var pointer = $(this).closest('tr');
 			jumlah_roll = pointer.find('.roll-stok').html();
 			if (jumlah_roll > 0) {
@@ -3072,229 +3024,6 @@ function filter_stok(ini, text){
 	return result;
 }
 
-function table_qty_update(table){
-	var total = 0; 
-	var idx = 0; 
-	var rekap = [];
-	var total_roll = 0;
-	$(table+" [name=qty]").each(function(){
-		var ini = $(this).closest('tr');
-		var qty = $(this).val();
-		var roll = ini.find('[name=jumlah_roll]').val();
-		var id = ini.find('.penjualan_qty_detail_id').val();
-		if ($(this).val() != '' || id != '' ) {
-			if (typeof id === 'undefined' || id == '' ) {
-				id = '0';
-			};
-
-			var subtotal = parseFloat(qty*roll);
-	    	total_roll += parseFloat(roll);
-			console.log(total_roll+'+='+roll);
-			
-			if (qty != '' && roll != '' && id != '') {
-				rekap[idx] = qty+'??'+roll+'??'+id;
-			}else if(id != 0){
-				rekap[idx] = 0+'??'+0+'??'+id;
-			}
-			idx++; 
-			total += subtotal;
-			ini.find('[name=subtotal]').val(qty*roll);
-		};
-
-	});
-
-	rekap_str = rekap.join('--');
-	// console.log(total+'=*='+total_roll+'=*='+rekap_str);
-
-	return total+'=*='+total_roll+'=*='+rekap_str;
-}
-
-function table_stok_update(table_stok_id){
-	var total= 0 ;
-	var total_roll = 0;
-	$(table_stok_id+".qty-stok").each(function(){
-		let ini = $(this).closest('tr');
-		var qty = parseFloat($(this).html());
-		var jumlah_roll = parseFloat(ini.find('.roll-stok').html());
-		total += (qty*jumlah_roll);
-		total_roll += jumlah_roll;
-	});
-
-	$(table_stok_id).find('.stok-qty').html(total);
-	$(table_stok_id).find('.stok-roll').html(total_roll);
-
-}
-
-function change_qty_update(pointer, table_stok_id){
-	let ini = pointer.closest('tr');
-	let qty = pointer.val();
-	
-	let jumlah_roll = ini.find('[jumlah_roll]').val();
-	let penjualan_qty_detail_id = ini.find('.penjualan_qty_detail_id').val();
-	if (jumlah_roll == '') {
-		jumlah_roll = 1; 
-		ini.find('[name=jumlah_roll]').val(1);
-	}else if(qty == ''){jumlah_roll = ''};
-	if (typeof penjualan_qty_detail_id === 'undefined' || penjualan_qty_detail_id == '' ) {ini.find('.penjualan_qty_detail_id').val(0);};
-
-	var qty_before = ini.find('.qty-get').html();
-	var roll_before = ini.find('.roll-get').html();
-
-	if (qty_before != '' && roll_before != '' ) {
-		$(table_stok_id+" .qty-stok").filter(function(){
-			if ($(this).text() == qty_before) {
-				var baris_before = $(this).closest('tr');
-				var roll_stok = baris_before.find('.roll-stok').html();
-				var roll_now = parseFloat(roll_before) + parseFloat(roll_stok);
-				baris_before.find('.roll-stok').html(roll_now);
-				baris_before.removeClass('habis');
-		    	$(table_stok_id+' tbody tr').not('.habis').show();
-
-			};
-		});
-	};
-	
-	var result = filter_stok($(table_stok_id+' .qty-stok'), qty);
-	if (result) {
-		ini.find('[name=jumlah_roll]').val(1);
-		ini.find('.qty-get').html(qty);
-		ini.find('.roll-get').html(1);
-
-	}else{
-		if (qty != '') {
-			ini.find('[name=qty]').val(qty_before);
-			ini.find('[name=jumlah_roll]').val(roll_before);
-		}else{
-			ini.find('[name=jumlah_roll]').val('');
-			ini.find('.qty-get').html('');
-			ini.find('.roll-get').html('');
-		}
-	}
-}
-
-function change_roll_update(pointer_ini, table_stok_id){
-	var ini = pointer_ini.closest('tr');
-	var roll_now = pointer_ini.val();
-	var qty = ini.find('[name=qty]').val();
-	var roll_before = ini.find('.roll-get').html();
-
-	$(table_stok_id+" .qty-stok").filter(function(){
-		if ($(this).text() == qty) {
-			var pointer = $(this).closest('tr');
-			roll_stok = pointer.find('.roll-stok').html();
-			var roll_max = parseFloat(roll_before) + parseFloat(roll_stok);
-			console.log("=================");
-			console.log('stok:'+roll_stok);
-			console.log('max:'+roll_max);
-			console.log('now:'+roll_now);
-
-			if (roll_now == '') {roll_now = 1; ini.find('[name=jumlah_roll]').val(roll_now) };
-			if (roll_now > roll_max) {
-				roll_now = roll_max;
-				ini.find("[name=jumlah_roll]").val(roll_now);
-				notific8("ruby","Sisa Stok "+roll_max+" Roll")
-				var roll_sisa = 0;
-			}else{
-				var roll_sisa = parseFloat(roll_max) - parseFloat(roll_now);
-			}
-			if (roll_sisa == 0) {
-				pointer.addClass('habis');
-			}else{
-				pointer.removeClass('habis');
-			}
-			pointer.find('.roll-stok').html(roll_sisa);
-			ini.find('.roll-get').html(roll_now);
-		};
-	});
-}
-
-function change_click_stok(pointer, table_id, table_stok_id){
-	var ini = pointer;
-	var qty_get = ini.find('.qty-stok').html();
-	var roll_get = ini.find('.roll-stok').html();
-	var compare = false;
-
-	$(table_id+" .qty-get").filter(function(){
-		if ($(this).text() == qty_get) {
-			var baris_get = $(this).closest('tr');
-			var jumlah_roll = parseFloat(baris_get.find('[name=jumlah_roll]').val());
-			jumlah_roll += parseFloat(roll_get);
-			baris_get.find('.roll-get').html(jumlah_roll);
-			baris_get.find('[name=jumlah_roll]').val(jumlah_roll);
-			compare = true;
-			return true;
-		};
-	});
-
-	if (compare == false) {
-
-		$(table_id+' tbody tr').each(function(){
-    		var qty = $(this).find('[name=qty]').val();
-    		var jumlah_roll = $(this).find('[name=jumlah_roll]').val();
-    		if (jumlah_roll == '' && qty == '') {
-    			$(this).find('[name=qty]').val(qty_get);
-    			$(this).find('[name=jumlah_roll]').val(roll_get);
-    			$(this).find('.qty-get').html(qty_get);
-    			$(this).find('.roll-get').html(roll_get);
-    			return false;
-    		};
-    	});
-	};
-
-	ini.find('.roll-stok').html(0);
-	ini.addClass('habis');
-	ini.hide();
-}
-
-function update_qty_edit(){
-    var total = 0; var idx = 0; var rekap = [];
-	var total_roll = 0;
-	$("#qty-table-edit [name=qty]").each(function(){
-		var ini = $(this).closest('tr');
-		var qty = $(this).val();
-		var roll = ini.find('[name=jumlah_roll]').val();
-		if (qty != '' && roll == '') {
-			roll = 1;
-		}else if(roll == 0){
-			// alert('test');
-			if (qty == '') {
-				qty = 0;
-			};
-		}else if(qty == '' && roll == ''){
-			roll = 0;
-			qty = 0;
-		}
-
-		if (roll == 0) {
-    		var subtotal = parseFloat(qty);
-    		total_roll += 0;
-		}else{
-    		var subtotal = parseFloat(qty*roll);
-    		// alert(qty+'*'+roll);
-    		total_roll += parseInt(roll);
-    		console.log(subtotal);
-		};
-
-		if (qty != '' && roll != '') {
-			rekap[idx] = qty+'??'+roll;
-		};
-		idx++;  
-		total += subtotal;
-
-	});
-
-	if (total > 0) {
-		$('.btn-brg-edit-save').attr('disabled',false);
-	}else{
-		$('.btn-brg-edit-save').attr('disabled',true);
-	}
-
-	$('#portlet-config-qty-edit .jumlah_roll_total').html(total_roll);
-	$('#portlet-config-qty-edit .yard_total').html(total.toFixed(2));
-
-	$('#form-qty-update [name=rekap_qty]').val(rekap.join('--'));
-
-}
 
 function update_table(){
 	subtotal = 0;
@@ -3311,144 +3040,42 @@ function update_table(){
 	ongkir = reset_number_comma(ongkir);
 	var g_total = subtotal - parseInt(diskon) + parseInt(ongkir);
 	// alert(subtotal+ '-' +parseInt(diskon) +'+'+ parseInt(ongkir));
-	$('.g_total').html(change_number_comma(g_total));
-	$('.total').html(change_number_comma(g_total));
+	$('.g_total').html(currency.rupiah(g_total));
+	$('.total').html(currency.rupiah(g_total));
 	update_bayar();
 }
 
+function tokoChange(tipe){
+	console.log(colorToko);
+	if (tipe == 1) {
+		let toko_id = $('#toko_id_select').val();
+		const use_ppn_toko = $(`#toko_id_copy option[value='${toko_id}']`).text();
+		const val = (use_ppn_toko == 1 ? 1 : 0)
+		$('#ppn-value').val(val); 
+		$("#portlet-config-detail .modal-body").css('background-color',colorToko[toko_id]);
+		ppnStatusChange(val)
+	}else{
+		let toko_id = $('#toko_id_select').val();
+		$("#portlet-config-edit .modal-body").css('background-color',colorToko[toko_id]);	
+	}
+
+	$.uniform.update($('#ppn-cek'));
+	// alert($('#ppn-cek').is(':checked'));
+}
+
+function ppnStatusChange(ppn_stat){
+
+	if (parseInt(ppn_stat) == 1) {
+		$('#ppn-cek').prop('checked',true);
+		$('#harga-dpp-group').show('slow');
+	}else{
+		$('#ppn-cek').prop('checked', false);
+		$('#harga-dpp-group').hide('fast');
+
+	}
+}
 //==============================================eceran==========================================
 
-function ambilEceran(){
-	let totalAmbil = 0;
-	let dataQty = [];
-	$('#qty-table-eceran .eceran-qty').each(function(){
-		let ini = $(this).closest('tr');
-		let stok = ini.find('.eceran-stok').text();
-		let id = ini.find('.stok_eceran_qty_id').html();
-		let tipe = ini.find('.stok_eceran_qty_tipe').html();
-		
-		let ambil = $(this).val();
-		if(ambil != ''){
-			totalAmbil += parseFloat(ambil);
-			let sisa = stok - ambil;
-			ini.find('.eceran-sisa').html(sisa);
-			dataQty.push(ambil+'??'+id+'??'+stok+'??'+tipe);
-		}
-	});
-
-	$('#form_add_barang [name=rekap_qty]').val(dataQty.join('--'));
-	$("#qty-table-eceran .total-ambil").html(totalAmbil);
-	if(totalAmbil > 0){
-		$(".btn-brg-save").prop('disabled',false);
-	}
-}
-
-function ambilEceranEdit(){
-	let totalAmbil = 0;
-	let dataQty = [];
-	$('#qty-table-eceran-edit .eceran-qty').each(function(){
-		let ini = $(this).closest('tr');
-		let stok = ini.find('.eceran-stok').text();
-		let id = ini.find('.stok_eceran_qty_id').html();
-		let tipe = ini.find('.stok_eceran_qty_tipe').html();
-		let qty_detail_id = ini.find('.penjualan_qty_detail_id').html();
-		
-		let ambil = $(this).val();
-		if(ambil != ''){
-			totalAmbil += parseFloat(ambil);
-			let sisa = stok - ambil;
-			ini.find('.eceran-sisa').html(sisa);
-			dataQty.push(ambil+'??'+id+'??'+stok+'??'+tipe+'??'+qty_detail_id);
-		}
-	});
-
-	// console.log('daki',dataQty);
-
-	$('#form_qty_edit [name=rekap_qty]').val(dataQty.join('--'));
-	$("#qty-table-eceran-edit .total-ambil").html(totalAmbil);
-	if(totalAmbil > 0){
-		$(".btn-brg-edit-save").prop('disabled',false);
-	}
-}
-
-function mutasiToEceran(idx, numberQty){
-	let ini = $('#qty-table-stok').find(`.idx-${idx}`).closest('tr');
-	let roll_stok = ini.find('.roll-stok').html();
-	console.log(roll_stok);
-	if(roll_stok > 0){
-		roll_stok--;
-		ini.find('.roll-stok').html(roll_stok);
-		if(roll_stok == 0){
-			ini.addClass('habis');
-		}
-
-		let newBaris = `<tr >
-			<td class='eceran-stok' style='padding:2px 10px'>${numberQty}</td>
-			<td><input type='numberQty' class='text-center eceran-qty' style='width:55px; border:none' onchange="ambilEceran()"></td>
-			<td class='eceran-sisa' style='padding:2px 10px'></td>
-			<td hidden><span class='stok_eceran_qty_id'>0</span> </td>
-			<td hidden><span class='stok_eceran_qty_tipe'>1</span> </td>
-			<td style='border:none; padding-left:5px'><button class='btn btn-xs red remove-stok-to-eceran'><i class='fa fa-times'></i></button></td>
-			</tr>`;
-
-		$('#qty-table-eceran tbody').prepend(newBaris);
-
-		let sec = $('#stok-eceran-add').find('.stok-qty-eceran').html();
-		let seb = $('#stok-info-add').find('.stok-qty').html();
-		let reb = $('#stok-info-add').find('.stok-roll').html();
-
-		sec = parseFloat(sec) + parseFloat(numberQty);
-		seb = parseFloat(seb) - parseFloat(numberQty);
-		reb--;
-
-		$('#stok-eceran-add').find('.stok-qty-eceran').html(sec);
-		$('#stok-info-add').find('.stok-qty').html(seb);
-		$('#stok-info-add').find('.stok-roll').html(reb);
-
-	}else{
-		alert("no stok");
-	}
-}
-
-function mutasiToEceranEdit(idx, numberQty){
-	let ini = $('#qty-table-stok-edit').find(`.idx-${idx}`).closest('tr');
-	let roll_stok = ini.find('.roll-stok').html();
-	console.log(roll_stok);
-	if(roll_stok > 0){
-		roll_stok--;
-		ini.find('.roll-stok').html(roll_stok);
-		
-		if(roll_stok == 0){
-			ini.addClass('habis');
-		}
-
-		let newBaris = `<tr >
-			<td class='eceran-stok' style='padding:2px 10px'>${numberQty}</td>
-			<td><input type='numberQty' class='text-center eceran-qty' style='width:55px; border:none' onchange="ambilEceranEdit()"></td>
-			<td class='eceran-sisa' style='padding:2px 10px'></td>
-			<td hidden><span class='stok_eceran_qty_id'>0</span> </td>
-			<td hidden><span class='stok_eceran_qty_tipe'>1</span> </td>
-			<td style='border:none; padding-left:5px'><button class='btn btn-xs red remove-stok-to-eceran-edit'><i class='fa fa-times'></i></button></td>
-			</tr>`;
-
-		$('#qty-table-eceran-edit tbody').prepend(newBaris);
-
-		let sec = $('#stok-eceran-edit').find('.stok-qty-eceran').html();
-		let seb = $('#stok-info-edit').find('.stok-qty').html();
-		let reb = $('#stok-info-edit').find('.stok-roll').html();
-
-		sec = parseFloat(sec) + parseFloat(numberQty);
-		seb = parseFloat(seb) - parseFloat(numberQty);
-		reb--;
-
-		$('#stok-eceran-edit').find('.stok-qty-eceran').html(sec);
-		$('#stok-info-edit').find('.stok-qty').html(seb);
-		$('#stok-info-edit').find('.stok-roll').html(reb);
-
-	}else{
-		alert("no stok");
-	}
-}
 
 </script>
 <?

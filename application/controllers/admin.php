@@ -51,13 +51,16 @@ class Admin extends CI_Controller {
 			'nama_menu' => 'menu_dashboard',
 			'nama_submenu' => '',
 			'common_data'=> $this->data );
-		$data['notifikasi_akunting'] = $this->admin_model->get_notifikasi_akunting_report();
-		$data['notifikasi_faktur_kosong'] = $this->admin_model->get_notifikasi_faktur_kosong();
+		// $data['notifikasi_akunting'] = $this->admin_model->get_notifikasi_akunting_report();
+		// $data['notifikasi_faktur_kosong'] = $this->admin_model->get_notifikasi_faktur_kosong();
 		// $data['recap_pembelian_bulanan'] = $this->admin_model->recap_pembelian_bulanan(date('m'), date('Y'));
 		// $data['recap_penjualan_bulanan'] = $this->admin_model->recap_penjualan_bulanan(date('m'), date('Y'));
 
+		$data['notifikasi_akunting'] = array();
+		$data['notifikasi_faktur_kosong'] = array();
 		$data['recap_pembelian_bulanan'] = array();
 		$data['recap_penjualan_bulanan'] = array();
+		// echo 'tet';
 		$this->load->view('admin/template',$data);
 	}
 

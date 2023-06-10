@@ -25,7 +25,7 @@ function print_faktur(printer_name){
 	   	//3
 	   	'\x0A'+
 	   	<?="'".sprintf('%-35.35s', strtoupper($alamat_toko))."'";?>+'\x09'+
-	   	<?="'".sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) )."'";?> + 
+	   	<?='"'.sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) ).'"';?> + 
 
 	   	//4
 	   	'\x0A'+

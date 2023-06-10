@@ -399,10 +399,8 @@
 				                    <div class="col-md-6">
 				                    	<select name="barang_id" class='form-control input1' id='barang_id_select'>
 			                				<option value=''>Pilih</option>
-			                				<?foreach ($this->barang_list_aktif as $row) { 
-												if ($row->toko_id == $toko_id) {?>
+			                				<?foreach ($this->barang_list_aktif as $row) {?>
 													<option value="<?=$row->id?>"><?=$row->nama;?></option>
-												<?}?>
 				                    		<? } ?>
 				                    	</select>
 				                    	<select name='data_barang' hidden>

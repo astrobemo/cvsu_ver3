@@ -243,6 +243,8 @@ class Master extends CI_Controller {
 		$this->load->view('admin/template',$data);
 	}
 
+
+
 	function data_barang(){
 
 		// $session_data = $this->session->userdata('do_filter');
@@ -344,6 +346,8 @@ class Master extends CI_Controller {
 			'harga_jual' => $harga_jual,
 			'harga_beli' => $harga_beli,
 			'harga_ecer' => $harga_ecer,
+			'subitem_status' => $this->input->post('subitem_status'),
+			'eceran_mix_status' => $this->input->post('eceran_mix_status'),
 			'toko_id' => $this->input->post('toko_id') ,
 			'satuan_id' => $this->input->post('satuan_id'),
 			'packaging_id' => $this->input->post('packaging_id'),
@@ -374,12 +378,17 @@ class Master extends CI_Controller {
 			'harga_beli' => $harga_beli,
 			'harga_ecer' => $harga_ecer,
 			'toko_id' => $this->input->post('toko_id'),
+			'subitem_status' => $this->input->post('subitem_status'),
+			'eceran_mix_status' => $this->input->post('eceran_mix_status'),
 			'satuan_id' => $this->input->post('satuan_id'),
 			'packaging_id' => $this->input->post('packaging_id'),
 			'pengali_harga_jual' => $this->input->post('pengali_harga_jual'),
 			'pengali_harga_beli' => $this->input->post('pengali_harga_beli'),
 			'status_aktif' => $this->input->post('status_aktif')
 			);
+
+			// print_r($this->input->post());
+			// print_r($data);
 
 		$this->common_model->db_update('nd_barang',$data,'id', $id);
 		redirect(trim(base64_encode('master/barang_list'),'='));
@@ -690,8 +699,11 @@ class Master extends CI_Controller {
 
 
 	function toko_list_insert(){
+		$use_ppn = $this->input->post('use_ppn');
+		$use_ppn = ($use_ppn == '' ? 0 : $use_ppn);
 		$data = array(
 			'nama' => $this->input->post('nama'),
+			'use_ppn' => $use_ppn,
 			'alamat' => $this->input->post('alamat'),
 			'telepon' => $this->input->post('telepon'),
 			'fax' => $this->input->post('fax'),
@@ -707,9 +719,11 @@ class Master extends CI_Controller {
 	function toko_list_update(){
 
 		$id = $this->input->post('toko_list_id');
-
+		$use_ppn = $this->input->post('use_ppn');
+		$use_ppn = ($use_ppn == '' ? 0 : $use_ppn);
 		$data = array(
 			'nama' => $this->input->post('nama'),
+			'use_ppn' => $use_ppn,
 			'alamat' => $this->input->post('alamat'),
 			'telepon' => $this->input->post('telepon'),
 			'fax' => $this->input->post('fax'),
@@ -810,5 +824,29 @@ class Master extends CI_Controller {
 		redirect(trim(base64_encode('master/close_day_list'),'='));
 	}
 
-	
+//================================barang list================================================
+
+	function barang_eceran_mix_list(){
+		$menu = is_get_url($this->uri->segment(1)) ;
+
+		$data = array(
+			'content' =>'admin/master/barang_eceran_mix' ,
+			'breadcrumb_title' => 'Master',
+			'breadcrumb_small' => 'daftar eceran mix',
+			'nama_menu' => $menu[0],
+			'nama_submenu' => $menu[1],
+			'common_data'=> $this->data );
+
+		$data['barang_list'] = $this->common_model->get_barang_eceran_mix_list(); 
+		$this->load->view('admin/template',$data);
+	}
+
+	function barang_eceran_mix_list_update(){
+		$barang_id = $this->input->post('barang_id');
+		$data = array(
+			'eceran_mix_status' => $this->input->post('eceran_mix_status')
+			);
+		$this->common_model->db_update('nd_barang',$data, 'id', $barang_id);
+		redirect(is_setting_link('master/barang_eceran_mix_list'));
+	}
 }

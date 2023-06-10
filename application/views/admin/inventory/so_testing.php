@@ -39,19 +39,24 @@
 			<table>
                 <thead>
                     <tr>
-                        <th rowspan='2'>NO</th>
-                        <th rowspan='2'>index<br/>barang</th>
-                        <th rowspan='2'>index<br/>keterangan</th>
-                        <th rowspan='2'>Nama</th>
-                        <th rowspan='2'>Ket</th>
-                        <th colspan='10'>Sat. Kecil</th>
-                        <th rowspan='2'>Sat. Besar</th>
-                        <th rowspan='2'>TOTAL</th>
-                    </tr>
-                    <tr> 
-                    <?for ($i=1; $i <= 10 ; $i++) {?>
-                        <th><?=$i?></th>
-                    <?}?>
+                        <th rowspan=''>NO</th>
+                        <th rowspan=''>Tanggal<br/>SO</th>
+                        <th rowspan=''>Toko</th>
+                        <th rowspan=''>Gudang</th>
+                        <th rowspan=''>Nama Beli</th>
+                        <th rowspan=''>Nama Jual</th>
+                        <th rowspan=''>Harga Eceran</th>
+                        <th rowspan=''>Harga Jual</th>
+                        <th rowspan=''>Harga Beli</th>
+                        <th rowspan=''>Nama <br/>Keterangan</th>
+                        <th rowspan=''>Supplier</th>
+                        <th rowspan=''>Qty Besar</th>
+                        <th rowspan=''>Satuan Besar</th>
+                        <th rowspan=''>Qty Kecil</th>
+                        <th rowspan=''>Satuan Kecil</th>
+                        <th rowspan=''>Qty Eceran</th>
+                        <th rowspan=''>Satuan Eceran</th>
+                        <th rowspan=''>Rincian Qty Kecil</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,16 +78,27 @@
                         for ($j=0; $j < $baris; $j++) { 
                             if ($j==0) {?>
                                 <tr>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=$idx;?></td>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=$row->barang_id;?></td>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=$row->warna_id;?></td>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=$row->nama_barang;?></td>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=$row->warna_jual;?> </td>
-                                        <?for ($i=0; $i < 10 ; $i++) {;?> 
-                                            <td class="first-row"><?=(isset($qty_list[$i]) ? (float)$qty_list[$i] : '' );?></td>
-                                        <?};?>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=$row->total_roll;?></td>
-                                    <td class="first-row" rowspan='<?=$baris;?>'><?=(float)$row->total_qty;?></td>
+                                    <!-- no -->
+                                    <td class="first-row" ><?=$idx;?></td>
+                                    <!-- Tanggal -->
+                                    <td><?=is_reverse_date($tanggal)?></td>
+                                    <td><?=$row->nama_toko;?></td>
+                                    <td><?=$row->nama_gudang;?></td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->nama_barang;?></td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->warna_jual;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->harga_eceran;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->harga_jual;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->harga_beli;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->nama_supplier;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->qty_besar;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->nama_satuan_besar;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->qty_detail;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->nama_satuan_detail;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->qty_eceran;?> </td>
+                                    <td class="" rowspan='<?=$baris;?>'><?=$row->nama_satuan_eceran;?> </td>
+                                    <?for ($i=0; $i < 10 ; $i++) {;?> 
+                                        <td><?=(isset($qty_list[$i]) ? (float)$qty_list[$i] : '' );?></td>
+                                    <?};?>
                                 </tr>
                             <?}else{?>
                                 <tr>

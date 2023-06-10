@@ -5,6 +5,24 @@
 <div class="page-content">
 	<div class='container'>
 
+	<div class="modal fade" id="portlet-config" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-body">
+						<h3>Daftar Kontra Bon</h3>
+						<div>
+							<ol id='kontra-list'></ol>
+						</div>
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn btn-active default" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+				<!-- /.modal-content -->
+			</div>
+			<!-- /.modal-dialog -->
+		</div>
 	
 		<div class="row margin-top-10">
 			<div class="col-md-12">
@@ -31,6 +49,9 @@
 										Piutang
 									</th>
 									<th scope="col">
+										Kontra
+									</th>
+									<th scope="col">
 										Actions
 									</th>
 								</tr>
@@ -48,8 +69,14 @@
 											<?=number_format($row->sisa_piutang,'0',',','.');?>
 										</td>
 										<td>
+											<?=number_format($row->sisa_kontra,'0',',','.');?>
+										</td>
+										<td>
 											<!-- <a href="<?=base_url().rtrim(base64_encode('finance/piutang_list_detail'),'=').'/?customer_id='.$row->customer_id;?>" class="btn btn-xs blue"><i class='fa fa-search'></i></a> -->
 											<a href="<?=base_url().rtrim(base64_encode('finance/piutang_payment_form'),'=').'/?customer_id='.$row->customer_id;?>&toko_id=<?=$row->toko_id;?>&tanggal_start=<?=$row->tanggal_start;?>&tanggal_end=<?=$row->tanggal_end;?>" class="btn btn-xs blue"> Lihat / Pelunasan</a>
+											<a href="#portlet-config" data-toggle="modal" class="btn btn-xs green btn-show-kontra"> Kontra Bon</a>
+											<span hidden class='pembayaran_piutang_id'><?=$row->pembayaran_piutang_id;?></span>
+											<span hidden class='sisa_kontra_data'><?=$row->sisa_kontra_data;?></span>
 											
 										</td>
 									</tr>
@@ -93,6 +120,17 @@ jQuery(document).ready(function() {
 			$('#form_add_data').submit();
 		}else{
 			alert('Tanggal dan Jumlah harus diisi');
+		}
+	});
+
+	$(document).on('click','.btn-show-kontra', function(){
+		$("#kontra-list").html('');
+		var pemb_piutang_id = $(this).closest('tr').find('.pembayaran_piutang_id').html().split(',');
+		var kontra_data = $(this).closest('tr').find('.sisa_kontra_data').html().split(',');
+		for (let i = 0; i < pemb_piutang_id.length; i++) {
+			$('#kontra-list').append(`<li>
+				<a href="<?=base_url().is_setting_link('finance/piutang_payment_form')?>?id=${pemb_piutang_id[i]}" class='btn btn-xs default'>Kontra - ${change_number_format(kontra_data[i])}</a>
+			</li>`);
 		}
 	});
 

@@ -53,33 +53,6 @@
 	color:#333;
 }
 
-.qty-eceran-data{
-	position: absolute;
-	top: 100%;
-	padding: 5px;
-	z-index: 99;
-	font-size:12px;
-	background-color: white;
-	max-height:200px;
-	overflow:auto;
-}
-
-.qty-eceran-data tbody tr:first-child td{
-	font-size:14px !important;
-}
-
-.qty-eceran-data table tr th,
-.qty-eceran-data table tr td{
-	padding:2px !important;
-	min-width:20px !important;
-	height:20px !important;
-}
-
-.qty-eceran-aktif{
-	background:lightpink !important;
-}
-
-
 </style>
 
 <div class="page-content">
@@ -612,7 +585,7 @@
 												<?}?>
 											</td>
 											<td>
-												<?if ($row->tipe != 'z1') {?>
+												<?if ($row->tipe != 'z1' && $row->tipe != 'so') {?>
 													<?=($row->qty_masuk == 0 ?  '-' : "<span class='qty'>".$row->qty_masuk."</span>" );?>
 													<?$qty += $row->qty_masuk;?>
 													<?$total_in += $row->qty_masuk;?>
@@ -760,80 +733,23 @@
 							<?
 								$stok_eceran_satuan = [];
 								$total_stok_eceran = 0;
-								$stok_eceran_data = [];
 								foreach ($stok_barang_eceran as $row) {
 									$total_stok_eceran += $row->qty;
-									array_push($stok_eceran_data, array(
-										'tanggal' => $row->tanggal,
-										'qty' => $row->qty,
-										'qty_in' => $row->qty_in,
-										'id' => $row->stok_eceran_qty_id,
-										'qty_out' => explode(",", $row->qty_out),
-										'tanggal_jual' => explode(",", $row->tanggal_jual),
-										'nama_customer' => explode("??", $row->nama_customer)
-									));
+									array_push($stok_eceran_satuan, $row->qty);
 								}?>
 							<tr>
 								<th colspan='5'>TOTAL</th>
 								<th colspan='5'><?=(float)$total_stok_eceran;?></th>
 							</tr>
-							<?
-								$baris = ceil(count($stok_eceran_data)/10);
+							<?	sort($stok_eceran_satuan);
+								$baris = ceil(count($stok_eceran_satuan)/10);
 								for ($i=0; $i < $baris ; $i++) { 
 									echo '<tr>';
 									for ($j=0; $j < 10 ; $j++) { 
-										$dt = '';
-										if (isset($stok_eceran_data[($i*10) + $j])) {
-											$dt = $stok_eceran_data[($i*10) + $j];
-											echo "<td class='qty-eceran' id='eceran-".$dt['id']."'  style='position:relative' onclick='showEceranDetail(".$dt['id'].")'>";
-										}else{
-											echo "<td>";
-										}
-											if (is_array($dt) > 0) {
-												echo (float)$dt['qty'];
-												$sld = $dt['qty_in'];?>
-												<div class='qty-eceran-data' hidden>
-													<table>
-														<thead>
-															<tr>
-																<th></th>
-																<th>Tgl</th>
-																<th>In</th>
-																<th>Out</th>
-																<th>Sisa</th>
-															</tr>
-														</thead>
-														<tbody>
-															<tr>
-																<td>1</td>
-																<td><?=is_reverse_date($dt['tanggal'])?></td>
-																<td><?=(float)$dt['qty_in']?></td>
-																<td></td>
-																<td><?=(float)$sld?></td>
-															</tr>
-															<?foreach ($dt['tanggal_jual'] as $key => $value) {
-																if ($dt['qty_out'][$key] != '') {
-																	$sld -= $dt['qty_out'][$key];?>
-																	<tr>
-																		<td>
-																			<?=$key+2?>
-																		</td>
-																		<td>
-																			<?=is_reverse_date($value)?><br/>
-																			<!-- <small><?=$dt['nama_customer'][$key]?></small> -->
-																		</td>
-																		<td></td>
-																		<td>
-																			<?=(float)$dt['qty_out'][$key]?>
-																		</td>
-																		<td><?=(float)$sld?></td>
-																	</tr>
-																<?}
-															}?>
-														</tbody>
-													</table>
-												</div>
-											<?}
+										echo '<td>';
+											if (isset($stok_eceran_satuan[($i*10) + $j])) {
+												echo (float)$stok_eceran_satuan[ ($i*10) + $j ];
+											}
 										echo '</td>';
 									}
 									echo '</tr>';
@@ -863,17 +779,11 @@
 <script>
 
 var qty_total_ori = "<?=$qty_total?>"
-var roll_total_ori = "<?=$roll_total?>";
+var roll_total_ori = "<?=$roll_total?>"
 
 jQuery(document).ready(function() {
 	Metronic.init(); // init metronic core components
 	Layout.init(); // init current layout
-
-	document.addEventListener("click",function(e){
-		if(!e.target.classList.contains('qty-eceran')){
-			$(".qty-eceran-data").hide();
-		}
-	})
 
 	$('.view-stat, #qty-total-info, #roll-total-info').hide();
 	
@@ -1130,13 +1040,6 @@ function filterListStok(className, setStat) {
 
 	$("#qty-total").html(qtyTotal);
 	$("#roll-total").html(rollTotal);
-}
-
-function showEceranDetail(ecId){
-	$(".qty-eceran-data").hide();
-	$(".qty-eceran").removeClass('qty-eceran-aktif');
-	$(`#eceran-${ecId} .qty-eceran-data`).show();
-	$(`#eceran-${ecId}`).addClass('qty-eceran-aktif');
 }
 
 

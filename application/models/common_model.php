@@ -52,6 +52,12 @@ class Common_Model extends CI_Model {
 		return $this->db->last_query();
 	}
 
+	function db_update_batch($table, $data, $param)
+	{
+		$this->db->update_batch($table, $data, $param);
+		return $this->db->last_query();
+	}
+
 	function db_update_multiple_cond($table,$data,$array){
 		$this->db->where($array);
 		$this->db->update($table, $data);
@@ -60,6 +66,13 @@ class Common_Model extends CI_Model {
 	function db_delete($table,$column,$selector){
 		$this->db->where($column, $selector);
 		$this->db->delete($table);
+	}
+
+	function db_delete_batch($table, $column, $array)
+	{
+		$this->db->where_in($column, $array);
+		$this->db->delete($table);
+		return $this->db->last_query();
 	}
 
 	function get_data_barang($barang_id){
@@ -141,7 +154,7 @@ class Common_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function get_latest_so_before($tanggal, $barang_id, $warna_id, $gudang_id)
+	function get_latest_so_before($tanggal, $barang_id, $supplier_id, $warna_id, $gudang_id)
 	{
 		$query = $this->db->query("SELECT t1.*, t2.tanggal
 			FROM (
@@ -149,6 +162,7 @@ class Common_Model extends CI_Model {
 				FROM nd_stok_opname_detail
 				WHERE barang_id = $barang_id
 				AND warna_id = $warna_id
+				AND supplier_id = $supplier_id
 				AND gudang_id = $gudang_id
 			) t1
 			LEFT JOIN (
@@ -164,7 +178,7 @@ class Common_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function get_latest_so_eceran_before($tanggal, $barang_id, $warna_id, $gudang_id)
+	function get_latest_so_eceran_before($tanggal, $barang_id, $warna_id, $supplier_id,  $gudang_id)
 	{
 		$query = $this->db->query("SELECT t1.*, t2.tanggal
 			FROM (
@@ -173,6 +187,7 @@ class Common_Model extends CI_Model {
 				WHERE barang_id = $barang_id
 				AND warna_id = $warna_id
 				AND gudang_id = $gudang_id
+				AND supplier_id = $supplier_id
 			) t1
 			LEFT JOIN (
 				SELECT *
@@ -217,7 +232,12 @@ class Common_Model extends CI_Model {
 
 		$query = $this->db->query("SELECT *
 			FROM (
-				SELECT tbl_a.status_aktif, tbl_a.nama as nama, nama_jual, tbl_b.nama as nama_satuan, tbl_c.nama as nama_packaging, harga_jual, harga_beli, concat(if(pengali_harga_jual=1,tbl_b.nama, tbl_c.nama),'??',if(pengali_harga_beli=1,tbl_b.nama, tbl_c.nama)) as pengali_harga, nd_toko.nama as nama_toko, concat_ws('??',tbl_a.id, satuan_id, packaging_id, pengali_harga_jual, pengali_harga_beli, toko_id, ifnull(harga_ecer,0) ) as status_barang
+				SELECT tbl_a.status_aktif, tbl_a.nama as nama, nama_jual, tbl_b.nama as nama_satuan, 
+				tbl_c.nama as nama_packaging, harga_jual, harga_beli, 
+				concat(if(pengali_harga_jual=1,tbl_b.nama, tbl_c.nama),'??',
+				if(pengali_harga_beli=1,tbl_b.nama, tbl_c.nama)) as pengali_harga, 
+				nd_toko.nama as nama_toko, 
+				concat_ws('??',tbl_a.id, satuan_id, packaging_id, pengali_harga_jual, pengali_harga_beli, toko_id, ifnull(harga_ecer,0), subitem_status, eceran_mix_status ) as status_barang
 				FROM nd_barang as tbl_a
 				LEFT JOIN nd_satuan as tbl_b
 				ON tbl_a.satuan_id = tbl_b.id
@@ -867,5 +887,16 @@ class Common_Model extends CI_Model {
 		return $query;
 	}
 
+//=======================================================================================
+
+	function get_barang_eceran_mix_list(){
+		$query = $this->db->query("SELECT *
+			FROM nd_barang
+			WHERE eceran_mix_status = 1
+		");
+
+		return $query->result();
+		
+	}
 
 }

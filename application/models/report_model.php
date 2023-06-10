@@ -2,9 +2,11 @@
 
 class Report_Model extends CI_Model {
 	
-	function get_penjualan_report($from, $to, $cond, $customer_cond, $cond_toko, $cond_barang_warna){
-		$query = $this->db->query("SELECT tbl_a.id, no_faktur as nf, tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, qty, jumlah_roll, nama_barang, harga_jual, total, diskon, ongkos_kirim, if(customer_id != 0, tbl_c.nama, concat(nama_keterangan, ' (non-pelanggan)')) as nama_customer,
-			(ifnull(total_bayar,0) + ifnull(total_lunas,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) as keterangan, tbl_a.id as data , jatuh_tempo, pembayaran_type_id, data_bayar, pengali_harga, pembayaran_piutang_id, ifnull(npwp, '00.000.000.0-000.000') as npwp, nama_jual
+	function get_penjualan_report($from, $to, $cond, $customer_cond, $cond_toko, $cond_barang_warna, $cond_supplier){
+		$query = $this->db->query("SELECT tbl_a.id, no_faktur as nf, tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, qty, jumlah_roll, 
+			nama_barang, harga_jual, total, diskon, ongkos_kirim, if(customer_id != 0, tbl_c.nama, concat(nama_keterangan, ' (non-pelanggan)')) as nama_customer,
+			(ifnull(total_bayar,0) + ifnull(total_lunas,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) as keterangan, tbl_a.id as data , 
+			jatuh_tempo, pembayaran_type_id, data_bayar, pengali_harga, pembayaran_piutang_id, ifnull(npwp, '00.000.000.0-000.000') as npwp, nama_jual
 				FROM (
 					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
 					FROM nd_penjualan 
@@ -15,26 +17,29 @@ class Report_Model extends CI_Model {
 					ORDER BY tanggal desc
 					)as tbl_a
 				LEFT JOIN (
-					SELECT group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_barang, group_concat(t1.harga_jual SEPARATOR '??') as harga_jual, group_concat(qty SEPARATOR '??') as qty ,group_concat(jumlah_roll SEPARATOR '??') as jumlah_roll, group_concat((qty *t1.harga_jual) SEPARATOR '??') as total, sum(if(pengali_harga=1,qty,jumlah_roll) *t1.harga_jual) as g_total, penjualan_id, group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_jual, group_concat(pengali_harga SEPARATOR '??') as pengali_harga
+					SELECT group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_barang, 
+					group_concat(t1.harga_jual SEPARATOR '??') as harga_jual, 
+					group_concat(qty SEPARATOR '??') as qty ,group_concat(jumlah_roll SEPARATOR '??') as jumlah_roll, 
+					group_concat((qty *t1.harga_jual) SEPARATOR '??') as total, sum(if(pengali_harga=1,qty,jumlah_roll) *t1.harga_jual) as g_total, 
+					penjualan_id, group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_jual, 
+					group_concat(pengali_harga SEPARATOR '??') as pengali_harga
 					FROM (
+						SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, penjualan_detail_id
+						FROM nd_penjualan_qty_detail
+						$cond_supplier
+						group by penjualan_detail_id, supplier_id
+						) as nd_penjualan_qty_detail
+					LEFT JOIN(
 						SELECT *
 						FROM nd_penjualan_detail
 						$cond_barang_warna
-						)t1
-					LEFT JOIN (
-						SELECT *
-						FROM nd_barang
 						$cond_toko
-					)nd_barang
+						)t1
+					ON nd_penjualan_qty_detail.penjualan_detail_id = t1.id
+					LEFT JOIN nd_barang
 					ON t1.barang_id = nd_barang.id
 					LEFT JOIN nd_warna
 					ON t1.warna_id = nd_warna.id
-					LEFT JOIN (
-						SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, penjualan_detail_id
-						FROM nd_penjualan_qty_detail
-						group by penjualan_detail_id
-						) as nd_penjualan_qty_detail
-					ON nd_penjualan_qty_detail.penjualan_detail_id = t1.id
 					WHERE nd_barang.id is not null
 					GROUP BY penjualan_id
 					) as tbl_b
@@ -57,8 +62,9 @@ class Report_Model extends CI_Model {
 					GROUP BY penjualan_id
 					) tbl_e
 				ON tbl_e.penjualan_id = tbl_a.id
+				WHERE tbl_b.nama_barang is not null
 				$cond
-				ORDER BY nf asc
+				ORDER BY tanggal, nf asc
 
 			", false);
 

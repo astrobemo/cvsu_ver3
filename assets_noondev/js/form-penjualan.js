@@ -15,6 +15,9 @@ var FormNewPenjualanDetail = function () {
                 errorClass: 'help-block help-block-error', // default input error message class
                 focusInvalid: true, // do not focus the last invalid input
                 rules: {
+                    toko_id: {
+                        required: true,
+                    },
                     barang_id: {
                         required: true,
                     },

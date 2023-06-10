@@ -41,6 +41,7 @@ class Report extends CI_Controller {
 			$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
 			$tipe_search = $this->input->get('tipe_search');
 			$customer_id = $this->input->get('customer_id');
+			$supplier_id = $this->input->get('supplier_id');
 			if ($tipe_search > 6 || $tipe_search < 1) {
 				$tipe_search = 1;
 			}
@@ -55,6 +56,7 @@ class Report extends CI_Controller {
 			$status_excel = '0';
 			$tipe_search = 1;
 			$customer_id = 0;
+			$supplier_id = 0;
 			$toko_id = 0;
 			$barang_id = 0;
 			$warna_id = 0;
@@ -64,13 +66,14 @@ class Report extends CI_Controller {
 		$cond = '';
 		$customer_cond = "";
 		$cond_toko = "";
+		$supplier_cond = "";
 		$cond_barang_warna = '';
 		if ($tipe_search == 2) {
-			$cond = "WHERE pembayaran_type_id LIKE '%2%' AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) >= 0";
+			$cond = "AND pembayaran_type_id LIKE '%2%' AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) >= 0";
 		}elseif ($tipe_search == 3) {
-			$cond = "WHERE pembayaran_type_id LIKE '%2%' AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) >= 0";
+			$cond = "AND pembayaran_type_id LIKE '%2%' AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) >= 0";
 		}elseif ($tipe_search == 4) {
-			$cond = " WHERE  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) < 0";
+			$cond = " AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) < 0";
 		}elseif ($tipe_search == 5) {
 			$customer_cond = " AND  fp_status = 1";
 		}elseif ($tipe_search == 6) {
@@ -79,6 +82,10 @@ class Report extends CI_Controller {
 
 		if ($customer_id != null && $customer_id != 0) {
 			$customer_cond = 'AND customer_id = '.$customer_id;
+		}
+		
+		if ($supplier_id != null && $supplier_id != 0) {
+			$supplier_cond = 'WHERE supplier_id = '.$supplier_id;
 		}
 
 		if ($toko_id != 0) {
@@ -110,13 +117,16 @@ class Report extends CI_Controller {
 			'status_excel' => $status_excel,
 			'tipe_search' => $tipe_search,
 			'customer_id' => $customer_id,
+			'supplier_id' => $supplier_id,
 			'toko_id' => $toko_id,
 			'barang_id' => $barang_id,
 			'warna_id' => $warna_id,
 			'gudang_id' => $gudang_id,
 			'tipe_bayar' => $this->common_model->db_select('nd_pembayaran_type'),
-			'penjualan_list' => $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna)
+			'penjualan_list' => $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna, $supplier_cond)
 			);
+
+		// echo $tanggal_start.'<hr/>'. $tanggal_end.'<hr/>'. $cond.'<hr/>'.$customer_cond.'<hr/>'. $cond_toko.'<hr/>'. $cond_barang_warna.'<hr/>'. $cond_supplier;
 
 		$this->load->view('admin/template',$data);
 	}

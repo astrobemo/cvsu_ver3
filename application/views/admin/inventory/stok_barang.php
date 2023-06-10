@@ -99,7 +99,9 @@
 										
 										<td style='text-align:left'>
 												<?=$row->nama_barang_jual;?> <?=$row->nama_warna_jual;?>
+											<?if (is_posisi_id() == 1) {?>
 												<?=$row->barang_id?> <?=$row->warna_id;?>
+											<?}?>
 										</td>
 										<?if (is_posisi_id() == 1) {?>
 											<td>

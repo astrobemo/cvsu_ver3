@@ -7,3 +7,11 @@ application/cache/*
 application/logs/*
 !application/logs/index.html
 !application/logs/.htaccess
+
+assets/
+system/
+uploads/
+font/
+image/
+uploads/
+user_guide/

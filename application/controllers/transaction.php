@@ -650,7 +650,9 @@ class Transaction extends CI_Controller {
             $page++;
             $output['aaData'][] = $row;
         }
-        
+
+
+        // echo $aColumns, $sWhere, $sOrder, $sLimit;
         echo json_encode( $output );
 	}
 
@@ -801,11 +803,11 @@ class Transaction extends CI_Controller {
                 $OCKH = $row->ockh;
             }
 
-            if ($po_pembelian_batch_id != '') {
-                $barang_list = $this->tr_model->get_pembelian_barang_by_po($po_pembelian_batch_id, $OCKH);
-            }else {
+            // if ($po_pembelian_batch_id != '') {
+            //     $barang_list = $this->tr_model->get_pembelian_barang_by_po($po_pembelian_batch_id, $OCKH);
+            // }else {
                 $barang_list = $this->barang_list_aktif;
-            }
+            // }
 
             $data['barang_list'] = $barang_list;
 
@@ -1483,7 +1485,27 @@ class Transaction extends CI_Controller {
 			$data['data_toko'] = array();
 		}
 
-		$this->load->view('admin/template',$data);
+		$tipe = '';
+		if ($this->input->get("tipe") != '') {
+			$tipe = $this->input->get("tipe");
+		}
+		if (is_posisi_id() == 1) {
+			if ($tipe == '') {
+				$data['content'] = 'admin/transaction/penjualan_list_detail_2';
+			}else{
+				$data['content'] = 'admin/transaction/penjualan_pos';
+			}
+		}
+
+		if ($tipe == '') {
+			$data['content'] = 'admin/transaction/penjualan_list_detail_2';
+			$this->load->view('admin/template',$data);
+		}else{
+			$data['content'] = 'admin/transaction/penjualan_pos';
+			// $this->load->view('admin/template_no_sidebar',$data);
+			$this->load->view('admin/transaction/penjualan_pos',$data);
+		}
+		
 	}
 
 	function cek_history_harga(){
@@ -1532,9 +1554,28 @@ class Transaction extends CI_Controller {
 		$penjualan_id =  $ini->post('penjualan_id');
 		$is_eceran = $this->input->post('is_eceran');
 		$is_eceran = ($is_eceran == 'on' ? 1 : 0);
+		$is_eceran_mix = $ini->post('is_eceran_mix');
+
+		$use_ppn = $ini->post('use_ppn');
 		$barang_id = $ini->post('barang_id');
 		$warna_id = $ini->post('warna_id');
 		$gudang_id = $ini->post('gudang_id');
+		$toko_id = $ini->post('toko_id');
+		$subdiskon = $ini->post('subdiskon');
+
+		$subqty = $ini->post('subqty');
+		$subroll = $ini->post('subroll');
+		
+		$subtotal_nilai = str_replace(".","", $ini->post('subtotal_nilai'));
+		$harga_jual_noppn = str_replace(",","", $ini->post('harga_jual_noppn'));
+		$ppn_berlaku = $ini->post('ppn_berlaku');
+		$subtotal_ppn = 0;
+		if ($use_ppn == 1) {
+			$subtotal_ppn = $harga_jual_noppn * $subtqty;
+		}else{
+			$harga_jual_noppn = 0;
+			$subtotal_ppn = 0;
+		}
 		$data = array(
 			'penjualan_id' => $penjualan_id,
 			'gudang_id' => $gudang_id,
@@ -1542,21 +1583,28 @@ class Transaction extends CI_Controller {
 			'warna_id' => $warna_id,
             'pengali_harga' => $this->input->post('pengali_harga'),
 			'is_eceran' => $is_eceran,
+			'is_eceran_mix' => $is_eceran_mix,
+			'toko_id' => $toko_id,
+			'use_ppn' => $use_ppn,
+			'ppn_berlaku' => $ppn_berlaku,
+			'subqty' => $subqty,
+			'subroll' => $subroll,
+			'subtotal_nilai' => $subtotal_nilai,
+			'subtotal_ppn' => $subtotal_ppn,
+			'subdiskon' => ($subdiskon == '' ? 0 : str_replace(',', '', $subdiskon)),
+			'harga_dpp' => $harga_jual_noppn,
 			'harga_jual' => str_replace(',', '', $ini->post('harga_jual')) );
 
+			// if (is_posisi_id()==1) {
+			// 	print_r($data);
+			// 	print_r($ini->post());
+			// 	# code...
+			// }
 		$result_id = $this->common_model->db_insert('nd_penjualan_detail', $data);
-        // print_r($data);
 		$i = 0;
 		$qty_list = explode('--', $ini->post('rekap_qty'));
 		$new_mutasi_id = '';
-		$data_new = array(
-			'tanggal' => date('Y-m-d'),
-			'barang_id' => $barang_id ,
-			'warna_id' => $warna_id ,
-			'gudang_id' => $gudang_id ,
-			'tipe' => 2,
-			'user_id' => is_user_id(),
-		);
+		
 
 		foreach ($qty_list as $key => $value) {
 			$qty = explode('??', $value);
@@ -1564,7 +1612,9 @@ class Transaction extends CI_Controller {
 				$data_qty[$i] = array(
 					'penjualan_detail_id' => $result_id,
 					'qty' => $qty[0],
-					'jumlah_roll' => $qty[1] );
+					'jumlah_roll' => $qty[1],
+					'supplier_id' => $qty[3]
+				);
 			}else{
 				//index 1 stok_qty_eceran_id klo 0 ya berarti baru mutasi
 				if($qty[1] != 0){
@@ -1573,17 +1623,28 @@ class Transaction extends CI_Controller {
 						'qty' => $qty[0],
 						'jumlah_roll' => 1,
 						'stok_eceran_qty_id' => $qty[1],
-						'eceran_source' => $qty[3]
+						'eceran_source' => $qty[4]
 					);
 				}else{
 					if ($new_mutasi_id  == '') {
+						$data_new = array(
+							'tanggal' => date('Y-m-d'),
+							'toko_id' => $toko_id ,
+							'barang_id' => $barang_id ,
+							'warna_id' => $warna_id ,
+							'gudang_id' => $gudang_id ,
+							'tipe' => 2,
+							'user_id' => is_user_id(),
+						);
+				
 						$new_mutasi_id = $this->common_model->db_insert('nd_mutasi_stok_eceran', $data_new);
 					}
 
 					$data_new_mutasi = array(
 						'mutasi_stok_eceran_id' => $new_mutasi_id ,
 						'qty' => $qty[2],
-						'jumlah_roll' => 1
+						'jumlah_roll' => 1,
+						'supplier_id' => $qty[3]
 					);
 
 					$new_id = $this->common_model->db_insert("nd_mutasi_stok_eceran_qty",$data_new_mutasi);
@@ -1593,6 +1654,7 @@ class Transaction extends CI_Controller {
 						'penjualan_detail_id' => $result_id,
 						'qty' => $qty[0],
 						'jumlah_roll' => 1,
+						'supplier_id' => $qty[3],
 						'stok_eceran_qty_id' => $new_id,
 						'eceran_source' => 1
 					);
@@ -1627,29 +1689,75 @@ class Transaction extends CI_Controller {
 	}
 
 	function penjualan_qty_detail_update(){
-        $penjualan_detail_id = $this->input->post('penjualan_list_detail_id');
-		$penjualan_id = $this->input->post('penjualan_id');
-		$rekap_qty = $this->input->post('rekap_qty');
-		$is_eceran = $this->input->post('is_eceran');
-		$qty_list = explode('--', $rekap_qty);
 
-        $harga_jual = $this->input->post('harga_jual');
-        $harga_jual = str_replace(',', '', $harga_jual);
+		// print_r($this->input->post());
+		$ini= $this->input;
+		
+        $penjualan_detail_id = $ini->post('penjualan_list_detail_id');
+		$penjualan_id = $ini->post('penjualan_id');
+		$rekap_qty = $ini->post('rekap_qty');
+		$is_eceran = $ini->post('is_eceran');
+		$qty_list = explode('--', $rekap_qty);
+		$use_ppn = $ini->post('use_ppn');
+
+
+        $harga_jual = $ini->post('harga_jual');
+        $harga_jual = str_replace('.', '', $harga_jual);
+        $harga_jual = str_replace(',', '.', $harga_jual);
+		
+        $subdiskon = $ini->post('subdiskon');
+        $subdiskon = str_replace('.', '', $subdiskon);
+        $subdiskon = str_replace(',', '.', $subdiskon);
+
+		$subqty = $ini->post('subqty');
+		$subroll = $ini->post('subroll');
+
+		$subtotal_nilai = str_replace(".","", $ini->post('subtotal_nilai'));
+		$subtotal_nilai = str_replace(",",".", $ini->post('subtotal_nilai'));
+		
+		$harga_jual_noppn = str_replace(".","", $ini->post('harga_jual_noppn'));
+		$harga_jual_noppn = str_replace(",",".", $ini->post('harga_jual_noppn'));
+
+		if ($use_ppn == 1) {
+			$subtotal_ppn = $harga_jual_noppn * $subtqty;
+		}else{
+			$harga_jual_noppn = 0;
+			$subtotal_ppn = 0;
+		}
 
         $dt_harga = array(
-            'harga_jual' => $harga_jual );
+            'harga_jual' => $harga_jual,
+			'subqty' => $subqty,
+			'subroll' => $subroll,
+			'subtotal_nilai' => $subtotal_nilai,
+			'subtotal_ppn' => $subtotal_ppn,
+			'subdiskon' => ($subdiskon == '' ? 0 : str_replace(',', '', $subdiskon)),
+			'harga_dpp' => $harga_jual_noppn
+
+		);
+
+		if (is_posisi_id() == 1) {
+			# code...
+			// print_r($dt_harga);
+		}
+
+		
+
         $this->common_model->db_update('nd_penjualan_detail',$dt_harga,'id', $penjualan_detail_id);
 		$i = 0;
 		$data_qty = array();
 		foreach ($qty_list as $key => $value) {
 			$qty = explode('??', $value);
+			$urai = explode('??', $value);
 			unset($data_up);
 			if (!$is_eceran) {
 				$penjualan_qty_detail_id = $urai[2];
 				$data = array(
 					'penjualan_detail_id' => $penjualan_detail_id,
 					'qty' => $urai[0] ,
-					'jumlah_roll' => $urai[1] );
+					'jumlah_roll' => $urai[1],
+					'supplier_id' => $urai[3],
+				);
 				
 				if ($penjualan_qty_detail_id != 0) {
 					if ($urai[0] == 0) {
@@ -1715,9 +1823,6 @@ class Transaction extends CI_Controller {
 			$i++;
 		}
 
-		// print_r($qty_list);
-		// echo '<br/>';
-		// print_r($data_qty);
 
 		if (count($data_qty)) {
 			$this->common_model->db_insert_batch('nd_penjualan_qty_detail',$data_qty);
@@ -1919,9 +2024,17 @@ class Transaction extends CI_Controller {
             $stok_opname_id = $row->stok_opname_id;
         }
 
+		
+
 		// echo $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id;
         $get = $this->tr_model->get_qty_stok_by_barang_detail($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
         $result[0] = $get->result();
+
+		$res = array(
+			'data' => $tanggal, $barang_id, $warna_id, $gudang_id,
+			'tanggal_awal' => $tanggal_awal,
+			'stok_opname_id' => $stok_opname_id
+		);
 
 		$detail_id = $this->input->post('penjualan_list_detail_id');
 		$detail_id = ($detail_id=='' ? 0 : $detail_id);
@@ -1937,6 +2050,18 @@ class Transaction extends CI_Controller {
 			$result[1] = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
 			$result[1] = $result[1]->result();
 		}
+
+		$result[2] = array(
+			'tgl'=>$tanggal_awal,
+			'sid' =>$stok_opname_id
+		);
+
+		$result[3] = array(
+			'res'=>$res,
+			'var' => $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id, $tanggal
+		);
+
+		
 		
 		echo json_encode($result);
         

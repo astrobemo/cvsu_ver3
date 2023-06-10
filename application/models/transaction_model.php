@@ -355,7 +355,9 @@ class Transaction_Model extends CI_Model {
 //=====================================pembelian detail=====================================================
 
 	function get_data_pembelian_detail($pembelian_id){
-		$query = $this->db->query("SELECT tbl_a.*,t2.*, tbl_b.nama as nama_barang, tbl_c.nama as nama_satuan, tbl_c2.nama as nama_packaging, tbl_d.warna_beli as nama_warna, pengali_harga_beli, tbl_b.toko_id as toko_id, color_code
+		$query = $this->db->query("SELECT tbl_a.*,t2.*, tbl_b.nama as nama_barang, tbl_c.nama as nama_satuan, 
+		tbl_c2.nama as nama_packaging, tbl_d.warna_beli as nama_warna, pengali_harga_beli, 
+		tbl_b.toko_id as toko_id, color_code
 			FROM (
 				SELECT id, barang_id, warna_id, harga_beli, pengali_type
 				FROM nd_pembelian_detail
@@ -501,7 +503,9 @@ class Transaction_Model extends CI_Model {
 	function get_data_penjualan_detail($id){
 		$this->db->simple_query('SET SESSION group_concat_max_len=15000');
 
-		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, tbl_d.warna_jual as nama_warna, tbl_e.qty as qty, tbl_e.jumlah_roll as jumlah_roll, if(is_eceran = 1,data_qty_eceran,data_qty) as data_qty, pengali_harga, nama_packaging, color_code
+		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, 
+		tbl_d.warna_jual as nama_warna, tbl_e.qty as qty, tbl_e.jumlah_roll as jumlah_roll,  nama_supplier as data_supplier,
+		if(is_eceran = 1,data_qty_eceran,data_qty) as data_qty, pengali_harga, nama_packaging, color_code
 				FROM (
 					SELECT *
 					FROM nd_penjualan_detail
@@ -521,13 +525,19 @@ class Transaction_Model extends CI_Model {
 				LEFT JOIN nd_warna as tbl_d
 				ON tbl_a.warna_id = tbl_d.id
 				LEFT JOIN (
-					SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, penjualan_detail_id,  group_concat(concat_ws('??',qty,jumlah_roll,id ) SEPARATOR '=?=') as data_qty, group_concat(concat_ws('??',qty,stok_eceran_qty_id,'0', eceran_source, id ) SEPARATOR '=?=') as data_qty_eceran
-					FROM nd_penjualan_qty_detail
+					SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, 
+					sum(jumlah_roll) as jumlah_roll, penjualan_detail_id, 
+					group_concat(concat_ws('??',qty,jumlah_roll,t1.id, supplier_id) SEPARATOR '=?=') as data_qty, 
+					group_concat(t2.nama SEPARATOR '=?=') as nama_supplier, 
+					group_concat(concat_ws('??',qty,ifnull(stok_eceran_qty_id,0),'0', ifnull(eceran_source,0), t1.id ) SEPARATOR '=?=') as data_qty_eceran
+					FROM nd_penjualan_qty_detail t1
+					LEFT JOIN nd_supplier t2
+					ON t1.supplier_id = t2.id
 					group by penjualan_detail_id
 				) as tbl_e
-			ON tbl_e.penjualan_detail_id = tbl_a.id
-			LEFT JOIN nd_toko
-			ON tbl_a.toko_id = nd_toko.id
+				ON tbl_e.penjualan_detail_id = tbl_a.id
+				LEFT JOIN nd_toko
+				ON tbl_a.toko_id = nd_toko.id
 			", false);
 
 		return $query->result();
@@ -536,7 +546,9 @@ class Transaction_Model extends CI_Model {
 	function get_data_penjualan_detail_group($id){
 		$this->db->simple_query('SET SESSION group_concat_max_len=15000');
 		
-		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, group_concat(tbl_d.warna_jual SEPARATOR '--') as nama_warna, sum(tbl_e.qty) as qty, sum(tbl_e.jumlah_roll) as jumlah_roll, group_concat(data_qty SEPARATOR '--') as data_qty
+		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, 
+		group_concat(tbl_d.warna_jual SEPARATOR '--') as nama_warna, 
+		sum(tbl_e.qty) as qty, sum(tbl_e.jumlah_roll) as jumlah_roll, group_concat(data_qty SEPARATOR '--') as data_qty
 			FROM (
 				SELECT *
 				FROM nd_penjualan_detail
@@ -979,7 +991,7 @@ class Transaction_Model extends CI_Model {
 						ON t2.penjualan_id=t3.id
 						WHERE status_aktif=1
 						AND t2.id != $penjualan_detail_id
-						GROUP BY stok_eceran_qty_id
+						GROUP BY stok_eceran_qty_id, eceran_source
 
 				)tB
 				ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
@@ -1079,7 +1091,8 @@ class Transaction_Model extends CI_Model {
 	}
 
 	function get_retur_jual_detail($id){
-		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, tbl_d.warna_jual as nama_warna, tbl_e.qty as qty, tbl_e.jumlah_roll as jumlah_roll, data_qty
+		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, 
+		tbl_d.warna_jual as nama_warna, tbl_e.qty as qty, tbl_e.jumlah_roll as jumlah_roll, data_qty
 			FROM (
 				SELECT *
 				FROM nd_retur_jual_detail
@@ -1378,32 +1391,27 @@ class Transaction_Model extends CI_Model {
 //==========================================history list================================
 
 	function get_pembelian_history($from, $to){
-		$query = $this->db->query("SELECT tbl_a.id, tbl_a.status_aktif, tbl_b.nama as toko, no_faktur, tanggal, qty as jumlah, jumlah_roll, tbl_d.nama as nama_barang, tbl_c.harga_beli, tbl_e.nama as gudang, 0 as harga, tbl_f.nama as supplier, total, created, username
-				FROM (
-					SELECT *
-					FROM nd_pembelian
+		$query = $this->db->query("SELECT tbl_a.id, tbl_a.status_aktif, tbl_b.nama as toko, no_faktur, tanggal, qty as jumlah, jumlah_roll, 
+				tbl_f.nama as supplier, total, created, username, tbl_e.nama as gudang
+				FROM ( 
+					SELECT * FROM nd_pembelian 
 					WHERE DATE(created) >= '$from'
 					AND DATE(created) <= '$to'
-					ORDER BY created desc
-					) as tbl_a
-				LEFT JOIN nd_toko as tbl_b
-				ON tbl_a.toko_id = tbl_b.id
-				LEFT JOIN (
-					SELECT id, sum(qty) as qty, sum(jumlah_roll) as jumlah_roll, sum(qty*harga_beli) as total, harga_beli, pembelian_id, barang_id, satuan_id
-					FROM nd_pembelian_detail
-					group by pembelian_id
-					) as tbl_c
-				ON tbl_c.pembelian_id = tbl_a.id
-				LEFT JOIN nd_barang as tbl_d
-				ON tbl_c.barang_id = tbl_d.id
-				LEFT JOIN nd_gudang as tbl_e
-				ON tbl_a.gudang_id = tbl_e.id
-				LEFT JOIN nd_supplier as tbl_f
-				ON tbl_f.id = tbl_a.supplier_id
-				LEFT JOIN nd_satuan as tbl_g
-				ON tbl_c.satuan_id = tbl_g.id
-				LEFT JOIN nd_user tbl_h
-				ON tbl_a.user_id = tbl_h.id
+					ORDER BY created desc 
+				) as tbl_a 
+				LEFT JOIN nd_toko as tbl_b 
+				ON tbl_a.toko_id = tbl_b.id 
+				LEFT JOIN ( 
+					SELECT tA.id, sum(qty*if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, sum((qty*if(jumlah_roll = 0,1,jumlah_roll))*harga_beli) as total, harga_beli, pembelian_id 
+					FROM nd_pembelian_detail tA
+					LEFT JOIN nd_pembelian_qty_detail tB
+					ON tB.pembelian_detail_id = tA.id 
+					group by pembelian_id 
+					) as tbl_c 
+					ON tbl_c.pembelian_id = tbl_a.id 
+				LEFT JOIN nd_gudang as tbl_e ON tbl_a.gudang_id = tbl_e.id 
+				LEFT JOIN nd_supplier as tbl_f ON tbl_f.id = tbl_a.supplier_id 
+				LEFT JOIN nd_user tbl_h ON tbl_a.user_id = tbl_h.id
 		");
 		return $query->result();
 	}

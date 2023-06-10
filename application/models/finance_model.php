@@ -407,12 +407,19 @@ class Finance_Model extends CI_Model {
 
 	function get_piutang_list_all($tanggal){
 		
-		$query = $this->db->query("SELECT customer_id, t2.nama as nama_customer, t3.nama as nama_toko, sum(sisa_piutang) as sisa_piutang, MIN(tanggal_start) as tanggal_start, MAX(tanggal_end) as tanggal_end, toko_id
+		$query = $this->db->query("SELECT customer_id, t2.nama as nama_customer, t3.nama as nama_toko, 
+			sum(sisa_piutang) as sisa_piutang, 
+			MIN(tanggal_start) as tanggal_start, MAX(tanggal_end) as tanggal_end, toko_id,
+			sum(sisa_kontra) as sisa_kontra, group_concat(sisa_kontra_data) as sisa_kontra_data, group_concat(pembayaran_piutang_id) as pembayaran_piutang_id
 			FROM (
 				(
-					SELECT t1.*, sisa - ifnull(total_bayar,0) as sisa_piutang
+					SELECT t1.customer_id, toko_id, tanggal_start, tanggal_end, sisa - ifnull(total_bayar,0) as sisa_piutang, 0 as sisa_kontra, null as pembayaran_piutang_id, null as sisa_kontra_data
 					FROM (
-						SELECT sum(ifnull(g_total,0)) - sum(ifnull(diskon,0)) + sum(ongkos_kirim) - sum(ifnull(if(amount_bayar > g_total, g_total, amount_bayar),0)) as sisa, concat_ws('??',tbl_a.id,no_faktur_lengkap) as data, if(tbl_a.status = -1,-1,0) as status, customer_id, MIN(tanggal) as tanggal_start, MAX(tanggal) as tanggal_end, tbl_a.toko_id, tbl_a.status_aktif
+						SELECT sum(ifnull(g_total,0)) - sum(ifnull(diskon,0)) + sum(ongkos_kirim) - sum(ifnull(if(amount_bayar > g_total, 
+						g_total, amount_bayar),0)) as sisa, 
+						concat_ws('??',tbl_a.id,no_faktur_lengkap) as data, 
+						if(tbl_a.status = -1,-1,0) as status, customer_id, MIN(tanggal) as tanggal_start, MAX(tanggal) as tanggal_end, 
+						tbl_a.toko_id, tbl_a.status_aktif
 						FROM (
 							SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
 							FROM nd_penjualan 
@@ -450,50 +457,51 @@ class Finance_Model extends CI_Model {
 						SELECT sum(amount) as total_bayar, customer_id
 						FROM (
 							SELECT *
-							FROM nd_pembayaran_piutang_nilai
-							WHERE tanggal_transfer <='$tanggal'
+							FROM nd_pembayaran_piutang_detail
 							) a
 						LEFT JOIN (
 							SELECT *
 							FROM nd_pembayaran_piutang
 							WHERE status_aktif = 1
+							AND tanggal <='$tanggal'
 							) b
 						ON a.pembayaran_piutang_id = b.id
 						WHERE b.id is not null
 						GROUP BY customer_id
 						) t2
 					ON t1.customer_id = t2.customer_id
-				)
-				-- UNION(
-				-- 	SELECT 1, sum(ifnull(amount,0) - ifnull(total_bayar,0)) as sisa_piutang, concat_ws('??',id,no_faktur) as data, 1, customer_id, MIN(tanggal) as tanggal_start, MAX(tanggal) as tanggal_end, toko_id
-				-- 	FROM nd_piutang_awal a
-				-- 	LEFT JOIN (
-				-- 		SELECT penjualan_id, sum(amount) as total_bayar
-				-- 		FROM (
-				-- 			SELECT *
-				-- 			FROM nd_pembayaran_piutang_detail
-				-- 			WHERE data_status = 2
-				-- 			) a
-				-- 		LEFT JOIN (
-				-- 			SELECT *
-				-- 			FROM nd_pembayaran_piutang
-				-- 			WHERE status_aktif = 1
-				-- 			) b
-				-- 		ON a.pembayaran_piutang_id = b.id
-				-- 		WHERE b.id is not null
-				-- 		GROUP BY penjualan_id
-				-- 		) b
-				-- 	ON b.penjualan_id = a.id
-				-- 	GROUP BY customer_id, toko_id
-				-- )
-			) t1
-			LEFT JOIN nd_customer as t2
-			ON t1.customer_id = t2.id
-			LEFT JOIN nd_toko t3
-			ON t1.toko_id = t3.id
-			WHERE sisa_piutang != 0
-			GROUP BY customer_id
-			ORDER BY t2.nama asc", false);
+				)UNION(
+					SELECT customer_id, toko_id, min(tanggal_start) as tanggal_start, max(tanggal_end) , 0, sum(sisa_kontra) as sisa_kontra, group_concat(pembayaran_piutang_id) as pembayaran_piutang_id, group_concat(sisa_kontra) as sisa_kontra_data
+					FROM (
+						SELECT amount, amount_bayar, (amount - ifnull(amount_bayar,0)) as sisa_kontra, customer_id , toko_id, tanggal_start, tanggal_end, t1.pembayaran_piutang_id
+						FROM (
+							SELECT sum(amount) as amount, pembayaran_piutang_id
+							FROM nd_pembayaran_piutang_detail
+							GROUP BY pembayaran_piutang_id
+						) t1
+						LEFT JOIN (
+							SELECT sum(amount) as amount_bayar, pembayaran_piutang_id, min(tanggal_transfer) as tanggal_start, max(tanggal_transfer) as tanggal_end
+							FROM nd_pembayaran_piutang_nilai
+							WHERE tanggal_transfer <= '$tanggal'
+							GROUP BY pembayaran_piutang_id
+						) t2
+						ON t1.pembayaran_piutang_id = t2.pembayaran_piutang_id
+						LEFT JOIN nd_pembayaran_piutang t3
+						ON t1.pembayaran_piutang_id = t3.id
+						WHERE t3.id is not null
+					)res
+					WHERE sisa_kontra > 0
+					GROUP BY customer_id
+					)
+				) t1
+				LEFT JOIN nd_customer as t2
+				ON t1.customer_id = t2.id
+				LEFT JOIN nd_toko t3
+				ON t1.toko_id = t3.id
+				WHERE sisa_piutang != 0
+				OR sisa_kontra != 0
+				GROUP BY customer_id
+				ORDER BY t2.nama asc", false);
 
 		return $query->result();
 	}

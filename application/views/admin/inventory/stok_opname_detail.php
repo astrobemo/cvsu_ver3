@@ -76,6 +76,32 @@
 													<td></td>
 												</tr>
 												<tr>
+													<td>Toko</td>
+													<td> : </td>
+													<td>
+														<select id='toko_id_select' class='form-control' name='toko_id_filter' >
+															<option value=''>Pilih</option>
+															<?foreach ($this->toko_list_aktif as $row) { ?>
+																<option value='<?=$row->id?>'><?=$row->nama;?></option>
+															<?}?>
+														</select>
+													</td>
+													<td></td>
+												</tr>
+												<tr>
+													<td>Supplier</td>
+													<td> : </td>
+													<td>
+														<select id='supplier_id_select' class='form-control' name='supplier_id_filter' >
+															<option value=''>Pilih</option>
+															<?foreach ($this->supplier_list_aktif as $row) { ?>
+																<option value='<?=$row->id?>'><?=$row->nama;?></option>
+															<?}?>
+														</select>
+													</td>
+													<td></td>
+												</tr>
+												<tr>
 													<td>Barang</td>
 													<td> : </td>
 													<td>
@@ -85,11 +111,17 @@
 																<option value='<?=$row->id?>'><?=$row->nama_jual;?></option>
 															<?}?>
 														</select>
+														<select id='barang_id_copy' hidden>
+															<option value=''></option>
+															<?foreach ($this->barang_list_aktif as $row) { ?>
+																<option value='<?=$row->id?>'><?=$row->nama_satuan;?>??<?=$row->nama_packaging;?></option>
+															<?}?>
+														</select>
 													</td>
 													<td></td>
 												</tr>
 												<tr>
-													<td>Warna</td>
+													<td>Keterangan</td>
 													<td> : </td>
 													<td>
 														<select id='warna_id_select' class='form-control' name='warna_id_filter' >
@@ -105,8 +137,9 @@
 										</td>
 										<td>
 											<?if (is_posisi_id()==1) {?>
-												Barang ID : <span id='barang-id-selected'></span><BR/> 
-												Warna ID : <span id='warna-id-selected'></span>
+												Barang ID : <span id='barang-id-selected'></span><br/> 
+												Warna ID : <span id='warna-id-selected'></span><br/>
+												Supplier ID : <span id='supplier-id-selected'></span>
 											<?}?>
 											<h1 style='float:right;font-weight:bold' id='nama-barang'></h1>
 										</td>
@@ -138,8 +171,8 @@
 													<table class='table-head' >
 														<thead>
 															<th style='width:50px' onclick="sortTable(0)" >No</th>
-															<th style='width:100px' onclick="sortTable(1)" >Qty</th>
-															<th style='width:80px' onclick="sortTable(2)" >Roll</th>
+															<th style='width:100px' onclick="sortTable(1)" ><span class='nama-satuan-kecil'></span></th>
+															<th style='width:80px' onclick="sortTable(2)" ><span class='nama-satuan-besar'></span></th>
 															<th style='width:100px' onclick="sortTable(3)" >Total</th>
 															<th style='width:100px; border:none; vertical-align:top' >
 																<?$hidden = (is_posisi_id()!=1 ? 'hidden' : '');?>
@@ -195,8 +228,8 @@
 													<table class='table-head' >
 														<thead>
 															<th style='width:50px' onclick="sortTable(0)" >No</th>
-															<th style='width:100px' onclick="sortTable(1)" >Qty</th>
-															<th style='width:80px' onclick="sortTable(2)" hidden>Roll</th>
+															<th style='width:100px' onclick="sortTable(1)" ><span class='nama-satuan-kecil'></span></th>
+															<th style='width:80px' onclick="sortTable(2)" hidden><span class='nama-satuan-besar'></span></th>
 															<th style='width:100px' onclick="sortTable(3)" hidden >Total</th>
 															<th style='width:100px; border:none; vertical-align:top' >
 																<?$hidden = (is_posisi_id()!=1 ? 'hidden' : '');?>
@@ -283,11 +316,14 @@
 								</div>
 								<hr/>
 								<div style='text-align:right'>
-									<?if ($status_aktif == 0 ) {?>
-										<button type='button' class='btn btn-lg red hidden-print btn-close' id='btn-lock-so' onclick="lockSO(<?=$id;?>)"><i class='fa fa-lock'></i> LOCK </button>
-									<?}else{?>
-										<h2><i class='fa fa-locked'></i> LOCKED</h2>
-									<?}?>
+									<?
+									if(is_posisi_id()==1){
+										if ($status_aktif == 0 ) {?>
+											<button type='button' class='btn btn-lg red hidden-print btn-close' id='btn-lock-so' onclick="lockSO(<?=$id;?>)"><i class='fa fa-lock'></i> LOCK </button>
+										<?}else{?>
+											<h2><i class='fa fa-locked'></i> LOCKED</h2>
+										<?}
+									} ?>
 								</div>
 							</div>
 						</div>
@@ -318,6 +354,7 @@ count_gudang = 0;
 var barang_id_now = '';
 var warna_id_now = '';
 var barang_id_select = '';		
+var supplier_id_select = '';		
 var warna_id_select = '';
 var isSaved = true;
 
@@ -330,13 +367,13 @@ jQuery(document).ready(function() {
 	// TableAdvanced.init();
 
 	if (status_aktif == 1) {
-		<?if (is_posisi_id() > 3) {?>
-			$('.table-body').find('.qty, .jumlah-roll').prop('disabled',true);
-		<?};?>
+		<?//if (is_posisi_id() > 3) {?>
+			// $('.table-body').find('.qty, .jumlah-roll').prop('disabled',true);
+		<?//};?>
 	};
 
 
-	$('#barang_id_select, #warna_id_select').select2();
+	$('#barang_id_select, #warna_id_select, #supplier_id_select').select2();
 
 	
 	var map = {13: false};
@@ -406,10 +443,14 @@ jQuery(document).ready(function() {
 	    for (var i = 0; i < rows.length; i++){table.append(rows[i])}*/
 	});
 
-	$("#barang_id_select, #warna_id_select").change(function(){
-		if($('#barang_id_select').val() != '' && $("#warna_id_select").val() != '' ){
+	$("#barang_id_select, #warna_id_select, #supplier_id_select" ).change(function(){
+		if($('#barang_id_select').val() != '' && $("#warna_id_select").val() != '' && $("#supplier_id_select").val() != '' && $("#toko_id_select").val() != '' ){
 			var totalan = 0;
 			totalan = count_gudang;
+			
+
+				// alert('*');
+
 			// alert(totalan);
 
 			// alert(count_gudang);
@@ -419,10 +460,14 @@ jQuery(document).ready(function() {
 			}else{
 				barang_id_now = $("#barang-id-selected").html();
 				warna_id_now = $("#warna-id-selected").html();
+				supplier_id_now = $("#supplier-id-selected").html();
+				
 				barang_id_select = $('#barang_id_select').val();		
 				warna_id_select = $('#warna_id_select').val();
+				supplier_id_select = $('#supplier_id_select').val();
+				
 
-				if (barang_id_now != barang_id_select || warna_id_now != warna_id_select) {
+				if (barang_id_now != barang_id_select || warna_id_now != warna_id_select || supplier_id_now != supplier_id_select) {
 					bootbox.confirm("Table belum di save, yakin ubah nama barang ? ", function(respond){
 						if(respond){
 							count_gudang = 0;
@@ -430,8 +475,11 @@ jQuery(document).ready(function() {
 						}else{
 							$("#barang_id_select").val(barang_id_now);
 							$("#warna_id_select").val(warna_id_now);
+							$("#supplier_id_select").val(supplier_id_now);
+
 							$('#barang_id_select').change();
 							$('#warna_id_select').change();
+							$('#supplier_id_select').change();
 						}
 					});
 					
@@ -456,12 +504,17 @@ jQuery(document).ready(function() {
 					count_gudang = 0;
 					searchAndDrawTable();
 				}else{
-					var barang_id_now = $("#barang-id-selected").html();
-					var warna_id_now = $("#warna-id-selected").html();
+					barang_id_now = $("#barang-id-selected").html();
+					warna_id_now = $("#warna-id-selected").html();
+					supplier_id_now = $("#supplier-id-selected").html();
 					$("#barang_id_select").val(barang_id_now);
 					$("#warna_id_select").val(warna_id_now);
+					$("#supplier_id_select").val(supplier_id_now);
+
 					$('#barang_id_select').change();
 					$('#warna_id_select').change();
+					$('#supplier_id_select').change();
+
 				}
 			});
 		}
@@ -579,29 +632,40 @@ function searchAndDrawTable(){
 
 	$('#table-body input').attr('disabled', true);
 
-	var data_st = {};
-	var barang_id = $("#barang_id_select").val();
-	var warna_id = $("#warna_id_select").val();
+	const data_st = {};
+	const barang_id = $("#barang_id_select").val();
+	const warna_id = $("#warna_id_select").val();
+	const supplier_id = $("#supplier_id_select").val();
 
-	var nama_barang = $("#barang_id_select [value='"+barang_id+"']").text();
-	var nama_warna = $("#warna_id_select [value='"+warna_id+"']").text();
-	var nama_lengkap = nama_barang+' '+nama_warna;
+	const satuan_data = document.querySelector(`#barang_id_copy [value='${barang_id}']`).text.split("??");
+	const nama_satuan_kecil = satuan_data[0];
+	const nama_satuan_besar = satuan_data[1];
+
+
+	const nama_barang = $("#barang_id_select [value='"+barang_id+"']").text();
+	const nama_warna = $("#warna_id_select [value='"+warna_id+"']").text();
+	const nama_lengkap = nama_barang+' '+nama_warna;
 	$("#nama-barang").html(nama_lengkap);
 
 	
 	$('#barang-id-selected').html(barang_id);
 	$('#warna-id-selected').html(warna_id);
+	$('#supplier-id-selected').html(supplier_id);
+
+	$(".nama-satuan-kecil").html(nama_satuan_kecil);
+	$(".nama-satuan-besar").html(nama_satuan_besar);
 	
-	var url = "inventory/get_data_stok_opname_detail";
+	const url = "inventory/get_data_stok_opname_detail";
 	data_st['stok_opname_id'] = stok_opname_id;
 	data_st['barang_id'] = barang_id;
 	data_st['warna_id'] = warna_id;
+	data_st['supplier_id'] = supplier_id;
 	data_st['tanggal'] = "<?=$tanggal_so?>";
 	// console.log(data_st);
-	var baris_gudang = [];
-	var idx_gudang = [];
-	var baris_gudangecer = [];
-	var idx_gudangecer = [];
+	const baris_gudang = [];
+	const idx_gudang = [];
+	const baris_gudangecer = [];
+	const idx_gudangecer = [];
 	$.each(gudang_id, function(k,v){
 		baris_gudang[v] = '';
 		idx_gudang[v] = 1;
@@ -690,9 +754,9 @@ function searchAndDrawTable(){
 		$(".form-stok-detail [name=warna_id]").val(warna_id);
 
 		if (status_aktif == 1) {
-			<?if (is_posisi_id() > 3) {?>
-			$('.table-body').find('.qty, .jumlah-roll').prop('disabled',true);
-			<?}?>
+			<?//if (is_posisi_id() > 3) {?>
+			// $('.table-body').find('.qty, .jumlah-roll').prop('disabled',true);
+			<?//}?>
 		};
 
 		//===============================================

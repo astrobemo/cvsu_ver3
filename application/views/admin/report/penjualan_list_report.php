@@ -111,6 +111,21 @@
 												<td></td>
 											</tr>
 											<tr>
+												<td>Supplier Barang</td>
+												<td> : </td>
+												<td>
+													<b>
+														<select name='supplier_id' id="select_supplier" style='width:100%'>
+															<option <?=($supplier_id == 0 ? "selected" : "");?> value='0'>Semua</option>
+															<?foreach ($this->supplier_list_aktif as $row) { ?>
+																<option <?=($supplier_id == $row->id ? "selected" : "");?> value="<?=$row->id?>"><?=$row->nama;?></option>
+															<?}?>
+														</select>
+													</b>
+												</td>
+												<td></td>
+											</tr>
+											<tr>
 												<td>Barang</td>
 												<td> : </td>
 												<td>
@@ -492,7 +507,7 @@ jQuery(document).ready(function() {
 		// "bFilter":false
 	});
 
-	$('#select_customer').select2({});
+	$('#select_customer, #select_supplier').select2({});
 
 });
 </script>

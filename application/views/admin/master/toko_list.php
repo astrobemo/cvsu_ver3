@@ -1,3 +1,8 @@
+<style>
+	.use_ppn{
+		background: lightpink;
+	}
+</style>
 <div class="page-content">
 	<div class='container'>
 		
@@ -13,6 +18,17 @@
 				                    </label>
 				                    <div class="col-md-6">
 				                    	<input type="text" class="form-control input1" name="nama"/>
+				                    </div>				                    
+				                </div>
+								
+								<div class="form-group use_ppn" id='ppn_add' >
+				                    <label class="control-label col-md-3">PPN
+				                    </label>
+				                    <div class="col-md-6">
+										<div class="checkbox-list">
+											<label class="checkbox-inline">
+												<input type="checkbox" checked value="1" class="form-control" name="use_ppn" onchange="checkPPN('ppn_add')" /></label>
+										</div>		
 				                    </div>				                    
 				                </div>
 
@@ -90,6 +106,8 @@
 					<div class="modal-body">
 						<form action="<?=base_url('master/toko_list_update')?>" class="form-horizontal" id="form_edit_data" method="post">
 							<h3 class='block'> Edit </h3>
+							
+
 				                <div class="form-group">
 				                    <label class="control-label col-md-3">Nama<span class="required">
 				                    * </span>
@@ -97,6 +115,17 @@
 				                    <div class="col-md-6">
 				                    	<input name="toko_list_id" hidden='hidden'/>
 				                    	<input type="text" class="form-control input1" name="nama"/>
+				                    </div>				                    
+				                </div>
+
+								<div class="form-group" id='ppn_edit'>
+				                    <label class="control-label col-md-3">PPN
+				                    </label>
+				                    <div class="col-md-6">
+										<div class="checkbox-list">
+											<label class="checkbox-inline">
+											<input type="checkbox" checked value="1" class="form-control" name="use_ppn" onchange="checkPPN('ppn_edit')" /></label>
+										</div>				                    
 				                    </div>				                    
 				                </div>
 
@@ -190,6 +219,9 @@
 										Nama
 									</th>
 									<th scope="col">
+										PPN
+									</th>
+									<th scope="col">
 										Alamat
 									</th>
 									<th scope="col">
@@ -219,8 +251,10 @@
 								<?foreach ($toko_list as $row) { ?>
 									<tr>
 										<td>
-											<span class='id' hidden="hidden"><?=$row->id;?></span>
 											<span class='nama'><?=$row->nama;?></span> 
+										</td>
+										<td>
+											<span class='ppn'><?=($row->use_ppn ? "<i class='fa fa-check'></i>" : "");?></span> 
 										</td>
 										<td>
 											<span class='alamat'><?=$row->alamat;?></span> 
@@ -244,6 +278,8 @@
 											<span class='color_code'><?=$row->color_code;?></span>
 										</td>
 										<td>
+											<span class='use_ppn' hidden="hidden"><?=$row->use_ppn;?></span>
+											<span class='id' hidden="hidden"><?=$row->id;?></span>
 											<a href='#portlet-config-edit' data-toggle='modal' class="btn-xs btn green btn-edit"><i class="fa fa-edit"></i> Edit</a>
 										</td>
 									</tr>
@@ -265,6 +301,7 @@ jQuery(document).ready(function() {
 		let ini = $(this).closest('tr');
    		$('#form_edit_data [name=toko_list_id]').val(ini.find('.id').html());
    		$('#form_edit_data [name=nama]').val(ini.find('.nama').html());
+   		$('#form_edit_data [name=use_ppn]').val(ini.find('.use_ppn').html());
    		$('#form_edit_data [name=alamat]').val(ini.find('.alamat').html());
    		$('#form_edit_data [name=telepon]').val(ini.find('.telepon').html());
    		$('#form_edit_data [name=fax]').val(ini.find('.fax').html());
@@ -272,6 +309,14 @@ jQuery(document).ready(function() {
    		$('#form_edit_data [name=kode_pos]').val(ini.find('.kode_pos').html());
    		$('#form_edit_data [name=NPWP]').val(ini.find('.NPWP').html());
    		$('#form_edit_data [name=color_code]').val(ini.find('.color_code').html());
+
+		const ppn_row = $('#form_edit_data [name=use_ppn]').closest('.form-group'); 
+		if (ini.find('.use_ppn').html()) {
+			ppn_row.addClass('use_ppn')
+		}else{
+			ppn_row.removeClass('use_ppn')
+		}
+
    	});
 
    	$('.btn-save').click(function(){
@@ -285,5 +330,17 @@ jQuery(document).ready(function() {
    			$('#form_edit_data').submit();
    		}
    	});
+
 });
+
+function checkPPN(el){
+	const ini = $(`#${el}`);
+	const isChecked = ini.find('input').is(':checked');
+	if (isChecked) {
+		ini.addClass('use_ppn');
+	}else{
+		ini.removeClass('use_ppn');
+	}
+}
+
 </script>

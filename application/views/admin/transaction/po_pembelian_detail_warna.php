@@ -345,7 +345,6 @@
 <script>
 jQuery(document).ready(function() {
 
-	
 	$('#barang_id_select, #warna_id_select').select2({
         placeholder: "Pilih...",
         allowClear: true

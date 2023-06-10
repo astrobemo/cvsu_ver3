@@ -69,7 +69,7 @@ function print_kombinasi_2(printer_name){
 			   	//3
 			   	'\x0A'+
 			   	<?="'".sprintf('%-35.35s', $alamat_toko)."'";?>+'\x09'+
-			   	<?="'".sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) )."'";?> + 
+			   	<?='"'.sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) ).'"';?> + 
 
 			   	//4
 			   	'\x0A'+
@@ -433,7 +433,7 @@ function print_kombinasi_2(printer_name){
 			   	//3
 			   	'\x0A'+
 			   	<?="'".sprintf('%-35.35s', $alamat_toko)."'";?>+'\x09'+
-			   	<?="'".sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) )."'";?> + 
+			   	<?='"'.sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) ).'"';?> + 
 
 			   	//4
 			   	'\x0A'+

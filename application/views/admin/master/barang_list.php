@@ -9,8 +9,8 @@
 				<div class="modal-content">
 					<div class="modal-body">
 						<form action="<?=base_url('master/barang_list_insert')?>" class="form-horizontal" id="form_add_data" method="post">
-							<h3 class='block'> Tambah </h3>
-							<div class="form-group">
+							<h3 class='block' style="background:lightblue; padding-left:10px;"> Barang Baru </h3>
+							<div class="form-group" hidden>
 			                    <label class="control-label col-md-3">Toko<span class="required">
 			                    * </span>
 			                    </label>
@@ -42,6 +42,27 @@
 			                    	<span class='check-double-info'></span>
 			                    </div>				                    
 			                </div>
+			                <hr/>
+
+							<div class="form-group subitem-field" style="background:lightgreen">
+			                    <label class="control-label col-md-3">Punya Subitem<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+									<label class='checkbox-inline'>
+										<input type="checkbox" checked class="form-control" value='1' onchange="subitemChange('1')" id='subitem-check' name="subitem_status" value="1" />yes</label>
+								</div>				                    
+			                </div>
+
+							<div class="form-group eceran-field">
+			                    <label class="control-label col-md-3">Stok Eceran di Mix<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+									<label class='checkbox-inline'>
+										<input type="checkbox" class="form-control" value='1' onchange="eceranMixChange('1')" id='eceran-mix' name="eceran_mix_status" value="1" />yes</label>
+								</div>				                    
+			                </div>
 
 			                <div class="form-group">
 			                    <label class="control-label col-md-3">Satuan(Kecil)<span class="required">
@@ -61,7 +82,7 @@
 			                    </div>
 			                </div>
 
-			                <div class="form-group">
+			                <div class="form-group" id='satuan-besar-add'>
 			                    <label class="control-label col-md-3">Satuan(Besar)<span class="required">
 			                    * </span>
 			                    </label>
@@ -77,12 +98,12 @@
 
 			                <hr/>
 
-			                <div class="form-group">
+			                <div class="form-group" hidden>
 			                    <label class="control-label col-md-3">Harga Beli<span class="required">
 			                    * </span>
 			                    </label>
 			                    <div class="col-md-6">
-			                    	<input type="text" class="form-control amount_number_comma " name="harga_beli"/>
+			                    	<input type="text" class="form-control amount_number_comma " value='0' name="harga_beli"/>
 			                    </div>				                    
 			                </div>
 
@@ -106,7 +127,7 @@
 			                </div>
 
 			                <div class="form-group">
-			                    <label class="control-label col-md-3">Harga Beli Per<span class="required">
+			                    <label class="control-label col-md-3">Pengali Harga Beli<span class="required">
 			                    * </span>
 			                    </label>
 			                    <div class="col-md-6">
@@ -121,7 +142,7 @@
 			                </div>
 
 			                <div class="form-group">
-			                    <label class="control-label col-md-3">Harga Jual Per<span class="required">
+			                    <label class="control-label col-md-3">Pengali Harga Jual <span class="required">
 			                    * </span>
 			                    </label>
 			                    <div class="col-md-6">
@@ -165,8 +186,8 @@
 				<div class="modal-content">
 					<div class="modal-body">
 						<form action="<?=base_url('master/barang_list_update')?>" class="form-horizontal" id="form_edit_data" method="post">
-							<h3 class='block'> Edit </h3>
-							<div class="form-group">
+							<h3 class='block' style="background:lightpink; padding-left:10px;"> Edit Barang </h3>
+							<div class="form-group"  hidden>
 			                    <label class="control-label col-md-3">Toko<span class="required">
 			                    * </span>
 			                    </label>
@@ -195,6 +216,27 @@
 			                    <div class="col-md-6">
 			                    	<input type="text" class="form-control" name="nama_jual"/>
 			                    </div>				                    
+			                </div>							
+			                <hr/>
+
+							<div class="form-group subitem-field">
+			                    <label class="control-label col-md-3">Punya Subitem<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+									<label class='checkbox-inline'>
+										<input type="checkbox" class="form-control" value='1' onchange="subitemChange('2')" id='subitem-check-edit' name="subitem_status" />yes</label>
+								</div>				                    
+			                </div>
+
+							<div class="form-group eceran-field">
+			                    <label class="control-label col-md-3">Stok Eceran di Mix<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+									<label class='checkbox-inline'>
+										<input type="checkbox" class="form-control" value='1' onchange="eceranMixChange('2')" id='eceran-mix-edit' name="eceran_mix_status" />yes</label>
+								</div>				                    
 			                </div>
 
 			                <div class="form-group">
@@ -299,10 +341,7 @@
 			                    		<option value='1' selected>Aktif</option>
 			                    	</select>
 			                    </div>
-			                    
-			                </div>
-
-				                
+			                </div>				                
 						</form>
 					</div>
 					<div class="modal-footer">
@@ -318,6 +357,20 @@
 		<div class="row margin-top-10">
 			<div class="col-md-12">
 				<div class="portlet light">
+					<div class="tabbable tabs-left" style='margin-bottom:5px'>
+						<ul class="nav nav-tabs" style='padding:0px; margin:10px 0px;'>
+							<li class='active'>
+								<a>
+									DAFTAR BARANG
+								</a> 
+							</li>
+							<li>
+								<a href="<?=base_url().is_setting_link('master/barang_eceran_mix_list')?>">
+									DAFTAR BARANG ECERAN (MIX)
+								</a> 
+							</li>
+						</ul>
+					</div>
 					<div class="portlet-title">
 						<div class="caption caption-md">
 							<i class="icon-bar-chart theme-font hide"></i>
@@ -430,8 +483,10 @@ jQuery(document).ready(function() {
             let pengali_harga = data_get[3];
             let pengali_harga_beli = data_get[4];
             let toko_id = data_get[5];
-            let color_code = data_get[6];
-            let harga_ecer = data_get[7];
+            // let color_code = data_get[6];
+            let harga_ecer = data_get[6];
+            let subitem_status = data_get[7];
+            let eceran_mix_status = data_get[8];
             let status_aktif = $('td:eq(0)', nRow).text();
             let btn_status = '';
             let p_jual = data_harga[0];
@@ -448,12 +503,14 @@ jQuery(document).ready(function() {
             let toko = "<span class='toko_id' hidden>"+toko_id+"</span>"
             let packaging = "<span class='packaging_id' hidden>"+packaging_id+"</span>";
             let status = "<span class='status_aktif' hidden>"+status_aktif+"</span>";
+            let subitemStatus = "<span class='subitem-status' hidden>"+subitem_status+"</span>";
+            let eceranStatus = "<span class='eceran-mix-status' hidden>"+eceran_mix_status+"</span>";
 			let ecer = '';
 			if(harga_ecer !=0){
             	ecer = `<span class='harga_ecer' style='background:lightblue'>${change_number_comma(harga_ecer)}</span>`;
 			}
            	let action = id+status+pengali+pengali_beli+
-           		satuan+packaging+toko+
+           		satuan+packaging+toko+subitemStatus+eceranStatus+
            		"<a href='#portlet-config-edit' data-toggle='modal' class='btn-xs btn green btn-edit'><i class='fa fa-edit'></i> </a>"+
            		btn_status;
             $('td:eq(0)', nRow).html($('td:eq(0)', nRow).text());
@@ -486,30 +543,45 @@ jQuery(document).ready(function() {
 	});
 	
    	$('#general_table').on('click', '.btn-edit', function(){
+		var form = '#form_edit_data';
+		
 		let ini = $(this).closest('tr');
-   		$('#form_edit_data [name=barang_id]').val(ini.find('.id').html());
-   		$('#form_edit_data [name=satuan_id]').val(ini.find('.satuan_id').html());
-   		$('#form_edit_data [name=packaging_id]').val(ini.find('.packaging_id').html());
+   		$(`${form} [name=barang_id]`).val(ini.find('.id').html());
+   		$(`${form} [name=satuan_id]`).val(ini.find('.satuan_id').html());
+   		$(`${form} [name=packaging_id]`).val(ini.find('.packaging_id').html());
+		$(`${form} [name=satuan_id]`).change();
 
-   		$('#form_edit_data [name=nama]').val(ini.find('.nama').html());
-   		$('#form_edit_data [name=nama_jual]').val(ini.find('.nama_jual').html());
-   		$('#form_edit_data [name=harga_beli]').val(ini.find('.harga_beli').html());
-   		$('#form_edit_data [name=harga_jual]').val(ini.find('.harga_jual').html());
-   		$('#form_edit_data [name=harga_ecer]').val(ini.find('.harga_ecer').html());
-   		$('#form_edit_data [name=toko_id]').val(ini.find('.toko_id').html());
-   		$("#form_edit_data [name=pengali_harga_jual]").prop('checked', false);
+   		$(`${form} [name=nama]`).val(ini.find('.nama').html());
+   		$(`${form} [name=nama_jual]`).val(ini.find('.nama_jual').html());
+   		$(`${form} [name=harga_beli]`).val(ini.find('.harga_beli').html());
+   		$(`${form} [name=harga_jual]`).val(ini.find('.harga_jual').html());
+   		$(`${form} [name=harga_ecer]`).val(ini.find('.harga_ecer').html());
+   		$(`${form} [name=toko_id]`).val(ini.find('.toko_id').html());
+   		$(`${form} [name=pengali_harga_jual]`).prop('checked', false);
+
    		$.uniform.update($("#form_edit_data [name=pengali_harga]"));
    		var pengali_harga = ini.find('.pengali_harga_jual').html();
    		var pengali_harga_beli = ini.find('.pengali_harga_beli').html();
+		const subitemStatus = ini.find(".subitem-status").html();
+		const eceranStatus = ini.find(".eceran-mix-status").html();
 		tokoChange(2);
 
    		$("#form_edit_data [name=pengali_harga_jual][value='"+pengali_harga+"']").prop('checked', true);
    		$("#form_edit_data [name=pengali_harga_beli][value='"+pengali_harga_beli+"']").prop('checked', true);
    		
+   		$("#subitem-check-edit").prop('checked', parseInt(subitemStatus));
+   		$("#eceran-mix-edit").prop('checked', parseInt(eceranStatus));
+
+		console.log($("#eceran-mix-edit").is(':checked'), parseInt(eceranStatus) == false);
+
+		subitemChange('2');
+		eceranMixChange('2');
+
    		$('#form_edit_data [name=satuan_id]').change();
    		$('#form_edit_data [name=packaging_id]').change();
 
-   		$.uniform.update($("#form_edit_data [name=pengali_harga_jual], #form_edit_data [name=pengali_harga_beli]"));
+
+   		$.uniform.update($("#form_edit_data [name=pengali_harga_jual], #form_edit_data [name=pengali_harga_beli], #subitem-check-edit, #eceran-mix-edit"));
    		
    	});
 
@@ -589,11 +661,55 @@ jQuery(document).ready(function() {
 function tokoChange(tipe){
 	if (tipe == 1) {
 		let toko_id = $('#toko-id').val();
-		$("#portlet-config .modal-body").css('background-color',colorToko[toko_id]);
+		// $("#portlet-config .modal-body").css('background-color',colorToko[toko_id]);
 	}else{
 		let toko_id = $('#toko-id-edit').val();
-		$("#portlet-config-edit .modal-body").css('background-color',colorToko[toko_id]);
-		
+		// $("#portlet-config-edit .modal-body").css('background-color',colorToko[toko_id]);
 	}
 }
+
+function subitemChange(tipe){
+	let form;
+	let check;
+	let checkDiv;
+	if (tipe==1) {
+		form = document.querySelector("#form_add_data")
+		checkDiv = form.querySelector(".subitem-field");
+		check = document.querySelector("#subitem-check");
+	}else{
+		form = document.querySelector("#form_edit_data")
+		checkDiv = form.querySelector(".subitem-field");
+		check = document.querySelector("#subitem-check-edit");
+	}
+
+	if (check.checked) {
+		checkDiv.style.backgroundColor = 'lightgreen'
+	}else{
+		checkDiv.style.backgroundColor = 'transparent'
+	}
+	
+}
+
+function eceranMixChange(tipe){
+	let form;
+	let check;
+	let checkDiv;
+	if (tipe==1) {
+		form = document.querySelector("#form_add_data")
+		checkDiv = form.querySelector(".eceran-field");
+		check = document.querySelector("#eceran-mix");
+	}else{
+		form = document.querySelector("#form_edit_data")
+		checkDiv = form.querySelector(".eceran-field");
+		check = document.querySelector("#eceran-mix-edit");
+	}
+
+	if (check.checked) {
+		checkDiv.style.backgroundColor = 'yellow'
+	}else{
+		checkDiv.style.backgroundColor = 'transparent'
+	}
+	
+}
+
 </script>

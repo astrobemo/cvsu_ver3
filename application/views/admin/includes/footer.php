@@ -498,11 +498,14 @@
 </html>
 <script src="<?php echo base_url('assets/global/plugins/select2/select2.min.js'); ?>" type="text/javascript" ></script>
 <script src="<?php echo base_url('assets_noondev/js/page_common.js'); ?>"></script>
+<script src="<?php echo base_url('assets_noondev/js/currency-format.js'); ?>"></script>
 <script>
 	$(document).ready(function() {
-	   	$("#<?=$nama_menu;?>").addClass("active");
-	   	$("#<?=$nama_menu;?> .title").after('<span class="selected"></span>');
-	   	$("#<?=$nama_submenu;?>").addClass("active");
+		<?if (isset($nama_menu)) {?>
+			$("#<?=$nama_menu;?>").addClass("active");
+			$("#<?=$nama_menu;?> .title").after('<span class="selected"></span>');
+			$("#<?=$nama_submenu;?>").addClass("active");
+		<?}?>
 
 	   	// $('.tanggal_target')
 

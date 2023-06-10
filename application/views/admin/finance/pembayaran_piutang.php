@@ -113,6 +113,9 @@
 											<span class='unbalance_<?=$baris->id;?>' hidden style='color:red; margin-right:20px;'><b>UNBALANCED</b></span>
 											<button id='button_<?=$baris->id;?>' class='btn btn-md yellow-gold btn-view'>VIEW <i class='fa fa-sort-down'></i></button>
 											<a target='_blank' href="<?=base_url().is_setting_link('finance/piutang_payment_form')?>?id=<?=$baris->id;?>" class='btn btn-md green'>EDIT</a>
+											<?if(is_posisi_id()== 1){?>
+											<?}?>
+											<a target='_blank' href="<?=base_url().is_setting_link('finance/piutang_payment_form')?>?id=<?=$baris->id;?>" class='btn btn-md green'>EDIT</a>
 										</td>
 									</tr>
 								</table>

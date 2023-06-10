@@ -158,7 +158,7 @@ function change_number_format2(number_data){
 function reset_number_comma(number_data){
     if(number_data == '' && number_data == null )
         number_data = 0;
-    if (number_data != 0) {
+    if (number_data.toString().length > 0) {
         // alert(number_data); 
         number_data = number_data.toString();
         if ( number_data.length > 4 ) {

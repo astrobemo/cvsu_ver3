@@ -39,10 +39,10 @@ function print_kombinasi(printer_name){
 			}
 
 			asort($qty_c);
+			$jml_angka = count($qty_c);
 
 			$qty_c = array_values($qty_c);
 			$baris = ceil($jml_angka/10);
-			
 			for ($m=0; $m < $baris ; $m++) { 
 		   		$baris_idx++;
 			}
@@ -69,7 +69,7 @@ function print_kombinasi(printer_name){
 			   	//3
 			   	'\x0A'+
 			   	<?="'".sprintf('%-35.35s', $alamat_toko)."'";?>+'\x09'+
-			   	<?="'".sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) )."'";?> + 
+			   	<?='"'.sprintf('%56.54s', 'Yth, '.strtoupper($nama_keterangan) ).'"';?> + 
 
 			   	//4
 			   	'\x0A'+

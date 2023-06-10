@@ -328,11 +328,8 @@
 				                <a href="<?=base_url()?>transaction/po_pembelian_open?id=<?=$po_pembelian_id;?>" class='btn btn-lg yellow-gold btn-edit-po hidden-print'><i class='fa fa-print'></i> Edit </a>
 			                <?}?>
 			                <a href="javascript:window.open('','_self').close();" class="btn btn-lg default button-previous hidden-print">Close</a>
-
-
 						</div>
-					</div>
-					
+					</div>	
 				</div>
 			</div>
 		</div>

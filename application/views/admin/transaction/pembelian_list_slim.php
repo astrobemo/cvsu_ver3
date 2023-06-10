@@ -142,8 +142,8 @@
 						<div class="actions">
 							<select class='btn btn-sm btn-default' name='status_select' id='status_select'>
 								<option value="1" selected>Aktif</option>
+								<option value="2">Belum Release</option>
 								<?if (is_posisi_id() < 4) {?>
-									<option value="2">Belum Release</option>
 									<option value="-1">Batal</option>
 								<?}?>
 
@@ -302,11 +302,11 @@ jQuery(document).ready(function() {
            	};
 
            	let button_release = '';
-           	<?if (is_posisi_id() <= 3) {?>
+           	<?//if (is_posisi_id() <= 3) {?>
            		if (status_aktif == 2) {
            			button_release = "<a data-toggle='tooltip' data-placement='left' title='Double click untuk release' class='btn-xs btn purple btn-release'><i class='fa fa-check'></i> </a>";
            		};
-       		<?};?>
+       		<?//};?>
            	
            	var action = "<span class='id' hidden='hidden'>"+id+"</span><span class='toko_id' hidden='hidden'>"+toko_id+"</span><span class='gudang_id' hidden='hidden'>"+gudang_id+"</span><span class='supplier_id' hidden='hidden'>"+supplier_id+"</span>"+button_release+button_edit+button_remove + button_view;
 
