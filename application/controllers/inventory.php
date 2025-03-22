@@ -2495,7 +2495,7 @@ class Inventory extends CI_Controller {
 
 		if ($this->input->get('warna_id') != '') {
 			$warna_id = $this->input->get('warna_id');
-			$cond_filter = ($cond_filter == "" ? "WHERE" : "AND")." warna_id=".$warna_id;
+			$cond_filter .= ($cond_filter == "" ? "WHERE" : " AND")." warna_id=".$warna_id;
 		}
 
 		if ($this->input->get('gudang_id') != '') {
@@ -2539,7 +2539,12 @@ class Inventory extends CI_Controller {
 		
 		$data['stok_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal_end, $tanggal_awal,"");
 		$data['assembly_list'] = $this->inv_model->get_assembly_list($tanggal_end, $tanggal_start, $cond_filter, $cond_filter_gudang);
+	
 		$this->load->view('admin/template',$data);		
+
+		// $this->output->enable_profiler(TRUE);
+
+		// echo $cond_filter." ".$cond_filter_gudang;
 	}
 
 	function assembly_list_insert(){

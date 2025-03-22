@@ -441,14 +441,14 @@
 							<i class="icon-bar-chart theme-font hide"></i>
 							<span class="caption-subject theme-font bold uppercase"><?=$breadcrumb_small;?></span>
 						</div>
-						<?if (is_posisi_id() < 3) { ?>
+						<?/*if (is_posisi_id() < 3) { ?>
 							<div class="actions">
 								<a href="#portlet-config" data-toggle='modal' class="btn btn-default btn-sm btn-form-add hidden-print">
 								<i class="fa fa-plus"></i> Tambah </a>
 								<!-- <a href="#portlet-config-eceran" data-toggle='modal' class="btn btn-default btn-sm hidden-print">
 								<i class="fa fa-plus"></i> Eceran </a> -->
 							</div>
-						<?}?>
+						<?}*/?>
 					</div>
 					<div class="portlet-body">
 						<h1><?=$nama_toko;?></h1>
@@ -630,14 +630,14 @@
 													echo "<b>Stok Opname</b>";
 												}elseif ($row->tipe == 'ecer1') {
 													echo "<b>Ubah ke stok eceran</b>";
-													if (is_posisi_id() < 3) { ?>
+													/* if (is_posisi_id() < 3) { ?>
 														<span class='tipe' hidden><?=$row->tipe?></span>
 														<span class='id' hidden ><?=$row->trx_id?></span>
 														<span class='toko_id' hidden ><?=$row->toko_id?></span>
 														<span class='qty-data' hidden><?=$row->qty_data?></span>
 														<a href="#portlet-config-eceran-edit" data-toggle='modal' class='btn btn-xs blue btn-eceran-edit'><i class='fa fa-edit'></i></a>
 														<button class='btn btn-xs red btn-eceran-remove' onclick="removeEceran('<?=$row->trx_id;?>')"><i class='fa fa-times'></i></button>
-													<? }
+													<? } */
 												}elseif ($row->tipe == 'so') {?>
 													STOK OPNAME	
 												<?}?>
