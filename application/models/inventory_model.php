@@ -3615,7 +3615,7 @@ class Inventory_Model extends CI_Model {
 
 //==========================================================================================================================================
 
-	function get_assembly_list($tanggal_end, $tanggal_start){
+	function get_assembly_list($tanggal_end, $tanggal_start, $cond_barang, $cond_gudang){
 		$query = $this->db->query("SELECT t1.*, CONCAT('[', GROUP_CONCAT(rekap_sumber),']') as rekap_sumber, 
 		CONCAT('[', GROUP_CONCAT(rekap_hasil),']') as rekap_hasil, 
 		username, nd_toko.nama as nama_toko, nd_gudang.nama as nama_gudang,
@@ -3627,6 +3627,7 @@ class Inventory_Model extends CI_Model {
 				FROM nd_assembly
 				WHERE tanggal >='$tanggal_start'
 				AND tanggal <='$tanggal_end'
+				$cond_gudang
 				)t1
 				LEFT JOIN(
 					SELECT assembly_id,
@@ -3640,6 +3641,7 @@ class Inventory_Model extends CI_Model {
 					FROM nd_assembly_detail_sumber tX
 					LEFT JOIN nd_supplier 
 					ON tX.supplier_id = nd_supplier.id
+					$cond_barang
 				)t2
 				ON t1.id=t2.assembly_id
 				LEFT JOIN(
@@ -3654,6 +3656,7 @@ class Inventory_Model extends CI_Model {
 					FROM nd_assembly_detail_hasil tX
 					LEFT JOIN nd_supplier 
 					ON tX.supplier_id = nd_supplier.id
+					$cond_barang
 				)t3
 				ON t1.id=t3.assembly_id
 				LEFT JOIN nd_user
@@ -3670,6 +3673,8 @@ class Inventory_Model extends CI_Model {
 				ON t1.warna_id_sumber = w1.id
 				LEFT JOIN nd_warna w2
 				ON t1.warna_id_hasil = w2.id
+				WHERE t2.assembly_id is not null
+				OR t3.assembly_id is not null
 				GROUP BY t1.id
 				");
 		
