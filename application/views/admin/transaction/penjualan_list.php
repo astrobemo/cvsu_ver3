@@ -140,6 +140,14 @@
 									</select>
 								</td>
 							</tr>
+							<tr>
+								<td></td>
+								<td class='padding-rl-5'> : </td>
+								<td>
+									<input name="tanggal_start" id="tanggalStart" type="text" class="date-picker" value="<?=$tanggal_start?>"> s/d
+									<input name="tanggal_end" id="tanggalEnd" type="text" class="date-picker" value="<?=$tanggal_end?>">
+								</td>
+							</tr>
 						</table>
 						<hr>
 						<!-- table-striped table-bordered  -->
@@ -281,7 +289,7 @@ jQuery(document).ready(function() {
 
             $('td:eq(2)', nRow).html("<span class='no_faktur'>"+$('td:eq(2)', nRow).text() + "</span>" );
             $('td:eq(2)', nRow).attr('data-order',tahun+no_faktur);
-            $('td:eq(3)', nRow).html("<span hidden>"+tgl+"</span>"+tanggal);
+            $('td:eq(3)', nRow).html("<span>"+tgl+"</span>");
             $('td:eq(5)', nRow).html(change_number_comma($('td:eq(5)', nRow).text()));
             $('td:eq(6)', nRow).html(change_number_comma($('td:eq(6)', nRow).text()));
             $('td:eq(9)', nRow).html(stat);
@@ -302,7 +310,7 @@ jQuery(document).ready(function() {
 		"bProcessing": true,
 		"bServerSide": true,
 		"order":[[1, 'desc']],
-		"sAjaxSource": baseurl + "transaction/data_penjualan?status_aktif=<?=$status_aktif;?>"
+		"sAjaxSource": baseurl + "transaction/data_penjualan?status_aktif=<?=$status_aktif;?>&tanggal_start=<?=$tanggal_start;?>&tanggal_end=<?=$tanggal_end;?>",
 	});
 
 	// var oTable;
@@ -310,8 +318,10 @@ jQuery(document).ready(function() {
     
 	$('#status_select').change(function(){
 		let status_aktif = $(this).val();
+		const tanggal_start = $(`#tanggalStart`).val();
+		const tanggal_end = $(`#tanggalEnd`).val();
 		// alert(status_aktif);
-		oTable.fnReloadAjax(baseurl + "transaction/data_penjualan?status_aktif="+status_aktif);
+		oTable.fnReloadAjax(baseurl + "transaction/data_penjualan?status_aktif="+status_aktif+`&tanggal_start=${tangga	l_start}&tanggal_end=${tanggal_end}`);
 		// alert('test');
 	});
 

@@ -287,7 +287,7 @@ jQuery(document).ready(function() {
 
    	$('#general_table').on('click', '.btn-remove', function(){
    		var data = status_aktif_get($(this).closest('tr'))+'=?=supplier';
-   		window.location.replace("master/ubah_status_aktif?data_sent="+data+'&link=supplier_list');
+   		window.location.replace(baseurl+"master/ubah_status_aktif?data_sent="+data+'&link=supplier_list');
    	});
 
    	$('.btn-save').click(function(){

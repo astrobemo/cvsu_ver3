@@ -245,6 +245,23 @@
 			                </div> 
 
 							<div class="form-group">
+			                    <label class="control-label col-md-3">Barang<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+			                    	<select name="barang_id_source" class='form-control input1' id='barang_id_select'>
+		                				<option value=''>Pilih</option>
+		                				<?$i=0;foreach ($retur_barang as $row) { ?>
+			                    			<option value="<?=$row->id?>" data-index="<?=$i?>"><?=$row->nama_jual;?> <?=$row->warna_jual;?> - Rp <?=number_format($row->harga_jual,"0",",",".");?></option>
+			                    		<? $i++;} ?>
+			                    	</select>
+									<input type="text" name='barang_id' id="barang_id_add" hidden>
+									<input type="text" name='warna_id' id="warna_id_add" hidden>
+			                    </div>
+			                </div>
+							
+
+							<!-- <div class="form-group">
 			                    <label class="control-label col-md-3">Kode Barang<span class="required">
 			                    * </span>
 			                    </label>
@@ -284,23 +301,18 @@
 			                    <div class="col-md-6">
 		                			<input readonly type="text" class='form-control' name="satuan"/>
 			                    </div>
-			                </div> 
+			                </div>   -->
 
 			                <div class="form-group">
 			                    <label class="control-label col-md-3">Harga<span class="required">
 			                    * </span>
 			                    </label>
 			                    <div class="col-md-6">
-			                    	<div class='input-group'>
-			                    		<input type="text" class='amount_number form-control' name="harga"/>
-			                			<span class="input-group-btn" >
-											<a data-toggle="popover" class='btn btn-md default btn-cek-harga' data-trigger='click' title="History Pembelian Customer" data-html="true" data-content="<div id='data-harga'>loading...</div>"><i class='fa fa-search'></i></a>
-										</span>
-				                    	<input name='rekap_qty' hidden='hidden'>
-
-			                    	</div>
+									<input type="text" class='amount_number form-control' id="hargaJualAdd" name="harga_jual"/>
+			                    	<small id="hargaAddNotes"></small>
+									<input name='rekap_qty' hidden='hidden'>
 			                    </div>
-			                </div> 
+			                </div>
 						</form>
 					</div>
 
@@ -627,6 +639,14 @@
 
 
 <script>
+
+let hargaSource;
+const barangSource = <?=json_encode($retur_barang);?>;
+const hargaAdd = document.querySelector("#hargaJualAdd");
+const hargaAddNotes = document.querySelector("#hargaAddNotes");
+const barangIdAdd = document.querySelector("#barang_id_add");
+const warnaIdAdd = document.querySelector("#warna_id_add");
+
 jQuery(document).ready(function() {
 
 	FormNewReturDetail.init();
@@ -775,33 +795,51 @@ jQuery(document).ready(function() {
 //====================================get harga jual barang====================================
 
     $('#barang_id_select').change(function(){
-    	var barang_id = $('#barang_id_select').val();
-   		var data = $("#form_add_barang [name=data_barang] [value='"+barang_id+"']").text().split('??');
-   		if (retur_type_id == 3) {
-			$('#form_add_barang [name=harga]').val(change_number_format(data[1]));		
-   		}else{
-	    	var data_st = {};
-   			data_st['barang_id'] = $('#form_add_barang [name=barang_id]').val();
-	    	data_st['customer_id'] =  "<?=$customer_id;?>";
-	    	var url = "transaction/get_latest_harga";
+    	var barangIdSource = $('#barang_id_select');
+		const barangIndex = barangIdSource.find(":selected").attr('data-index');
+		const sel = barangSource[barangIndex];
+		const barang_id = sel.barang_id;
+		const warna_id = sel.warna_id;
+		const harga_jual = sel.harga_jual;
+		const qty = sel.subqty;
+		const roll = sel.subroll;
+		hargaSource = parseFloat(sel.harga_jual);
+		hargaAdd.value = hargaSource;
+		barangIdAdd.value = barang_id;
+		warnaIdAdd.value = warna_id;
 
-   			ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
-   				// alert(data_respond);
-   				if (data_respond > 0) {
-					$('#form_add_barang [name=harga]').val(change_number_format(data_respond));
-   				}else{
-					$('#form_add_barang [name=harga]').val(change_number_format(data[1]));
-   				}
-	   		});
-   		}
-   		// alert(data);
-		$('#form_add_barang [name=satuan]').val(data[0]);
-		$('#warna_id_select').select2('open');
+   		// var data = $("#form_add_barang [name=data_barang] [value='"+barang_id+"']").text().split('??');
+   		// if (retur_type_id == 3) {
+		// 	$('#form_add_barang [name=harga]').val(change_number_format(data[1]));		
+   		// }else{
+	    // 	var data_st = {};
+   		// 	data_st['barang_id'] = $('#form_add_barang [name=barang_id]').val();
+	    // 	data_st['customer_id'] =  "<?=$customer_id;?>";
+	    // 	var url = "transaction/get_latest_harga";
+
+   		// 	ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
+   		// 		// alert(data_respond);
+   		// 		if (data_respond > 0) {
+		// 			$('#form_add_barang [name=harga]').val(change_number_format(data_respond));
+   		// 		}else{
+		// 			$('#form_add_barang [name=harga]').val(change_number_format(data[1]));
+   		// 		}
+	   	// 	});
+   		// }
+   		// // alert(data);
+		// $('#form_add_barang [name=satuan]').val(data[0]);
+		// $('#warna_id_select').select2('open');
     });
 
-    $('#warna_id_select').change(function(){
-    	$('#form_add_barang [name=harga]').focus();
-    });
+	$("#hargaJualAdd").change(function(){
+		const selisih = parseFloat(hargaAdd.value) - parseFloat(hargaSource);
+		console.log(selisih,hargaSource,  parseFloat(hargaAdd.value)+ '-'+ parseFloat(hargaSource));
+		if (selisih < 0) {
+			hargaAddNotes.innerHTML = (`<span style="color:red"> Harga retur lebih rendah</span>`);
+		}else{
+			hargaAddNotes.innerHTML = ("");
+		}
+	})
 
     $('.btn-cek-harga').click(function(){
     	var data = {};

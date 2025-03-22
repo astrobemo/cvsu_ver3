@@ -240,8 +240,7 @@
 									$i++; 
 									} ?>
 
-									<?
-									foreach ($pembayaran_hutang_detail as $row) { ?>
+									<?foreach ($pembayaran_hutang_detail as $row) { ?>
 										<tr>
 											<td>
 												<?=$i;?>
@@ -285,8 +284,61 @@
 												<?}?>
 											</td>
 										</tr>
+									<?$i++; 
+									} ?>
+									
 									<?
-									$i++; 
+										if (count($retur_beli) > 0) {?>
+											<tr>
+												<td colspan="9" style="background-color: yellow; text-align:center"> - retur beli -</td>
+											</tr>
+										<?}
+									?>
+
+									<?foreach ($retur_beli as $row) { ?>
+										<tr>
+											<td>
+												<?=$i;?>
+											</td>
+											<td>
+												<a href="<?=base_url().is_setting_link('transaction/pembelian_list_detail')?>/<?=$row->pembelian_id?>" target="_blank">
+												<?=$row->no_faktur;?>
+												</a>
+											</td>
+											<td>
+												<?=is_reverse_date($row->tanggal);?>
+											</td>
+											<td>
+											</td>
+											<td>
+												<span style="padding-left:25px"><?=$row->jumlah_roll;?></span> 
+												<?$total_roll += $row->jumlah_roll; ?>
+											</td>
+											<td>
+												<?$total_hutang += $row->sisa_hutang;?>
+												<?//=$row->sisa_hutang;?>
+												<span class='hutang'><?=number_format($row->sisa_hutang,'0',',','.');?></span>
+											</td>
+											<td>
+												<? if ($pembayaran_hutang_id != '') { $amount = $row->amount;}else{$amount = 0;}?>
+												<input data-retur="1" <?=$readonly;?> name='retur_<?=$row->pembelian_id;?>' class='amount_number bayar-hutang' value="<?=number_format($amount,'0',',','.');?>">
+											</td>
+											<td>
+												<?$sisa = $row->sisa_hutang - $amount;?>
+												<span  data-retur="1" <?=$readonly;?> class='sisa-hutang'><?=number_format($sisa,'0',',','.');?></span>
+											</td>
+											<td class='hidden-print'>
+												<?if ($pembayaran_hutang_id != '') { ?>
+													<span class='pembayaran_hutang_detail_id' hidden><?=$row->id;?></span>
+												<?}else{?>
+													<input name='data_status_<?=$row->pembelian_id;?>' hidden value='<?=$row->data_status;?>'>
+													<input name='pembelian_id_<?=$row->pembelian_id;?>' hidden value="<?=$row->pembelian_id;?>"> 
+													<label><input <?=$disabled;?> type='checkbox' <?if ($sisa == 0) { echo 'checked'; }?> name='status_<?=$row->pembelian_id?>' class='lunas-check' >
+													lunas </label>
+												<?}?>
+											</td>
+										</tr>
+									<?$i++; 
 									} ?>
 
 									<tr style='font-size:1.2em; border-top:2px solid #171717; border-bottom:2px solid #171717;'>
@@ -772,7 +824,7 @@ jQuery(document).ready(function() {
 		update_total_bayar();
 	});
     
-    $('.btn-save-bayar').dblclick(function(){
+    $('.btn-save-bayar').click(function(){
     	// $('#form-bayar').submit();
     	var ini = $(this);
     	var bayar_id = $('[name=pembayaran_type_id]:checked').val();
@@ -991,12 +1043,23 @@ function update_total_bayar(){
 	var pembulatan = $("[name=pembulatan]").val();
 	var total_nilai_bayar = reset_number_format($('.total_nilai_bayar').html());
 	if (pembulatan == '') {pembulatan = 0;};
+	
 	$('#general_table .bayar-hutang').each(function(){
-		total_bayar += reset_number_format($(this).val());
+		const isRetur = $(this).attr('data-retur');
+		if (isRetur) {
+			total_bayar -= reset_number_format($(this).val());
+		}else{
+			total_bayar += reset_number_format($(this).val());
+		}
 	});
 
 	$('#general_table .sisa-hutang').each(function(){
-		total_hutang += reset_number_format($(this).html());
+		const isRetur = $(this).attr('data-retur');
+		if (isRetur) {
+			total_hutang -= reset_number_format($(this).html());
+		}else{
+			total_hutang += reset_number_format($(this).html());
+		}
 		// alert($(this).val());
 	});
 

@@ -28,10 +28,11 @@
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-body">
-						<form action="<?=base_url('transaction/retur_jual_list_insert')?>" class="form-horizontal" id="form_add_data" method="post">
+						<!-- <form action="<?=base_url('transaction/retur_jual_list_insert')?>" class="form-horizontal" id="form_add_data" method="post"> -->
+						<form action="<?=base_url('transaction/penjualan_list_retur')?>" class="form-horizontal" id="form_add_data" method="post">
 							<h3 class='block'> Retur Baru</h3>
 							
-							<div class="form-group">
+							<!--< div class="form-group">
 			                    <label class="control-label col-md-3">Type<span class="required">
 			                    * </span>
 			                    </label>
@@ -41,7 +42,7 @@
 		                    			<option <??> value='2'>Non Pelanggan</option>
 			                    	</select>
 			                    </div>
-			                </div>			                
+			                </div> -->			                
 
 			                <div class="form-group">
 			                    <label class="control-label col-md-3">Tanggal<span class="required">
@@ -52,7 +53,7 @@
 			                    </div>
 			                </div> 
 
-			                <div class="form-group customer_section">
+			                <!-- <div class="form-group customer_section">
 			                    <label class="control-label col-md-3">Customer<span class="required">
 			                    * </span>
 			                    </label>
@@ -67,6 +68,23 @@
 			                    	</div>
 			                    	<div id='add-input-customer' hidden='hidden'>
 			                    		<input name='nama_keterangan' class='form-control'>
+			                    	</div>
+			                    </div>
+			                </div> -->
+
+							<div class="form-group customer_section">
+			                    <label class="control-label col-md-3">Invoice Jual<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+			                    	<div id='add-select-customer'>
+			                    		<select name="penjualan_id" class='form-control' id="penjualan_id_select">
+			                				<option value=''>Pilih</option>
+			                				<?foreach ($penjualan_list as $row) { ?>
+				                    			<option value="<?=$row->id?>"><?=$row->no_faktur_lengkap;?></option>
+				                    		<? } ?>
+				                    	</select>
+										<small>tanggal invoice >= <?=is_reverse_date($max_tanggal);?></small>
 			                    	</div>
 			                    </div>
 			                </div>
@@ -294,8 +312,9 @@
 <script src="<?php echo base_url('assets/global/plugins/select2/select2.min.js'); ?>" type="text/javascript" ></script>
 <script>
 jQuery(document).ready(function() {
-	Metronic.init(); // init metronic core components
-	Layout.init(); // init current layout
+	$('#penjualan_id_select').select2({
+	        allowClear: true
+	});
 	// TableAdvanced.init();
 
 	// oTable = $('#general_table').DataTable();

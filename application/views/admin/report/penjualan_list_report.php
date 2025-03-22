@@ -81,6 +81,21 @@
 												<td></td>
 											</tr>
 											<tr>
+												<td>Tipe Trx</td>
+												<td>: </td>
+												<td>
+													<b>
+														<select name='penjualan_type_id'>
+															<option value="">All</option>
+															<?foreach ($penjualan_type as $row) { ?>
+																<option <?if ($penjualan_type_id == $row->id) {echo 'selected';}?> value='<?=$row->id;?>'><?=$row->text;?></option>
+															<?}?>
+														</select>
+													</b>
+												</td>
+												<td></td>
+											</tr>
+											<tr>
 												<td>Toko</td>
 												<td> : </td>
 												<td>
@@ -167,6 +182,7 @@
 										<input name='barang_id' value='<?=$barang_id;?>' hidden>
 										<input name='warna_id' value='<?=$warna_id;?>' hidden>
 										<input name='toko_id' value='<?=$toko_id;?>' hidden>
+										<input name='penjualan_type_id' value='<?=$penjualan_type_id;?>' hidden>
 
 										<button <?=(count($penjualan_list) == 0 ? "disabled" : "");?> class='btn green'><i class='fa fa-download'></i> Excel</button>
 									</form>
@@ -175,12 +191,23 @@
 						</table>
 									
 						<hr/>
+						INFO WARNA TOKO
+						<?$color_code = [];
+						foreach ($this->toko_list_aktif as $row) {
+							$color_code[$row->id] = $row->color_code;?>
+							<div style='background:<?=$row->color_code;?>; margin-bottom:0px;padding:2px; border-left:2px solid #f2cf87; width:200px'><?=$row->nama;?></div>	
+						<?}?>
+						<hr/>
+						
 						<!-- table-striped table-bordered  -->
 						<table class="table table-bordered table-hover table-striped " id="general_table">
 							<thead>
 								<tr style='background:#eee' >
 									<th scope="col" style='width:90px !important;'>
 										No Faktur
+									</th>
+									<th scope="col">
+										Faktur
 									</th>
 									<th scope="col">
 										Tanggal<br/> Penjualan
@@ -231,8 +258,11 @@
 								<?
 								$idx_total = 0; $g_total = 0;
 								$yard_total = 0; $roll_total = 0;
-								foreach ($penjualan_list as $row) { ?>
-									<?
+								foreach ($penjualan_list as $row) { 
+										$ppn = $row->ppn;
+										$ppn_bagi = 1+($ppn/100);
+										$no_faktur_pertoko = explode('??', $row->no_faktur_pertoko);
+										$toko_info = explode('??', $row->toko_info);
 										$qty = ''; $jumlah_roll = ''; $nama_barang = ''; $harga_jual = '';
 										if ($row->qty != '') {
 											$qty = explode('??', $row->qty);
@@ -247,6 +277,13 @@
 									<tr class='text-center' >
 										<td>
 											<a href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>/?id=<?=$row->id;?>" target='_blank' <?=($row->no_faktur == '' ? "class='btn btn-xs red'" : '' );?> ><?=($row->no_faktur == '' ? "<i class='fa fa-warning'></i><i class='fa fa-warning'></i>" : $row->no_faktur);?></a>
+										</td>
+										<td>
+											<?foreach ($no_faktur_pertoko as $key => $value) {?>
+												<div style='background:<?=$color_code[$toko_info[$key]];?>; margin-bottom:0px;padding:5px 8px; border-left:2px solid #f2cf87 '>
+													<?=$value;?>
+												</div>	
+											<?}?>
 										</td>
 										<td>
 											<?=is_reverse_date($row->tanggal);?>
@@ -316,16 +353,16 @@
 											if ($harga_jual != '') {
 													$j = 1; $idx = 1;
 													foreach ($harga_jual as $key => $value) {
-													echo str_replace(',00', '', number_format($value/1.1,'2',',','.')).'<br/>';
-													if ($j % 3 == 0 && $baris != $idx) {
-														echo "<hr style='margin:2px'/>";
-														// echo '---<br/>';
-														$j = 1;
-													}else{													
-														$j++;
+														echo str_replace(',00', '', number_format($value/$ppn_bagi,'2',',','.')).'<br/>';
+														if ($j % 3 == 0 && $baris != $idx) {
+															echo "<hr style='margin:2px'/>";
+															// echo '---<br/>';
+															$j = 1;
+														}else{													
+															$j++;
+														}
+														$idx++;
 													}
-													$idx++;
-												}
 											}?>
 											<b>Subtotal:</b>
 											<?if ($row->diskon != 0) {?>
@@ -338,8 +375,8 @@
 											if ($harga_jual != '') {
 												$j = 1; $idx = 1; 
 												foreach ($harga_jual as $key => $value) {
-													echo str_replace(',00', '', number_format(($pengali_harga[$key] == 1 ? $qty[$key] : $jumlah_roll[$key])*$value/1.1,'2',',','.')).'<br/>';
-													$subtotal += ($pengali_harga[$key] == 1 ? $qty[$key] : $jumlah_roll[$key])*$value/1.1;
+													echo str_replace(',00', '', number_format(($pengali_harga[$key] == 1 ? $qty[$key] : $jumlah_roll[$key])*$value/$ppn_bagi,'2',',','.')).'<br/>';
+													$subtotal += ($pengali_harga[$key] == 1 ? $qty[$key] : $jumlah_roll[$key])*$value/$ppn_bagi;
 													if ($j % 3 == 0 && $baris != $idx) {
 														echo "<hr style='margin:2px'/>";
 														// echo '---<br/>';
@@ -358,8 +395,8 @@
 												$j = 1; $idx = 1;
 												foreach ($harga_jual as $key => $value) {
 													$harga_now = ($pengali_harga[$key] == 1 ? $qty[$key] : $jumlah_roll[$key]) * $value;
-													$subtotal += $harga_now-($harga_now/1.1);
-													echo str_replace(',00', '', number_format($harga_now-($harga_now/1.1),'2',',','.')).'<br/>';
+													$subtotal += $harga_now-($harga_now/$ppn_bagi);
+													echo str_replace(',00', '', number_format($harga_now-($harga_now/$ppn_bagi),'2',',','.')).'<br/>';
 													if ($j % 3 == 0 && $baris != $idx) {
 														echo "<hr style='margin:2px'/>";
 														// echo '---<br/>';
@@ -456,26 +493,33 @@
 							<tr>
 								<th>Transaksi</th>
 								<th>Total</th>
-								<?foreach ($tipe_bayar as $row2) { 
-									if ($row2->id != 6) {?>
-									<th>
-										<?=$row2->nama;?>
-									</td>
-								<?}}?>
+								<?
+								if ($barang_id == '' && $warna_id == '' && $toko_id == '') {
+									foreach ($tipe_bayar as $row2) { 
+										if ($row2->id != 6) {?>
+										<th>
+											<?=$row2->nama;?>
+										</td>
+									<?}}
+								}
+								?>
 
 							</tr>
 							<tr style='font-size:1.2em;font-weight:bold'>
 								<td class='text-center'><?=$idx_total;?></td>
 								<td class='text-center'><b><?=number_format($g_total,'0',',','.');?></b> </td>
-								<?foreach ($tipe_bayar as $row2) { 
-									if ($row2->id != 6) {?>
-										<td>
-											<?if (isset($total_tipe_bayar[$row2->id])) {
-												echo number_format($total_tipe_bayar[$row2->id],'0',',','.');
-											}?>
-										</td>
-									<?}?>
-								<?}?>
+								<?
+								if ($barang_id == '' && $warna_id == '' && $toko_id == '') {
+									foreach ($tipe_bayar as $row2) { 
+										if ($row2->id != 6) {?>
+											<td>
+												<?if (isset($total_tipe_bayar[$row2->id])) {
+													echo number_format($total_tipe_bayar[$row2->id],'0',',','.');
+												}?>
+											</td>
+										<?}?>
+									<?}
+								}?>
 								<!-- <td></td>
 								<td></td>
 								<td></td> -->

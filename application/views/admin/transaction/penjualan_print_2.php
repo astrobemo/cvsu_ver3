@@ -1,5 +1,10 @@
 <?
 
+	$ppn_pembagi = 1.11;
+
+	$ppn_pembagi = 1+($ppn_berlaku/100);
+
+
 	foreach ($data_penjualan as $row) {
 		$nama_customer = $row->nama_keterangan;
 		$no_faktur = $row->no_faktur;
@@ -14,6 +19,7 @@
 		$keterangan = $row->keterangan;
 		$diskon = $row->diskon;
 	}
+
 
 
 	$pdf = new FPDF( 'L', 'mm', array(220 ,140 ) );
@@ -106,9 +112,9 @@
 		$pdf->Cell( 10, 5, substr($row->nama_packaging, 0,3), 'LB', 0, 'C' );
 		$t_roll += $row->jumlah_roll;
 		$subtotal = $row->harga_jual * ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll);
-		$dpp = ($row->harga_jual/1.1) * ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll);
+		$dpp = ($row->harga_jual/$ppn_pembagi) * ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll);
 
-		$pdf->Cell( 30, 5, number_format($row->harga_jual/1.1,'2',',','.'), 'LB', 0, 'C' );
+		$pdf->Cell( 30, 5, number_format($row->harga_jual/$ppn_pembagi,'2',',','.'), 'LB', 0, 'C' );
 		$pdf->Cell( 29, 5, number_format($dpp,'2',',','.'), 'LB', 0, 'R' );
 		$pdf->Cell( 1, 5, '','B', 0, 'R' );
 		$pdf->Cell( 29, 5, number_format($subtotal - $dpp ,'2',',','.'), 'LB', 0, 'R' );
@@ -132,9 +138,9 @@
 	
 	$pdf->Cell( 125, 5, '', 0, 0, 'C' );
 	$pdf->Cell( 20, 5, 'Subtotal', 0, 0, 'L' );
-	$pdf->Cell( 29, 5, number_format($g_total/1.1,'2',',','.'), 'LBT', 0, 'R' );
+	$pdf->Cell( 29, 5, number_format($g_total/$ppn_pembagi,'2',',','.'), 'LBT', 0, 'R' );
 	$pdf->Cell( 1, 5, '','TB', 0, 'R' );
-	$pdf->Cell( 29, 5, number_format($g_total - ($g_total/1.1),'2',',','.'), 'LBT', 0, 'R' );
+	$pdf->Cell( 29, 5, number_format($g_total - ($g_total/$ppn_pembagi),'2',',','.'), 'LBT', 0, 'R' );
 	$pdf->Cell( 1, 5, '','TRB', 1, 'R' );
 
 	$pdf->SetFont( $font_name_bold, '', 12 );

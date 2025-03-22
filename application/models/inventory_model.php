@@ -131,15 +131,20 @@ class Inventory_Model extends CI_Model {
 		// return $this->db->last_query();
 	}
 
-	function get_stok_barang_list_2($select, $tanggal, $tanggal_awal){
+	function get_stok_barang_list_2($select, $tanggal, $tanggal_awal, $condShown){
+
 		$query = $this->db->query("SELECT tbl_b.nama as nama_barang,tbl_b.nama_jual as nama_barang_jual, 
 				tbl_c.warna_beli as nama_warna,tbl_c.warna_jual as nama_warna_jual, 
 				tbl_a.barang_id, tbl_a.warna_id, tbl_b.status_aktif as status_barang, 
-				tbl_d.nama as nama_satuan, satuan_id, tbl_e.nama as nama_packaging, packaging_id
+				tbl_d.nama as nama_satuan, satuan_id, tbl_e.nama as nama_packaging, packaging_id,
+				nd_barang_sku.id as sku_id, ifnull(isShown,1) as isShown, nd_barang_sku.id as sku_id
 				$select
 				FROM(
 					(
-					        SELECT barang_id, warna_id, nd_pembelian.gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 1 as tipe
+					        SELECT barang_id, warna_id, nd_pembelian.gudang_id, 
+							sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+							CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+							tanggal, 1 as tipe
 					        FROM (
 					        	SELECT t2.qty as qty, t2.jumlah_roll, id, barang_id, warna_id, pembelian_id
 					        	FROM nd_pembelian_detail t1
@@ -169,8 +174,12 @@ class Inventory_Model extends CI_Model {
 			        	AND status_aktif = 1
 				        GROUP BY barang_id, warna_id, gudang_id_after, tanggal
 				    )UNION(
-				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 3
-				        FROM nd_penjualan_detail
+				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 3
+				        FROM (
+							SELECT id, toko_id, penjualan_id, barang_id, warna_id, gudang_id, subqty, subroll, if(warna_id!=888,is_eceran,0) as is_eceran 
+							FROM nd_penjualan_detail
+						) nd_penjualan_detail
 				        LEFT JOIN (
 				        	SELECT *
 				        	FROM nd_penjualan
@@ -189,7 +198,10 @@ class Inventory_Model extends CI_Model {
 						AND is_eceran = 0
 				        GROUP BY barang_id, warna_id, nd_penjualan_detail.gudang_id, tanggal
 				    )UNION(
-				    	SELECT barang_id, warna_id, nd_retur_jual_detail.gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 4
+				    	SELECT barang_id, warna_id, nd_retur_jual_detail.gudang_id, 
+						sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+						tanggal, 12
 				        FROM nd_retur_jual_detail
 				        LEFT JOIN (
 				        	SELECT *
@@ -207,6 +219,28 @@ class Inventory_Model extends CI_Model {
 				        ON nd_penjualan_qty_detail.retur_jual_detail_id = nd_retur_jual_detail.id
 				        WHERE nd_retur_jual.id is not null
 				        GROUP BY barang_id, warna_id,nd_retur_jual_detail.gudang_id, tanggal
+				    )UNION(
+				    	SELECT barang_id, warna_id, nd_retur_beli_detail.gudang_id, 
+						0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, 
+						tanggal, 13
+				        FROM nd_retur_beli_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_beli
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_retur_beli
+				        ON nd_retur_beli_detail.retur_beli_id = nd_retur_beli.id
+				        LEFT JOIN (
+				            SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_beli_detail_id
+				            FROM nd_retur_beli_qty
+				            GROUP BY retur_beli_detail_id
+				            ) nd_penbelian_qty_detail
+				        ON nd_penbelian_qty_detail.retur_beli_detail_id = nd_retur_beli_detail.id
+				        WHERE nd_retur_beli.id is not null
+				        GROUP BY barang_id, warna_id,nd_retur_beli_detail.gudang_id, tanggal
 				    )UNION(
 				        SELECT barang_id, warna_id, gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 5
 				        	FROM (
@@ -257,6 +291,7 @@ class Inventory_Model extends CI_Model {
                         LEFT JOIN nd_stok_opname t2
                         ON t1.stok_opname_id = t2.id
 						WHERE status_aktif = 1
+			        	AND tanggal <= '$tanggal'	
 						GROUP BY barang_id, warna_id, gudang_id, tanggal
 				    )UNION(
 				        SELECT barang_id, warna_id, gudang_id, 
@@ -267,9 +302,50 @@ class Inventory_Model extends CI_Model {
 							FROM nd_mutasi_stok_eceran
 							WHERE tanggal <= '$tanggal'	
 							AND tanggal >= '$tanggal_awal'
+							AND tipe != 3
                         ) t1
                         LEFT JOIN nd_mutasi_stok_eceran_qty t2
                         ON t2.mutasi_stok_eceran_id = t1.id
+						GROUP BY barang_id, warna_id, gudang_id, tanggal
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						0, 0, 
+						sum(qty), sum(jumlah_roll),
+						tanggal, 12
+				        FROM (
+                            SELECT *
+							FROM nd_assembly
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_assembly_detail_sumber 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						sum(qty), sum(jumlah_roll),
+						0, 0, 
+						tanggal, 13
+				        FROM (
+                            SELECT *
+							FROM nd_assembly
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_assembly_detail_hasil 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
 						GROUP BY barang_id, warna_id, gudang_id, tanggal
 				    )
 				) tbl_a
@@ -283,6 +359,7 @@ class Inventory_Model extends CI_Model {
 					LEFT JOIN nd_stok_opname t2
 					ON t1.stok_opname_id = t2.id
 					WHERE status_aktif = 1
+					AND tanggal <= '$tanggal'	
 					GROUP BY barang_id, warna_id, gudang_id
 				) t_stok
 				ON tbl_a.barang_id = t_stok.barang_id
@@ -296,8 +373,538 @@ class Inventory_Model extends CI_Model {
 				ON tbl_b.satuan_id = tbl_d.id
 				LEFT JOIN nd_satuan tbl_e
 				ON tbl_b.packaging_id = tbl_e.id
+				LEFT JOIN nd_barang_sku 
+				ON tbl_a.barang_id = nd_barang_sku.barang_id
+				AND tbl_a.warna_id = nd_barang_sku.warna_id
 				Where tbl_a.barang_id is not null
+				AND isEceran=0
+				$condShown
 				GROUP BY tbl_a.barang_id, tbl_a.warna_id
+				ORDER BY nama_jual, warna_jual");
+		
+		return $query->result();
+		// return $this->db->last_query();
+	}
+
+	function get_stok_barang_list_3($select, $tanggal, $tanggal_awal, $condShown){
+		$query = $this->db->query("SELECT tbl_b.nama as nama_barang,tbl_b.nama_jual as nama_barang_jual,  tbl_a.toko_id,
+				tbl_c.warna_beli as nama_warna,tbl_c.warna_jual as nama_warna_jual, 
+				tbl_a.barang_id, tbl_a.warna_id, tbl_b.status_aktif as status_barang, 
+				tbl_d.nama as nama_satuan, satuan_id, tbl_e.nama as nama_packaging, packaging_id,
+				nd_barang_sku.id as sku_id, ifnull(isShown,1) as isShown, nd_barang_sku.id as sku_id, tbl_f.nama as nama_toko
+				$select
+				FROM(
+					(
+					        SELECT barang_id, warna_id, nd_pembelian.gudang_id, 
+							sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+							CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+							tanggal, 1 as tipe, toko_id
+					        FROM (
+					        	SELECT t2.qty as qty, t2.jumlah_roll, id, barang_id, warna_id, pembelian_id
+					        	FROM nd_pembelian_detail t1
+					        	LEFT JOIN (
+					        		SELECT sum(qty * if(jumlah_roll != 0, jumlah_roll, 1)) as qty, sum(jumlah_roll) as jumlah_roll, pembelian_detail_id
+					        		FROM nd_pembelian_qty_detail
+					        		GROUP BY pembelian_detail_id
+					        		) t2
+								ON t2.pembelian_detail_id = t1.id
+					        	ORDER BY pembelian_id
+					        ) nd_pembelian_detail
+					        LEFT JOIN (
+					        	SELECT *
+					        	FROM nd_pembelian
+					        	WHERE ifnull(tanggal_sj,tanggal) <= '$tanggal'
+					        	AND ifnull(tanggal_sj,tanggal) >= '$tanggal_awal'
+					        	AND status_aktif = 1
+					        	) nd_pembelian
+					        ON nd_pembelian_detail.pembelian_id = nd_pembelian.id
+					        WHERE nd_pembelian.id is not null
+					        GROUP BY barang_id, warna_id, nd_pembelian.gudang_id, tanggal, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, gudang_id_after, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 2, toko_id
+			        	FROM nd_mutasi_barang
+			        	WHERE tanggal <= '$tanggal'
+			        	AND tanggal >= '$tanggal_awal'
+			        	AND status_aktif = 1
+				        GROUP BY barang_id, warna_id, gudang_id_after, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 3, toko_id
+				        FROM (
+							SELECT id, toko_id, penjualan_id, barang_id, warna_id, gudang_id, subqty, subroll, if(warna_id!=888,is_eceran,0) as is_eceran 
+							FROM nd_penjualan_detail
+						) nd_penjualan_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_penjualan
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_penjualan
+				        ON nd_penjualan_detail.penjualan_id = nd_penjualan.id
+				        LEFT JOIN (
+				            SELECT sum(qty* if(jumlah_roll != 0, jumlah_roll,1) ) as qty, sum(jumlah_roll) as jumlah_roll, penjualan_detail_id
+				            FROM nd_penjualan_qty_detail
+				            GROUP BY penjualan_detail_id
+				            ) nd_penjualan_qty_detail
+				        ON nd_penjualan_qty_detail.penjualan_detail_id = nd_penjualan_detail.id
+				        where nd_penjualan.id is not null
+						AND is_eceran = 0
+				        GROUP BY barang_id, warna_id, nd_penjualan_detail.gudang_id, tanggal, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, nd_retur_jual_detail.gudang_id, 
+						sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+						tanggal, 12, toko_id
+				        FROM nd_retur_jual_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_jual
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_retur_jual
+				        ON nd_retur_jual_detail.retur_jual_id = nd_retur_jual.id
+				        LEFT JOIN (
+				            SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id
+				            FROM nd_retur_jual_qty
+				            GROUP BY retur_jual_detail_id
+				            ) nd_penjualan_qty_detail
+				        ON nd_penjualan_qty_detail.retur_jual_detail_id = nd_retur_jual_detail.id
+				        WHERE nd_retur_jual.id is not null
+				        GROUP BY barang_id, warna_id,nd_retur_jual_detail.gudang_id, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, nd_retur_beli_detail.gudang_id, 
+						0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, 
+						tanggal, 13, toko_id
+				        FROM nd_retur_beli_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_beli
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_retur_beli
+				        ON nd_retur_beli_detail.retur_beli_id = nd_retur_beli.id
+				        LEFT JOIN (
+				            SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_beli_detail_id
+				            FROM nd_retur_beli_qty
+				            GROUP BY retur_beli_detail_id
+				            ) nd_penbelian_qty_detail
+				        ON nd_penbelian_qty_detail.retur_beli_detail_id = nd_retur_beli_detail.id
+				        WHERE nd_retur_beli.id is not null
+				        GROUP BY barang_id, warna_id,nd_retur_beli_detail.gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 5, toko_id
+				        	FROM (
+				        		SELECT barang_id, warna_id, keterangan, id, gudang_id, tanggal, toko_id
+				        		FROM nd_penyesuaian_stok
+					        	WHERE tipe_transaksi = 0
+		                        AND tanggal <= '$tanggal'
+					        	AND tanggal >= '$tanggal_awal'
+			        		)t1
+							LEFT JOIN (
+								SELECT sum(qty*if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, penyesuaian_stok_id
+								FROM nd_penyesuaian_stok_qty
+								GROUP BY penyesuaian_stok_id
+								) t2
+							ON t2.penyesuaian_stok_id = t1.id
+	                        GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT  barang_id, warna_id, gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 6, toko_id
+			        	FROM nd_penyesuaian_stok
+			        	WHERE tanggal <= '$tanggal'
+			        	AND tanggal >= '$tanggal_awal'
+			        	AND tipe_transaksi = 1
+			        	GROUP BY barang_id, warna_id, gudang_id, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 7, toko_id
+			        	FROM nd_penyesuaian_stok
+			        	WHERE tanggal <= '$tanggal'
+			        	AND tanggal >= '$tanggal_awal'
+			        	AND tipe_transaksi = 2
+						GROUP BY barang_id, warna_id, gudang_id, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, gudang_id_before, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 8, toko_id
+			        	FROM nd_mutasi_barang
+			        	WHERE tanggal <= '$tanggal'	
+					    AND tanggal >= '$tanggal_awal'
+			        	AND status_aktif = 1
+						GROUP BY barang_id, warna_id, gudang_id_before, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						sum(qty) as qty_masuk, sum(jumlah_roll), 0, 0,
+						tanggal, 10, toko_id
+				        FROM (
+                            SELECT id, barang_id, warna_id, gudang_id, group_concat(qty) as qty_data, 
+								sum(qty * if(jumlah_roll = 0,1,jumlah_roll )) as qty, sum(jumlah_roll) as jumlah_roll, stok_opname_id, toko_id
+                            FROM nd_stok_opname_detail
+                           	GROUP BY barang_id, warna_id, gudang_id, stok_opname_id, toko_id
+                        ) t1
+                        LEFT JOIN nd_stok_opname t2
+                        ON t1.stok_opname_id = t2.id
+						WHERE status_aktif = 1
+			        	AND tanggal <= '$tanggal'	
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						0, 0, sum(qty), sum(jumlah_roll),
+						tanggal, 11, toko_id
+				        FROM (
+                            SELECT *
+							FROM nd_mutasi_stok_eceran
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+							AND tipe != 3
+                        ) t1
+                        LEFT JOIN nd_mutasi_stok_eceran_qty t2
+                        ON t2.mutasi_stok_eceran_id = t1.id
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						0, 0, 
+						sum(qty), sum(jumlah_roll),
+						tanggal, 12, toko_id
+				        FROM (
+                            SELECT *
+							FROM nd_assembly
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_assembly_detail_sumber 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						sum(qty), sum(jumlah_roll),
+						0, 0, 
+						tanggal, 13, toko_id
+				        FROM (
+                            SELECT *
+							FROM nd_assembly
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_assembly_detail_hasil 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )
+				) tbl_a
+				LEFT JOIN (
+					SELECT barang_id, warna_id, gudang_id, max(tanggal) as tanggal_stok, toko_id
+					FROM (
+						SELECT barang_id, warna_id, gudang_id, stok_opname_id, toko_id
+						FROM nd_stok_opname_detail
+						GROUP BY barang_id, warna_id, gudang_id, stok_opname_id, toko_id
+					)t1
+					LEFT JOIN nd_stok_opname t2
+					ON t1.stok_opname_id = t2.id
+					WHERE status_aktif = 1
+					AND tanggal <= '$tanggal'	
+					GROUP BY barang_id, warna_id, gudang_id, toko_id
+				) t_stok
+				ON tbl_a.barang_id = t_stok.barang_id
+				AND tbl_a.warna_id = t_stok.warna_id
+				AND tbl_a.gudang_id = t_stok.gudang_id
+				AND tbl_a.toko_id = t_stok.toko_id
+				LEFT JOIN nd_barang tbl_b
+				ON tbl_a.barang_id = tbl_b.id
+				LEFT JOIN nd_warna tbl_c
+				ON tbl_a.warna_id = tbl_c.id
+				LEFT JOIN nd_satuan tbl_d
+				ON tbl_b.satuan_id = tbl_d.id
+				LEFT JOIN nd_satuan tbl_e
+				ON tbl_b.packaging_id = tbl_e.id
+				LEFT JOIN nd_toko tbl_f
+				ON tbl_a.toko_id = tbl_f.id
+				LEFT JOIN nd_barang_sku 
+				ON tbl_a.barang_id = nd_barang_sku.barang_id
+				AND tbl_a.warna_id = nd_barang_sku.warna_id
+				Where tbl_a.barang_id is not null
+				AND isEceran=0
+				$condShown
+				GROUP BY tbl_a.barang_id, tbl_a.warna_id, tbl_a.toko_id
+				ORDER BY nama_jual, warna_jual");
+		
+		return $query->result();
+		// return $this->db->last_query();
+	}
+
+	function get_stok_barang_list_pertoko($select, $tanggal, $tanggal_awal, $condShown, $cond_toko){
+		$query = $this->db->query("SELECT tbl_b.nama as nama_barang,tbl_b.nama_jual as nama_barang_jual,  tbl_a.toko_id,
+				tbl_c.warna_beli as nama_warna,tbl_c.warna_jual as nama_warna_jual, 
+				tbl_a.barang_id, tbl_a.warna_id, tbl_b.status_aktif as status_barang, 
+				tbl_d.nama as nama_satuan, satuan_id, tbl_e.nama as nama_packaging, packaging_id,
+				nd_barang_sku.id as sku_id, ifnull(isShown,1) as isShown, nd_barang_sku.id as sku_id, tbl_f.nama as nama_toko
+				$select
+				FROM(
+					(
+					        SELECT barang_id, warna_id, nd_pembelian.gudang_id, 
+							sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+							CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+							tanggal, 1 as tipe, toko_id
+					        FROM (
+					        	SELECT t2.qty as qty, t2.jumlah_roll, id, barang_id, warna_id, pembelian_id
+					        	FROM nd_pembelian_detail t1
+					        	LEFT JOIN (
+					        		SELECT sum(qty * if(jumlah_roll != 0, jumlah_roll, 1)) as qty, sum(jumlah_roll) as jumlah_roll, pembelian_detail_id
+					        		FROM nd_pembelian_qty_detail
+					        		GROUP BY pembelian_detail_id
+					        		) t2
+								ON t2.pembelian_detail_id = t1.id
+					        	ORDER BY pembelian_id
+					        ) nd_pembelian_detail
+					        LEFT JOIN (
+					        	SELECT *
+					        	FROM nd_pembelian
+					        	WHERE ifnull(tanggal_sj,tanggal) <= '$tanggal'
+					        	AND ifnull(tanggal_sj,tanggal) >= '$tanggal_awal'
+					        	AND status_aktif = 1
+					        	) nd_pembelian
+					        ON nd_pembelian_detail.pembelian_id = nd_pembelian.id
+					        WHERE nd_pembelian.id is not null
+					        GROUP BY barang_id, warna_id, nd_pembelian.gudang_id, tanggal, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, gudang_id_after, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 2, toko_id
+			        	FROM nd_mutasi_barang
+			        	WHERE tanggal <= '$tanggal'
+			        	AND tanggal >= '$tanggal_awal'
+			        	AND status_aktif = 1
+				        GROUP BY barang_id, warna_id, gudang_id_after, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 3, toko_id
+				        FROM (
+							SELECT id, toko_id, penjualan_id, barang_id, warna_id, gudang_id, subqty, subroll, if(warna_id!=888,is_eceran,0) as is_eceran 
+							FROM nd_penjualan_detail
+						) nd_penjualan_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_penjualan
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_penjualan
+				        ON nd_penjualan_detail.penjualan_id = nd_penjualan.id
+				        LEFT JOIN (
+				            SELECT sum(qty* if(jumlah_roll != 0, jumlah_roll,1) ) as qty, sum(jumlah_roll) as jumlah_roll, penjualan_detail_id
+				            FROM nd_penjualan_qty_detail
+				            GROUP BY penjualan_detail_id
+				            ) nd_penjualan_qty_detail
+				        ON nd_penjualan_qty_detail.penjualan_detail_id = nd_penjualan_detail.id
+				        where nd_penjualan.id is not null
+						AND is_eceran = 0
+				        GROUP BY barang_id, warna_id, nd_penjualan_detail.gudang_id, tanggal, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, nd_retur_jual_detail.gudang_id, 
+						sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+						tanggal, 12, toko_id
+				        FROM nd_retur_jual_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_jual
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_retur_jual
+				        ON nd_retur_jual_detail.retur_jual_id = nd_retur_jual.id
+				        LEFT JOIN (
+				            SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id
+				            FROM nd_retur_jual_qty
+				            GROUP BY retur_jual_detail_id
+				            ) nd_penjualan_qty_detail
+				        ON nd_penjualan_qty_detail.retur_jual_detail_id = nd_retur_jual_detail.id
+				        WHERE nd_retur_jual.id is not null
+				        GROUP BY barang_id, warna_id,nd_retur_jual_detail.gudang_id, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, nd_retur_beli_detail.gudang_id, 
+						0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, 
+						tanggal, 13, toko_id
+				        FROM nd_retur_beli_detail
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_beli
+				        	WHERE tanggal <= '$tanggal'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_retur_beli
+				        ON nd_retur_beli_detail.retur_beli_id = nd_retur_beli.id
+				        LEFT JOIN (
+				            SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_beli_detail_id
+				            FROM nd_retur_beli_qty
+				            GROUP BY retur_beli_detail_id
+				            ) nd_penbelian_qty_detail
+				        ON nd_penbelian_qty_detail.retur_beli_detail_id = nd_retur_beli_detail.id
+				        WHERE nd_retur_beli.id is not null
+				        GROUP BY barang_id, warna_id,nd_retur_beli_detail.gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 5, toko_id
+				        	FROM (
+				        		SELECT barang_id, warna_id, keterangan, id, gudang_id, tanggal, toko_id
+				        		FROM nd_penyesuaian_stok
+					        	WHERE tipe_transaksi = 0
+		                        AND tanggal <= '$tanggal'
+					        	AND tanggal >= '$tanggal_awal'
+			        		)t1
+							LEFT JOIN (
+								SELECT sum(qty*if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, penyesuaian_stok_id
+								FROM nd_penyesuaian_stok_qty
+								GROUP BY penyesuaian_stok_id
+								) t2
+							ON t2.penyesuaian_stok_id = t1.id
+	                        GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT  barang_id, warna_id, gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 6, toko_id
+			        	FROM nd_penyesuaian_stok
+			        	WHERE tanggal <= '$tanggal'
+			        	AND tanggal >= '$tanggal_awal'
+			        	AND tipe_transaksi = 1
+			        	GROUP BY barang_id, warna_id, gudang_id, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 7, toko_id
+			        	FROM nd_penyesuaian_stok
+			        	WHERE tanggal <= '$tanggal'
+			        	AND tanggal >= '$tanggal_awal'
+			        	AND tipe_transaksi = 2
+						GROUP BY barang_id, warna_id, gudang_id, toko_id
+				    )UNION(
+				    	SELECT barang_id, warna_id, gudang_id_before, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, 8, toko_id
+			        	FROM nd_mutasi_barang
+			        	WHERE tanggal <= '$tanggal'	
+					    AND tanggal >= '$tanggal_awal'
+			        	AND status_aktif = 1
+						GROUP BY barang_id, warna_id, gudang_id_before, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						sum(qty) as qty_masuk, sum(jumlah_roll), 0, 0,
+						tanggal, 10, toko_id
+				        FROM (
+                            SELECT id, barang_id, warna_id, gudang_id, group_concat(qty) as qty_data, 
+								sum(qty * if(jumlah_roll = 0,1,jumlah_roll )) as qty, sum(jumlah_roll) as jumlah_roll, stok_opname_id, toko_id
+                            FROM nd_stok_opname_detail
+                           	GROUP BY barang_id, warna_id, gudang_id, stok_opname_id, toko_id
+                        ) t1
+                        LEFT JOIN nd_stok_opname t2
+                        ON t1.stok_opname_id = t2.id
+						WHERE status_aktif = 1
+			        	AND tanggal <= '$tanggal'	
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						0, 0, sum(qty), sum(jumlah_roll),
+						tanggal, 11, toko_id
+				        FROM (
+                            SELECT *
+							FROM nd_mutasi_stok_eceran
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+							AND tipe != 3
+                        ) t1
+                        LEFT JOIN nd_mutasi_stok_eceran_qty t2
+                        ON t2.mutasi_stok_eceran_id = t1.id
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						0, 0, 
+						sum(qty), sum(jumlah_roll),
+						tanggal, 12, toko_id
+				        FROM (
+                            SELECT *
+							FROM nd_assembly
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_assembly_detail_sumber 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						sum(qty), sum(jumlah_roll),
+						0, 0, 
+						tanggal, 13, toko_id
+				        FROM (
+                            SELECT *
+							FROM nd_assembly
+							WHERE tanggal <= '$tanggal'	
+							AND tanggal >= '$tanggal_awal'
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_assembly_detail_hasil 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal, toko_id
+				    )
+				) tbl_a
+				LEFT JOIN (
+					SELECT barang_id, warna_id, gudang_id, max(tanggal) as tanggal_stok, toko_id
+					FROM (
+						SELECT barang_id, warna_id, gudang_id, stok_opname_id, toko_id
+						FROM nd_stok_opname_detail
+						GROUP BY barang_id, warna_id, gudang_id, stok_opname_id, toko_id
+					)t1
+					LEFT JOIN nd_stok_opname t2
+					ON t1.stok_opname_id = t2.id
+					WHERE status_aktif = 1
+					AND tanggal <= '$tanggal'	
+					GROUP BY barang_id, warna_id, gudang_id, toko_id
+				) t_stok
+				ON tbl_a.barang_id = t_stok.barang_id
+				AND tbl_a.warna_id = t_stok.warna_id
+				AND tbl_a.gudang_id = t_stok.gudang_id
+				AND tbl_a.toko_id = t_stok.toko_id
+				LEFT JOIN nd_barang tbl_b
+				ON tbl_a.barang_id = tbl_b.id
+				LEFT JOIN nd_warna tbl_c
+				ON tbl_a.warna_id = tbl_c.id
+				LEFT JOIN nd_satuan tbl_d
+				ON tbl_b.satuan_id = tbl_d.id
+				LEFT JOIN nd_satuan tbl_e
+				ON tbl_b.packaging_id = tbl_e.id
+				LEFT JOIN nd_toko tbl_f
+				ON tbl_a.toko_id = tbl_f.id
+				LEFT JOIN nd_barang_sku 
+				ON tbl_a.barang_id = nd_barang_sku.barang_id
+				AND tbl_a.warna_id = nd_barang_sku.warna_id
+				Where tbl_a.barang_id is not null
+				AND isEceran=0
+				$cond_toko
+				$condShown
+				GROUP BY tbl_a.barang_id, tbl_a.warna_id, tbl_a.toko_id
 				ORDER BY nama_jual, warna_jual");
 		
 		return $query->result();
@@ -412,9 +1019,10 @@ class Inventory_Model extends CI_Model {
 	}
 
 	function get_stok_barang_eceran_list($tanggal){
-		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id,  sum(tA.qty - ifnull(tB.qty,0)) as qty_stok
+		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id,  sum(tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0) ) as qty_stok
 				FROM (
-				    	SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, if(tanggal >= ifnull(tanggal_so,'2018-01-01'),qty, 0 ) as qty, tipe
+				    	SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
+						if(tanggal >= ifnull(tanggal_so,'2018-01-01'),qty, 0 ) as qty, tipe
 			        	FROM (
 							(
 								SELECT t1.id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal
@@ -473,6 +1081,13 @@ class Inventory_Model extends CI_Model {
 					)tB
 					ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
 					AND tA.tipe = tB.eceran_source
+					LEFT JOIN (
+							SELECT sum(qty) as qty_mutasi, mutasi_stok_eceran_qty_source_id
+							FROM nd_mutasi_stok_eceran_qty
+							WHERE mutasi_stok_eceran_qty_source_id is not null
+							GROUP BY mutasi_stok_eceran_qty_source_id
+					)tC
+					ON tA.stok_eceran_qty_id = tC.mutasi_stok_eceran_qty_source_id
                     WHERE tA.qty > 0
 					GROUP BY barang_id, warna_id, gudang_id
 				");
@@ -590,17 +1205,24 @@ class Inventory_Model extends CI_Model {
 				$select
 				FROM(
 					(
-				        SELECT barang_id, warna_id, nd_pembelian.gudang_id, CAST(sum(qty) as DECIMAL(15,2)) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar
+				        SELECT barang_id, warna_id, tA.gudang_id, CAST(sum(qty) as DECIMAL(15,2)) as qty_masuk, 
+						sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar
 				        FROM (
 				        	SELECT *
 				        	FROM nd_pembelian
 				        	WHERE ifnull(tanggal_sj,tanggal) <= '$tanggal'
 				        	AND status_aktif = 1
-				        	) nd_pembelian
-				        LEFT JOIN nd_pembelian_detail
-				        ON nd_pembelian_detail.pembelian_id = nd_pembelian.id
+				        	) tA
+				        LEFT JOIN nd_pembelian_detail tB
+				        ON tB.pembelian_id = tA.id
+						LEFT JOIN (
+				            SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, pembelian_detail_id
+				            FROM nd_pembelian_qty_detail
+				            GROUP BY pembelian_detail_id
+				            ) tC
+				        ON tC.pembelian_detail_id = tB.id
 				        $cond_barang
-				        GROUP BY barang_id, warna_id, nd_pembelian.gudang_id
+				        GROUP BY barang_id, warna_id, tA.gudang_id
 				    )UNION(
 				    	SELECT barang_id, warna_id, gudang_id_after, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar
 				    	FROM (
@@ -712,7 +1334,7 @@ class Inventory_Model extends CI_Model {
 				        SELECT barang_id, warna_id, toko_id, nd_pembelian.gudang_id, qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, 
 						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 
 						if(no_faktur !='' && no_faktur != null, no_faktur, no_surat_jalan) as no_faktur, 
-						'a1' as tipe, nd_pembelian.id as trx_id, qty_data, supplier_id
+						'a1' as tipe, nd_pembelian.id as trx_id, qty_data, supplier_id, nd_pembelian_detail.id as detail_id
 				        FROM (
 				        	SELECT barang_id, warna_id,t1.id,pembelian_id, t2.qty, t2.jumlah_roll, qty_data
 				        	FROM (
@@ -743,8 +1365,11 @@ class Inventory_Model extends CI_Model {
 				        AND warna_id is not null
 				        AND nd_pembelian.id is not null
 				    )UNION(
-				        SELECT barang_id, warna_id, nd_penjualan_detail.toko_id, nd_penjualan_detail.gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
-						qty as qty_keluar, jumlah_roll as jumlah_roll_keluar, tanggal, no_faktur_lengkap, 'a2' as tipe, nd_penjualan.id as trx_id, qty_data, supplier_id
+				        SELECT barang_id, warna_id, nd_penjualan_detail.toko_id, nd_penjualan_detail.gudang_id, 
+						CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
+						qty as qty_keluar, jumlah_roll as jumlah_roll_keluar, 
+						tanggal, no_faktur_lengkap, 'a2' as tipe, 
+						nd_penjualan.id as trx_id, qty_data, supplier_id, nd_penjualan_detail.id as detail_id
 				        FROM (
 				        	SELECT *
 				        	FROM nd_penjualan_detail 
@@ -754,7 +1379,7 @@ class Inventory_Model extends CI_Model {
 							AND is_eceran = 0
 				        	) nd_penjualan_detail
 				        LEFT JOIN (
-				        	SELECT *, concat('FPJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				        	SELECT *
 				        	FROM nd_penjualan
 				        	WHERE tanggal >= '$tanggal_start'
 				        	AND tanggal <= '$tanggal_end'
@@ -773,10 +1398,11 @@ class Inventory_Model extends CI_Model {
 				        AND nd_penjualan.id is not null
 				    )UNION(
 				    	SELECT barang_id, warna_id,  toko_id,nd_retur_jual_detail.gudang_id, CAST(qty as DECIMAL(15,2)) as qty_masuk, jumlah_roll as jumlah_roll_masuk, 
-						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, no_faktur_lengkap, 'a3' as tipe, nd_retur_jual.id as trx_id, qty_data,
-						0 as supplier_id
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
+						tanggal, no_faktur_lengkap, 'r0' as tipe, nd_retur_jual.id as trx_id, qty_data,
+						0 as supplier_id, nd_retur_jual_detail.id  as detail_id
 				        FROM (
-				        	SELECT *, concat('FRJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				        	SELECT *
 				        	FROM nd_retur_jual
 				        	WHERE tanggal >= '$tanggal_start'
 				        	AND tanggal <= '$tanggal_end'
@@ -792,7 +1418,8 @@ class Inventory_Model extends CI_Model {
 				        	) nd_retur_jual_detail
 				        ON nd_retur_jual_detail.retur_jual_id = nd_retur_jual.id
 				        LEFT JOIN (
-				            SELECT sum(qty * if(jumlah_roll != 0, jumlah_roll,1) ) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id, group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
+				            SELECT sum(qty * if(jumlah_roll != 0, jumlah_roll,1) ) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id, 
+							group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
 				            FROM nd_retur_jual_qty
 				            GROUP BY retur_jual_detail_id
 				            ) nd_retur_jual_qty
@@ -800,9 +1427,39 @@ class Inventory_Model extends CI_Model {
 				        WHERE barang_id is not null 
 				        AND warna_id is not null
 				    )UNION(
+				    	SELECT barang_id, warna_id,  toko_id,nd_retur_beli_detail.gudang_id, 
+						0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						CAST(qty as DECIMAL(15,2)) as qty_keluar, jumlah_roll as jumlah_roll_keluar, 
+						tanggal, no_faktur_lengkap, 'r1' as tipe, nd_retur_beli.id as trx_id, qty_data,
+						0 as supplier_id, nd_retur_beli_detail.id  as detail_id
+				        FROM (
+				        	SELECT *
+				        	FROM nd_retur_beli
+				        	WHERE tanggal >= '$tanggal_start'
+				        	AND tanggal <= '$tanggal_end'
+				        	AND tanggal >= '$tanggal_awal'
+				        	AND status_aktif = 1
+				        	) nd_retur_beli
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_beli_detail
+				        	WHERE gudang_id = $gudang_id
+				        	AND barang_id = $barang_id
+				        	AND warna_id = $warna_id
+				        	) nd_retur_beli_detail
+				        ON nd_retur_beli_detail.retur_beli_id = nd_retur_beli.id
+				        LEFT JOIN (
+				            SELECT sum(qty * if(jumlah_roll != 0, jumlah_roll,1) ) as qty, sum(jumlah_roll) as jumlah_roll, retur_beli_detail_id, group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
+				            FROM nd_retur_beli_qty
+				            GROUP BY retur_beli_detail_id
+				            ) nd_retur_beli_qty
+				        ON nd_retur_beli_qty.retur_beli_detail_id = nd_retur_beli_detail.id
+				        WHERE barang_id is not null 
+				        AND warna_id is not null
+				    )UNION(
 				        SELECT barang_id, warna_id,  toko_id,gudang_id, qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, 
 						tanggal, concat_ws('??', nd_user.username, user_id, nd_penyesuaian_stok.id  ), 0 as tipe, nd_penyesuaian_stok.id, concat(qty,',',jumlah_roll) as qty_data,
-						supplier_id
+						supplier_id, nd_penyesuaian_stok.id as detail_id
 				        FROM (
 				        	SELECT *
 				        	FROM nd_penyesuaian_stok
@@ -821,7 +1478,7 @@ class Inventory_Model extends CI_Model {
 				    )UNION(
 				        SELECT barang_id, warna_id,  toko_id,gudang_id, qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 
 						0 as jumlah_roll_keluar, tanggal, concat_ws('??', nd_user.username, user_id, nd_penyesuaian_stok.id, keterangan  ), 1 as tipe,nd_penyesuaian_stok.id, 
-						concat(qty,',',jumlah_roll)  as qty_data, supplier_id
+						concat(qty,',',jumlah_roll)  as qty_data, supplier_id, nd_penyesuaian_stok.id as detail_id
 				        FROM (
 				        	SELECT *
 				        	FROM nd_penyesuaian_stok
@@ -841,7 +1498,7 @@ class Inventory_Model extends CI_Model {
 				        SELECT barang_id, warna_id, toko_id, gudang_id, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
 						qty as qty_keluar, jumlah_roll as jumlah_roll_keluar, tanggal, concat_ws('??', nd_user.username, user_id, 
 						nd_penyesuaian_stok.id, keterangan ), 2 as tipe,nd_penyesuaian_stok.id, concat(qty,',',jumlah_roll) as qty_data, 
-						supplier_id
+						supplier_id, nd_penyesuaian_stok.id as detail_id
 				        FROM (
 				        	SELECT *
 				        	FROM nd_penyesuaian_stok
@@ -858,9 +1515,9 @@ class Inventory_Model extends CI_Model {
 						WHERE barang_id is not null 
 				        AND warna_id is not null
 				    )UNION(
-				    	SELECT barang_id, warna_id,  toko_id,gudang_id_after, qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, 
-						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal ,nd_gudang.nama, 'b1' as tipe,nd_mutasi_barang.id, concat(qty,',',jumlah_roll)  as qty_data,
-						supplier_id
+				    	SELECT barang_id, warna_id,  toko_id,gudang_id_after, qty2 as qty_masuk, jumlah_roll2 as jumlah_roll_masuk, 
+						CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal ,nd_gudang.nama, 'b1' as tipe, t1.id, concat(qty,',',jumlah_roll)  as qty_data,
+						supplier_id, t2.id as detail_id
 				    	FROM (
 				        	SELECT *
 				        	FROM nd_mutasi_barang
@@ -871,15 +1528,21 @@ class Inventory_Model extends CI_Model {
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
 				        	AND status_aktif = 1
-				        	) nd_mutasi_barang
+				        	) t1
 						LEFT JOIN nd_gudang
-						ON nd_mutasi_barang.gudang_id_before = nd_gudang.id
+						ON t1.gudang_id_before = nd_gudang.id
+						LEFT JOIN (
+							SELECT sum(qty) as qty2, sum(jumlah_roll) as jumlah_roll2, mutasi_barang_id, supplier_id, id
+							FROM nd_mutasi_barang_detail
+							GROUP BY mutasi_barang_id
+						) t2
+						ON t1.id = t2.mutasi_barang_id 
 						WHERE barang_id is not null 
 				        AND warna_id is not null
 				    )UNION(
 				    	SELECT barang_id, warna_id, toko_id, gudang_id_before, CAST(0 as DECIMAL(15,2)) as qty_masuk, 0 as jumlah_roll_masuk, 
-						qty as qty_keluar, jumlah_roll as jumlah_roll_keluar, tanggal,nd_gudang.nama, 'b2' as tipe, nd_mutasi_barang.id, concat(qty,',',jumlah_roll)  as qty_data,
-						supplier_id
+						qty2 as qty_keluar, jumlah_roll2 as jumlah_roll_keluar, tanggal,nd_gudang.nama, 'b2' as tipe, t1.id, concat(qty,',',jumlah_roll)  as qty_data,
+						supplier_id, t2.id as detail_id
 				    	FROM (
 				        	SELECT *
 				        	FROM nd_mutasi_barang
@@ -890,14 +1553,20 @@ class Inventory_Model extends CI_Model {
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
 				        	AND status_aktif = 1
-				        	) nd_mutasi_barang
+				        	) t1
 						LEFT JOIN nd_gudang
-						ON nd_mutasi_barang.gudang_id_after = nd_gudang.id
+						ON t1.gudang_id_after = nd_gudang.id
+						LEFT JOIN (
+							SELECT sum(qty) as qty2, sum(jumlah_roll) as jumlah_roll2, mutasi_barang_id, supplier_id, id
+							FROM nd_mutasi_barang_detail
+							GROUP BY mutasi_barang_id
+						) t2
+						ON t1.id = t2.mutasi_barang_id 
 						WHERE barang_id is not null 
 				        AND warna_id is not null
 				    )UNION(
 				    	SELECT barang_id, warna_id, toko_id, gudang_id, 0 as qty_masuk, 0 as jumlah_roll_masuk, qty as qty_keluar, jumlah_roll as jumlah_roll_keluar, 
-						tanggal,nd_gudang.nama, 'ecer1' as tipe, t1.id, qty_data, supplier_id
+						tanggal,nd_gudang.nama, 'ecer1' as tipe, t1.id, qty_data, supplier_id, t2.id as detail_id
 				    	FROM (
 				        	SELECT *
 				        	FROM nd_mutasi_stok_eceran
@@ -910,7 +1579,8 @@ class Inventory_Model extends CI_Model {
 				        	AND status_aktif = 1
 				        	) t1
 						LEFT JOIN (
-							SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll )) as qty, sum(jumlah_roll) as jumlah_roll, mutasi_stok_eceran_id, group_concat(concat(qty,',',jumlah_roll,',',id) SEPARATOR '??') as qty_data
+							SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll )) as qty, sum(jumlah_roll) as jumlah_roll, 
+							mutasi_stok_eceran_id, group_concat(concat(qty,',',jumlah_roll,',',id) SEPARATOR '??') as qty_data, id
 							FROM nd_mutasi_stok_eceran_qty
 							GROUP by mutasi_stok_eceran_id
 							) t2
@@ -921,7 +1591,7 @@ class Inventory_Model extends CI_Model {
 				        AND warna_id is not null
 				    )UNION(
 				    	SELECT barang_id, warna_id, toko_id, gudang_id, qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, 0, 0, tanggal,nd_gudang.nama, 'so' as tipe, 
-						t1.id, qty_data, supplier_id
+						t1.id, qty_data, supplier_id, t2.id as detail_id
                         FROM (
                             SELECT id, barang_id, warna_id, gudang_id, group_concat(qty) as qty_data, toko_id, 
 								sum(qty * if(jumlah_roll = 0,1,jumlah_roll )) as qty, sum(jumlah_roll) as jumlah_roll, stok_opname_id, supplier_id
@@ -945,6 +1615,72 @@ class Inventory_Model extends CI_Model {
                         WHERE t2.id is not null
                         ORDER BY tanggal DESC
 				    	
+				    )UNION(
+				        SELECT barang_id, warna_id, toko_id, gudang_id, 
+						0, 0, 
+						sum(qty), sum(jumlah_roll),
+						tanggal, concat('Diambil untuk <b>',nama_barang,'</b>'), 'ask',
+						t1.id, qty_data, supplier_id, t2.id as detail_id
+				        FROM (
+							SELECT tA.*, concat(nama_jual,' ', warna_jual) as nama_barang
+							FROM (
+								SELECT *
+								FROM nd_assembly
+								WHERE tanggal >= '$tanggal_start'
+								AND tanggal <= '$tanggal_end'
+								AND tanggal >= '$tanggal_awal'
+								AND gudang_id = $gudang_id 
+								AND barang_id_sumber = $barang_id
+								AND warna_id_sumber = $warna_id
+							)tA
+							LEFT JOIN nd_barang as b2
+							ON tA.barang_id_hasil = b2.id
+							LEFT JOIN nd_warna as w2
+							ON tA.warna_id_hasil = w2.id
+
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id, id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll,
+							group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
+							FROM nd_assembly_detail_sumber 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						GROUP BY barang_id, warna_id, gudang_id, tanggal
+				    )UNION(
+				        SELECT barang_id, warna_id, toko_id, gudang_id, 
+						sum(qty), sum(jumlah_roll),
+						0, 0, 
+						tanggal, concat('Diambil dari <b>',nama_barang,'</b>'), 'asm',
+						t1.id, qty_data, supplier_id, t2.id as detail_id
+				        FROM (
+							SELECT tA.*, concat(nama_jual,' ', warna_jual) as nama_barang
+							FROM (
+								SELECT *
+								FROM nd_assembly
+								WHERE tanggal >= '$tanggal_start'
+								AND tanggal <= '$tanggal_end'
+								AND tanggal >= '$tanggal_awal'
+								AND gudang_id = $gudang_id 
+								AND barang_id_hasil = $barang_id
+								AND warna_id_hasil = $warna_id
+							)tA
+							LEFT JOIN nd_barang as b1
+							ON tA.barang_id_sumber = b1.id
+							LEFT JOIN nd_warna as w1
+							ON tA.warna_id_sumber = w1.id
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id, id, 
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll,
+							group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
+							FROM nd_assembly_detail_hasil 
+							GROUP BY assembly_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal
 				    )
 				) tbl_a
 				LEFT JOIN nd_barang tbl_b
@@ -967,7 +1703,8 @@ class Inventory_Model extends CI_Model {
 		sum(jumlah_roll_masuk) as jumlah_roll_masuk, sum(jumlah_roll_keluar) jumlah_roll_keluar
 				FROM(
 					(
-				        SELECT barang_id, warna_id, t2.gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal, t1.id, 1 as tipe
+				        SELECT barang_id, warna_id, t2.gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal, t1.id, 1 as tipe
 				        FROM (
 				        	SELECT barang_id, warna_id, id, pembelian_id, t_b.*
 				        	FROM nd_pembelian_detail t_a
@@ -991,7 +1728,8 @@ class Inventory_Model extends CI_Model {
 				        ON t1.pembelian_id = t2.id
 				        WHERE t2.id is not null
 				    )UNION(
-				    	SELECT barang_id, warna_id, gudang_id_after, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal, t1.id, 2
+				    	SELECT barang_id, warna_id, gudang_id_after, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 
+						0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal, t1.id, 2
 				    	FROM (
 				        	SELECT *
 				        	FROM nd_mutasi_barang
@@ -1003,14 +1741,15 @@ class Inventory_Model extends CI_Model {
 				        	AND status_aktif = 1
 				        	) t1
 				    )UNION(
-				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, 0 as qty_masuk, 0 as jumlah_roll_masuk, sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, nd_penjualan_detail.id , 3
+				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, 0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, nd_penjualan_detail.id , 3
 				        FROM (
 				        	SELECT *
 				        	FROM nd_penjualan_detail 
 				        	WHERE gudang_id = $gudang_id 
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
-							AND is_eceran = 0
+							AND (is_eceran = 0 OR warna_id=888)
 				        	) nd_penjualan_detail
 				        LEFT JOIN (
 				        	SELECT *
@@ -1037,7 +1776,7 @@ class Inventory_Model extends CI_Model {
 				        	AND warna_id = $warna_id
 				        	) nd_retur_jual_detail
 				        LEFT JOIN (
-				        	SELECT *, concat('FRJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				        	SELECT *
 				        	FROM nd_retur_jual
 				        	WHERE tanggal < '$tanggal_start'
 				        	AND tanggal >= '$tanggal_awal'
@@ -1142,7 +1881,25 @@ class Inventory_Model extends CI_Model {
 						LEFT JOIN nd_mutasi_stok_eceran_qty t2
 						ON t1.id = t2.mutasi_stok_eceran_id
 						GROUP BY barang_id, warna_id, gudang_id
-				    )
+				    )UNION(
+                        SELECT barang_id_sumber, warna_id_sumber, gudang_id, 0 , 0, sum(qty_sumber), sum(jumlah_roll_sumber) , tanggal, id , 11
+				        FROM nd_assembly
+                        WHERE barang_id_sumber =  $barang_id
+                        AND warna_id_sumber = $warna_id
+                        AND gudang_id = $gudang_id
+                        AND tanggal < '$tanggal_start'
+				        AND tanggal >= '$tanggal_awal'
+						GROUP BY barang_id_sumber, warna_id_sumber, gudang_id
+                    )UNION(
+                        SELECT barang_id_hasil, warna_id_hasil, gudang_id, sum(qty_hasil), sum(jumlah_roll_hasil) , 0 , 0, tanggal, id , 12
+				        FROM nd_assembly
+                        WHERE barang_id_hasil =  $barang_id
+                        AND warna_id_hasil = $warna_id
+                        AND gudang_id = $gudang_id
+                        AND tanggal < '$tanggal_start'
+				        AND tanggal >= '$tanggal_awal'
+						GROUP BY barang_id_hasil, warna_id_hasil, gudang_id
+                    )
 				) tbl_a
 				LEFT JOIN nd_barang tbl_b
 				ON tbl_a.barang_id = tbl_b.id
@@ -1661,6 +2418,9 @@ class Inventory_Model extends CI_Model {
 
 	}
 
+
+//===================================================stok pertoko============================================= 
+
 //=======================================================mutasi================================================
 
 
@@ -1786,8 +2546,8 @@ class Inventory_Model extends CI_Model {
 	// 	return $query->result();
 	// }
 
-	function cek_barang_qty($gudang_id, $barang_id,$warna_id, $supplier_id, $tanggal_awal, $stok_opname_id, $tanggal){
-		$query = $this->db->query("SELECT sum(ifnull(qty_masuk,0)) - sum(ifnull(qty_keluar,0)) as qty, sum(ifnull(jumlah_roll_masuk,0)) - sum(ifnull(jumlah_roll_keluar,0)) as jumlah_roll, gudang_id
+	function cek_barang_qty($gudang_id, $toko_id, $barang_id,$warna_id, $supplier_id, $tanggal_awal, $stok_opname_id, $tanggal){
+		$query = $this->db->query("SELECT sum(ifnull(qty_masuk,0)) - sum(ifnull(qty_keluar,0)) as qty, sum(ifnull(jumlah_roll_masuk,0)) - sum(ifnull(jumlah_roll_keluar,0)) as jumlah_roll, gudang_id, $toko_id
 				FROM(
 					(
 				        SELECT barang_id, warna_id, t1.gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal
@@ -1797,6 +2557,7 @@ class Inventory_Model extends CI_Model {
 				        	WHERE gudang_id = $gudang_id
 				        	AND tanggal >= '$tanggal_awal'
 							AND supplier_id = $supplier_id
+							AND toko_id = $toko_id
 							AND tanggal <= '$tanggal'
 				        	AND status_aktif = 1
 				        	) t1
@@ -1814,26 +2575,32 @@ class Inventory_Model extends CI_Model {
                             ) t3
                         ON t3.pembelian_detail_id = t2.id
 				    )UNION(
-				    	SELECT barang_id, warna_id, gudang_id_after, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal
+				    	SELECT barang_id, warna_id, gudang_id_after, sum(t2.qty) as qty_masuk, sum(t2.jumlah_roll) as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal
 				    	FROM (
 				        	SELECT *
 				        	FROM nd_mutasi_barang
 				        	WHERE gudang_id_after = $gudang_id
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
-							AND supplier_id = $supplier_id
 				        	AND tanggal >= '$tanggal_awal'
 							AND tanggal <= '$tanggal'
+							AND toko_id = $toko_id
 				        	AND status_aktif = 1
-				        	) nd_mutasi_barang
+				        	) t1
+							LEFT JOIN nd_mutasi_barang_detail t2
+							ON t1.id = t2.mutasi_barang_id
+							WHERE supplier_id=$supplier_id
+							GROUP BY mutasi_barang_id, supplier_id
 				    )UNION(
-				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, 0 as qty_masuk, 0 as jumlah_roll_masuk, sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal
+				        SELECT barang_id, warna_id, nd_penjualan_detail.gudang_id, 0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal
 				        FROM (
 				        	SELECT *
 				        	FROM nd_penjualan_detail 
 				        	WHERE gudang_id = $gudang_id 
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
+							AND toko_id = $toko_id
 				        	) nd_penjualan_detail
 				        LEFT JOIN (
 				        	SELECT *
@@ -1854,7 +2621,7 @@ class Inventory_Model extends CI_Model {
 				    )UNION(
 				    	SELECT barang_id, warna_id, nd_retur_jual_detail.gudang_id, qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar, tanggal
 				        FROM (
-				        	SELECT *, concat('FRJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				        	SELECT *
 				        	FROM nd_retur_jual
 				        	WHERE status_aktif = 1
 				        	AND tanggal >= '$tanggal_awal'
@@ -1864,6 +2631,7 @@ class Inventory_Model extends CI_Model {
 				        	SELECT *
 				        	FROM nd_retur_jual_detail
 				        	WHERE gudang_id = $gudang_id
+							AND toko_id = $toko_id
 				        	AND barang_id = $barang_id
 							AND supplier_id = $supplier_id
 				        	AND warna_id = $warna_id
@@ -1878,18 +2646,22 @@ class Inventory_Model extends CI_Model {
 				        WHERE barang_id is not null 
 				        AND warna_id is not null
 				    )UNION(
-				    	SELECT barang_id, warna_id, gudang_id_before, 0 as qty_masuk, 0 as jumlah_roll_masuk, sum(qty) as qty_keluar, sum(jumlah_roll) as jumlah_roll_keluar, tanggal
+				    	SELECT barang_id, warna_id, gudang_id_before, 0 as qty_masuk, 0 as jumlah_roll_masuk, sum(t2.qty) as qty_keluar, sum(t2.jumlah_roll) as jumlah_roll_keluar, tanggal
 				    	FROM (
 				        	SELECT *
 				        	FROM nd_mutasi_barang
 				        	WHERE gudang_id_before = $gudang_id
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
-							AND supplier_id = $supplier_id
 				        	AND tanggal >= '$tanggal_awal'
 							AND tanggal <= '$tanggal'
+							AND toko_id = $toko_id
 				        	AND status_aktif = 1
-				        	) nd_mutasi_barang
+				        	)  t1
+							LEFT JOIN nd_mutasi_barang_detail t2
+							ON t1.id = t2.mutasi_barang_id
+							WHERE supplier_id=$supplier_id
+							GROUP BY mutasi_barang_id, supplier_id
 				    )UNION(
 				        SELECT barang_id, warna_id, gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, 0 as qty_keluar, 0 as jumlah_roll_keluar,tanggal
 				        FROM (
@@ -1902,6 +2674,7 @@ class Inventory_Model extends CI_Model {
 		        			AND gudang_id = $gudang_id
 				        	AND tanggal >= '$tanggal_awal'
 							AND tanggal <= '$tanggal'
+							AND toko_id = $toko_id
 			        	) nd_penyesuaian_stok
 						GROUP BY barang_id, warna_id, gudang_id
 				    )UNION(
@@ -1916,6 +2689,7 @@ class Inventory_Model extends CI_Model {
 		        			AND gudang_id = $gudang_id
 				        	AND tanggal >= '$tanggal_awal'
 							AND tanggal <= '$tanggal'
+							AND toko_id = $toko_id
 			        	) nd_penyesuaian_stok
 						GROUP BY barang_id, warna_id, gudang_id
 				    )UNION(
@@ -1930,6 +2704,7 @@ class Inventory_Model extends CI_Model {
 		        			AND gudang_id = $gudang_id
 				        	AND tanggal >= '$tanggal_awal'
 							AND tanggal <= '$tanggal'
+							AND toko_id = $toko_id
 			        	) nd_penyesuaian_stok
 						GROUP BY barang_id, warna_id, gudang_id
 				    )UNION(
@@ -1942,6 +2717,7 @@ class Inventory_Model extends CI_Model {
 							AND supplier_id = $supplier_id
 				        	AND gudang_id = $gudang_id
 				        	AND stok_opname_id = $stok_opname_id
+							AND toko_id = $toko_id
 				        	) t1
 						LEFT JOIN nd_stok_opname t2
 						ON t1.stok_opname_id = t2.id
@@ -1960,7 +2736,7 @@ class Inventory_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function cek_total_barang_qty_eceran($gudang_id, $barang_id,$warna_id, $supplier_id,  $tanggal_awal, $stok_opname_id, $tanggal){
+	function cek_total_barang_qty_eceran($gudang_id, $toko_id, $barang_id,$warna_id, $supplier_id,  $tanggal_awal, $stok_opname_id, $tanggal){
 		$query = $this->db->query("SELECT sum(ifnull(tA.qty,0)) - sum(ifnull(tB.qty,0)) as qty, tA.tipe, gudang_id
 				FROM (
 					(
@@ -1973,6 +2749,7 @@ class Inventory_Model extends CI_Model {
 							AND barang_id = $barang_id
 							AND warna_id = $warna_id
 							AND gudang_id = $gudang_id
+							AND toko_id = $toko_id
 							AND status_aktif = 1
 						)t1
 						LEFT JOIN nd_mutasi_stok_eceran_qty t2
@@ -1984,6 +2761,7 @@ class Inventory_Model extends CI_Model {
 						AND warna_id = $warna_id
 						AND gudang_id = $gudang_id
 						AND stok_opname_id = '$stok_opname_id'
+						AND toko_id = $toko_id
 					)
 					)tA
 					LEFT JOIN (
@@ -1999,6 +2777,7 @@ class Inventory_Model extends CI_Model {
 							LEFT JOIN nd_penjualan t3
 							ON t2.penjualan_id=t3.id
 							WHERE status_aktif=1
+							AND t2.toko_id = $toko_id
 							GROUP BY stok_eceran_qty_id
 
 					)tB
@@ -2089,10 +2868,10 @@ class Inventory_Model extends CI_Model {
 		$query = $this->db->query("SELECT *
 			FROM (
 				-- @row := @row + 1 as idx, 
-				SELECT a.status_aktif, tanggal, concat_ws(' ',e.nama_jual, f.warna_jual)  as nama_barang , c.nama as gudang_before, d.nama as gudang_after, qty, jumlah_roll, concat_ws('??',a.id,gudang_id_before, gudang_id_after, barang_id,warna_id) as data
+				SELECT a.status_aktif, tanggal, concat_ws(' ',e.nama_jual, f.warna_jual)  as nama_barang , c.nama as gudang_before, 
+				d.nama as gudang_after, qty, jumlah_roll, concat_ws('??',a.id,gudang_id_before, gudang_id_after, barang_id, warna_id, ifnull(qty_data,'-'), sku_id, a.toko_id) as data
 				FROM (
 					SELECT * 
-					-- , (SELECT @row := 0)
 					FROM nd_mutasi_barang
 					$cond
 					) a
@@ -2104,6 +2883,14 @@ class Inventory_Model extends CI_Model {
 				ON a.barang_id = e.id
 				LEFT JOIN nd_warna f
 				ON a.warna_id = f.id
+				LEFT JOIN (
+					SELECT group_concat(concat(t1.id,'|',qty,'|',supplier_id,'|', nd_supplier.nama) SEPARATOR '==') as qty_data, mutasi_barang_id
+					FROM nd_mutasi_barang_detail t1
+					LEFT JOIN nd_supplier
+					ON t1.supplier_id = nd_supplier.id
+					GROUP BY mutasi_barang_id
+				)a2
+				ON a.id = a2.mutasi_barang_id
 				order by a.id desc
 				) A			
 			$sWhere
@@ -2692,7 +3479,7 @@ class Inventory_Model extends CI_Model {
 
 	function get_stok_barang_eceran_list_detail($gudang_id, $barang_id,$warna_id, $tanggal, $tanggal_awal, $stok_opname_id){
 		$query = $this->db->query("SELECT *
-		FROM (SELECT tA.stok_eceran_qty_id, tA.qty - ifnull(tB.qty,0) as qty, 
+		FROM (SELECT tA.stok_eceran_qty_id, tA.qty - ifnull(tB.qty,0) -ifnull(qty_mutasi,0) as qty, 
 			eceran_source, tanggal, tipe, tanggal_jual, nama_customer, tA.qty as qty_in, qty_out
 				FROM (
 					(
@@ -2744,12 +3531,83 @@ class Inventory_Model extends CI_Model {
 					)tB
 					ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
 					AND tA.tipe = tB.eceran_source
+					LEFT JOIN (
+							SELECT sum(qty) as qty_mutasi, mutasi_stok_eceran_qty_source_id
+							FROM nd_mutasi_stok_eceran_qty
+							WHERE mutasi_stok_eceran_qty_source_id is not null
+							GROUP BY mutasi_stok_eceran_qty_source_id
+					)tC
+					ON tA.stok_eceran_qty_id = tC.mutasi_stok_eceran_qty_source_id
 					WHERE barang_id is not null
 					AND warna_id is not null
 					AND tA.qty - ifnull(tB.qty,0) > 0
 					)res
 					ORDER BY qty asc
 				");
+		
+		return $query->result();
+		// return $this->db->last_query();
+	}
+
+	function kartu_stok_eceran($gudang_id, $barang_id,$warna_id, $tanggal_end, $tanggal_start){
+		$query = $this->db->query("SELECT tA.*, username
+		FROM (
+			(
+				SELECT barang_id, warna_id, t2.id as stok_eceran_qty_id, qty as qty_in, 0 as qty_out, 1 as eceran_srouce, t1.id as trx_id, gudang_id, tanggal,
+				'mutasi eceran' as keterangan, ' ' as no_faktur, '1' as tipe, user_id
+				FROM (
+					SELECT *
+					FROM nd_mutasi_stok_eceran
+					WHERE tanggal >= '$tanggal_start'
+					AND tanggal <= '$tanggal_end'
+					AND barang_id = $barang_id
+					AND warna_id = $warna_id
+					AND gudang_id = $gudang_id
+					AND status_aktif = 1
+				)t1
+				LEFT JOIN nd_mutasi_stok_eceran_qty t2
+				ON t2.mutasi_stok_eceran_id = t1.id
+			)UNION(
+				SELECT barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 0 as qty_out, 2 as eceran_srouce, t2.id as trx_id, gudang_id, tanggal,
+				'mutasi eceran', ' ' as no_faktur, '2' as tipe, user_id
+				FROM (
+					SELECT barang_id, warna_id, id as stok_eceran_qty_id, qty, 2 , gudang_id,stok_opname_id, id
+					FROM nd_stok_opname_eceran
+					WHERE barang_id = $barang_id
+					AND warna_id = $warna_id
+					AND gudang_id = $gudang_id
+				)t1
+				LEFT JOIN nd_stok_opname t2
+				ON t1.stok_opname_id = t2.id
+				WHERE tanggal >= '$tanggal_start'
+				AND tanggal <= '$tanggal_end'
+				AND status_aktif = 1
+			)UNION(
+				SELECT barang_id, warna_id, stok_eceran_qty_id, 0 as qty_in, qty as qty_out, eceran_source, penjualan_id, t2.gudang_id, tanggal, 
+				no_faktur_lengkap, ifnull(t4.nama,'-') as nama_customer, '3' as tipe, user_id
+				FROM (
+					SELECT *
+					FROM nd_penjualan_qty_detail
+					WHERE stok_eceran_qty_id is not null
+				)t1
+				LEFT JOIN nd_penjualan_detail t2
+				ON t1.penjualan_detail_id=t2.id
+				LEFT JOIN nd_penjualan t3
+				ON t2.penjualan_id=t3.id
+				LEFT JOIN nd_customer t4
+				ON t3.customer_id=  t4.id
+				WHERE t3.status_aktif=1
+				AND tanggal >= '$tanggal_start'
+				AND tanggal <= '$tanggal_end'
+				AND barang_id = $barang_id
+				AND warna_id = $warna_id
+				AND t2.gudang_id = $gudang_id
+				AND no_faktur is not null
+				AND no_faktur != ''
+			)
+		)tA
+		LEFT JOIN nd_user
+		ON tA.user_id = nd_user.id");
 		
 		return $query->result();
 		// return $this->db->last_query();
@@ -2776,9 +3634,12 @@ class Inventory_Model extends CI_Model {
 						'\"qty\":', qty,
 						',\"jumlah_roll\":', jumlah_roll,
 						',\"supplier_id\":', supplier_id,
+						',\"nama_supplier\":', '\"',nd_supplier.nama,'\"',
 						'}'
 					) as rekap_sumber
-					FROM nd_assembly_detail_sumber
+					FROM nd_assembly_detail_sumber tX
+					LEFT JOIN nd_supplier 
+					ON tX.supplier_id = nd_supplier.id
 				)t2
 				ON t1.id=t2.assembly_id
 				LEFT JOIN(
@@ -2787,9 +3648,12 @@ class Inventory_Model extends CI_Model {
 						'\"qty\":', qty,
 						',\"jumlah_roll\":', jumlah_roll,
 						',\"supplier_id\":', supplier_id,
+						',\"nama_supplier\":', '\"',nd_supplier.nama,'\"',
 						'}'
 					)as rekap_hasil
-					FROM nd_assembly_detail_hasil
+					FROM nd_assembly_detail_hasil tX
+					LEFT JOIN nd_supplier 
+					ON tX.supplier_id = nd_supplier.id
 				)t3
 				ON t1.id=t3.assembly_id
 				LEFT JOIN nd_user
@@ -2812,5 +3676,41 @@ class Inventory_Model extends CI_Model {
 		return $query->result();
 	}
 
+//============================================================================================================================
+
+	function get_mutasi_barang_eceran($tanggal_start, $tanggal_end, $cond){
+		$query = $this->db->query("SELECT t1.*, t2.*, nama_jual as nama_barang, warna_jual as nama_keterangan, 
+		tD.nama as nama_gudang, tE.nama as nama_gudang_sumber
+			FROM (
+				SELECT *
+				FROM nd_mutasi_stok_eceran
+				WHERE tanggal >='$tanggal_start'
+				AND tanggal <='$tanggal_end'
+				AND tipe = 3
+				$cond
+			)t1
+			LEFT JOIN (
+				SELECT sum(qty) as qty, sum(jumlah_roll) as jumlah_roll, mutasi_stok_eceran_id,
+				group_concat(concat(mutasi_stok_eceran_qty_source_id,',',qty,',',tA.supplier_id) SEPARATOR '??' ) as qty_data,
+				tB.gudang_id as gudang_id_source
+				FROM nd_mutasi_stok_eceran_qty tA
+				LEFT JOIN nd_mutasi_stok_eceran tB
+				ON tA.mutasi_stok_eceran_qty_source_id = tB.id
+				GROUP BY mutasi_stok_eceran_id
+			)t2
+			ON t2.mutasi_stok_eceran_id = t1.id
+			LEFT JOIN nd_barang tB
+			ON t1.barang_id = tB.id
+			LEFT JOIN nd_warna tC 
+			ON t1.warna_id = tC.id
+			LEFT JOIN nd_gudang tD 
+			ON t1.gudang_id = tD.id
+			LEFT JOIN nd_gudang tE 
+			ON t2.gudang_id_source = tE.id
+			
+		");
+		
+		return $query->result();
+	}
 
 }

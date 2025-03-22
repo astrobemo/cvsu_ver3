@@ -105,7 +105,7 @@ function print_kombinasi_2(printer_name){
 			   	'\x0A'+
 			   	'\x1B' + '\x21' + '\x04'+ // em mode on
 			   	<?="'".sprintf('%-4.2s', 'NO ')."'";?>+
-			   	<?="'".sprintf('%-45.45s', 'Nama Barang')."'";?>+'\x09'+
+			   	<?="'".sprintf('%-35.35s', 'Nama Barang')."'";?>+'\x09'+
 			   	<?="'".sprintf('%8.8s', 'QTY')."'";?>+' '+
 			   	<?="'".sprintf('%6.3s', '')."'";?>+
 			   	<?="'".sprintf('%8.8s', 'QTY')."'";?>+' '+
@@ -113,6 +113,7 @@ function print_kombinasi_2(printer_name){
 			   	<?="'".sprintf('%-13.13s', ' ')."'";?>+ 
 			   	<?="'".sprintf('%-13.13s', 'Harga')."'";?>+'\x09'+
 			   	<?="'".sprintf('%-14.14s', 'Jumlah ')."'";?>+'\x09'+
+			   	<?="'".sprintf('%-11.11s', 'Diskon')."'";?>+'\x09'+
 
 			   	//11
 			   	'\x0A'+
@@ -126,22 +127,23 @@ function print_kombinasi_2(printer_name){
 			   	$total = 0; $total_roll = 0; $idx = 1;
 			   	$harga_raw_total = 0; $ppn_total = 0;
 			   	foreach ($penjualan_detail as $row) {
-			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
+			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
 			   		$total_roll += $row->jumlah_roll;?>
 			   			'\x1B' + '\x21' + '\x04'+ // em mode on
 			   			<?="'".sprintf('%-4.2s', $idx)."'";?>+
-			   			<?="'".sprintf('%-45.45s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
+			   			<?="'".sprintf('%-35.35s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
 					   	<?="'".sprintf('%8.8s', (float)$row->qty )."'";?>+' '+
 					   	<?="'".sprintf('%6.3s', $row->nama_satuan )."'";?>+
 					   	<?="'".sprintf('%8.8s', (float)$row->jumlah_roll)."'";?>+' '+
 					   	<?="'".sprintf('%-6.3s', $row->nama_packaging )."'";?>+'\x09'+
 					   	
 					   	<?
-					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
+					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual-$row->subdiskon;
 					   	?>
 					   	<?="'".sprintf('%-13.13s', '')."'";?>+
 					   	<?="'".sprintf('%-13.13s', number_format($row->harga_jual,'2',',','.'))."'";?>+'\x09'+
 					   	<?="'".sprintf('%-14.14s', number_format($harga_total,'2',',','.'))."'";?>+'\x09'+
+					   	<?="'".sprintf('%-11.11s', number_format($row->subdiskon,'2',',','.'))."'";?>+'\x09'+
 					   	'\x0A'+
 
 			   	<?$idx++;}?>
@@ -469,7 +471,7 @@ function print_kombinasi_2(printer_name){
 			   	'\x0A'+
 			   	'\x1B' + '\x21' + '\x04'+ // em mode on
 			   	<?="'".sprintf('%-4.2s', 'NO ')."'";?>+
-			   	<?="'".sprintf('%-45.45s', 'Nama Barang')."'";?>+'\x09'+
+			   	<?="'".sprintf('%-35.35s', 'Nama Barang')."'";?>+'\x09'+
 			   	<?="'".sprintf('%8.8s', 'QTY')."'";?>+' '+
 			   	<?="'".sprintf('%6.3s', '')."'";?>+
 			   	<?="'".sprintf('%8.8s', 'QTY')."'";?>+' '+
@@ -477,6 +479,7 @@ function print_kombinasi_2(printer_name){
 			   	<?="'".sprintf('%-13.13s', ' ')."'";?>+ 
 			   	<?="'".sprintf('%-13.13s', 'Harga')."'";?>+'\x09'+
 			   	<?="'".sprintf('%-14.14s', 'Jumlah ')."'";?>+'\x09'+
+			   	<?="'".sprintf('%-11.11s', 'Jumlah ')."'";?>+'\x09'+
 
 			   	//11
 			   	'\x0A'+
@@ -490,22 +493,23 @@ function print_kombinasi_2(printer_name){
 			   	$total = 0; $total_roll = 0; $idx = 1;
 			   	$harga_raw_total = 0; $ppn_total = 0;
 			   	foreach ($penjualan_detail as $row) {
-			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
+			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
 			   		$total_roll += $row->jumlah_roll;?>
 			   			'\x1B' + '\x21' + '\x04'+ // em mode on
 			   			<?="'".sprintf('%-4.2s', $idx)."'";?>+
-			   			<?="'".sprintf('%-45.45s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
+			   			<?="'".sprintf('%-35.35s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
 					   	<?="'".sprintf('%8.8s', (float)$row->qty )."'";?>+' '+
 					   	<?="'".sprintf('%6.3s', $row->nama_satuan )."'";?>+
 					   	<?="'".sprintf('%8.8s', (float)$row->jumlah_roll)."'";?>+' '+
 					   	<?="'".sprintf('%-6.3s', $row->nama_packaging )."'";?>+'\x09'+
 					   	
 					   	<?
-					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
+					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
 					   	?>
 					   	<?="'".sprintf('%-13.13s', '')."'";?>+
 					   	<?="'".sprintf('%-13.13s', number_format($row->harga_jual,'2',',','.'))."'";?>+'\x09'+
 					   	<?="'".sprintf('%-14.14s', number_format($harga_total,'2',',','.'))."'";?>+'\x09'+
+					   	<?="'".sprintf('%-11.11s', number_format($row->subdiskon,'2',',','.'))."'";?>+'\x09'+
 					   	'\x0A'+
 
 			   	<?$idx++;}?>

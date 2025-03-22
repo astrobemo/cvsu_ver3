@@ -15,6 +15,7 @@ class Inventory extends CI_Controller {
 		$this->data['username'] = is_username();
 		$this->data['user_menu_list'] = is_user_menu(is_posisi_id());
 		$this->load->model('inventory_model','inv_model',true);
+		$this->load->model('transaction_model','tr_model',true);
 		$this->load->model('stok/stok_general_model','sg_model',true);
 		
 		//======================data aktif section===========================
@@ -23,18 +24,19 @@ class Inventory extends CI_Controller {
 		$this->customer_list_aktif = $this->common_model->db_select('nd_customer where status_aktif = 1');
 		$this->toko_list_aktif = $this->common_model->db_select('nd_toko where status_aktif = 1');
 		
-		if (strpos($_SERVER['SERVER_NAME'], 'gracetdj') !== false ) {
-			$this->gudang_list_aktif = $this->common_model->db_select('nd_gudang where status_aktif = 1  ORDER BY id asc');
-		}else{
-			$this->gudang_list_aktif = $this->common_model->db_select('nd_gudang where status_aktif = 1  ORDER BY id desc');
-		}
+		$this->gudang_list_aktif = $this->common_model->db_select('nd_gudang where status_aktif = 1  ORDER BY id asc');
 
 
 		$this->warna_list_aktif = $this->common_model->db_select('nd_warna where status_aktif = 1 order by warna_jual asc');
 		$this->barang_list_aktif = $this->common_model->get_barang_list_aktif();
-		$this->satuan_list_aktif = $this->common_model->db_select('nd_satuan where status_aktif = 1');
+		$this->satuan_list_aktif = $this->common_model->db_select("nd_satuan where status_aktif=1");
+		$this->barang_sku_aktif = $this->common_model->get_sku_barang_aktif();
+
+		$this->mysqli_conn = $this->db->conn_id;
+		
 
 		// $this->output->enable_profiler(TRUE);
+		// $this->mysqli_conn = $this->db->conn_id;
 
 	}
 
@@ -42,15 +44,87 @@ class Inventory extends CI_Controller {
 		redirect('admin/dashboard');
 	}
 
+	function register_new_sku($barang_id, $warna_id, $is_eceran){
+
+		$get_sku = $this->common_model->db_select("nd_barang_sku where
+		 barang_id = $barang_id and warna_id = $warna_id and isEceran = $is_eceran");
+
+		$sku_id = 0;
+		foreach ($get_sku as $row) {
+			$sku_id = $row->id;
+		}
+
+		if ($sku_id == 0) {
+			# code...
+			$barang_data = $this->common_model->db_select("nd_barang WHERE id='$barang_id'");
+			$warna_data = $this->common_model->db_select("nd_warna WHERE id='$warna_id'");
+			$nama_barang = '';
+			$satuan_id = '';
+			$packaging_id = '';
+			$nama_satuan = '';
+			$nama_packaging = '';
+	
+			foreach ($barang_data as $row) {
+				$nama_barang = $row->nama_jual.' ';
+				$satuan_id = $row->satuan_id;
+				$packaging_id = $row->packaging_id;
+	
+			}
+			foreach ($warna_data as $row) {
+				$nama_barang .= $row->warna_jual;
+			}
+	
+			foreach ($this->satuan_list_aktif as $row) {
+				if ($row->id == $satuan_id) {
+					$nama_satuan = $row->nama;
+				}
+	
+				if ($row->id == $packaging_id) {
+					$nama_packaging = $row->nama;
+				}
+			}
+			
+			$nSku = array(
+				'barang_id' => $barang_id,
+				'warna_id' => $warna_id, 
+				'nama_barang' => $nama_barang.($is_eceran == 1 ? ' .' : ''),
+				'nama_satuan' => $nama_satuan, 
+				'nama_packaging' => $nama_packaging, 
+				'user_id' => is_user_id(),
+				'status_aktif'=> 1
+			);
+	
+			$this->common_model->db_insert("nd_barang_sku", $nSku);	
+		}
+
+	}
+
 //======================================stok barang============================================
 
 	function stok_barang(){
 		$menu = is_get_url($this->uri->segment(1)) ;
+		$is_filter_sku = "Some";
+		$cond_toko = "";
 
 		if ($this->input->get('tanggal') && $this->input->get('tanggal') != '') {
 			$tanggal = is_date_formatter($this->input->get('tanggal'));
 		}else{
 			$tanggal = date("Y-m-d");
+		}
+
+		$toko_id_filter = $this->input->get('toko_id');
+		$toko_id_filter = ($toko_id_filter == '' ? 'all' : $toko_id_filter);
+		if($toko_id_filter != 'all' && $toko_id_filter != "join" ){
+			$cond_toko = "AND tbl_a.toko_id = ".$toko_id_filter;
+		}
+
+		$condShown = "AND isShown = 1";
+		if ($this->input->get("is_filter_sku") == "All" ) {
+			$condShown = "";
+			$is_filter_sku = "All";
+		}else if($this->input->get("is_filter_sku") == "NoSKU"){
+			$condShown = "AND nd_barang_sku.id is null and tbl_a.warna_id != '888'";
+			$is_filter_sku = "NoSKU";
 		}
 
 		$data = array(
@@ -60,7 +134,10 @@ class Inventory extends CI_Controller {
 			'nama_menu' => $menu[0],
 			'nama_submenu' => $menu[1],
 			'common_data'=> $this->data,
-			'tanggal' => is_reverse_date($tanggal) );
+			"is_filter_sku" => $is_filter_sku,
+			'tanggal' => is_reverse_date($tanggal),
+			'toko_id' => $toko_id_filter
+		);
 
 		$tanggal_awal = '2019-01-01';
 
@@ -77,20 +154,45 @@ class Inventory extends CI_Controller {
 				SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), 
 					if(tbl_a.gudang_id=".$row->id.", ifnull(qty_keluar,0), 0 ),0 )),3)  as gudang_".$row->id."_qty , SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_masuk, 0 ),0 )) - SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_keluar, 0 ),0 ))  as gudang_".$row->id."_roll ";
 		}
+
+		// echo  $toko_id_filter;
 		// echo $select.'<br>';
 		// echo $tanggal_awal;
 		// $data['gudang_list'] = $this->common_model->db_select("nd_gudang where status_aktif = 1 ORDER BY id desc");
 		// $data['stok_barang'] = $this->inv_model->get_stok_barang_list($select, $tanggal, $tanggal_awal);
-		$data['stok_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal, $tanggal_awal);
+		if ($toko_id_filter == "join") {
+			$data['stok_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal, $tanggal_awal, $condShown);
+		}else if($toko_id_filter == "all"){
+			$data['stok_barang'] = $this->inv_model->get_stok_barang_list_3($select_update, $tanggal, $tanggal_awal, $condShown);
+		}else{
+			$data['stok_barang'] = $this->inv_model->get_stok_barang_list_pertoko($select_update, $tanggal, $tanggal_awal, $condShown, $cond_toko);
+		}
 		$data['stok_barang_eceran'] = $this->inv_model->get_stok_barang_eceran_list($tanggal);
+		$data['stok_barang_warning'] = $this->sg_model->get_stok_warning('nd_stok_warning');
 		// echo $data['stok_barang'];
 
 		if (is_posisi_id()==1) {
 			# code...
 			// print_r($data['stok_barang_eceran']);
+			// echo $select_update.'<br/>'.$tanggal.'<br/>'. $tanggal_awal;
+			// echo $data['stok_barang'];
+            $this->output->enable_profiler(TRUE);
+
 		}else{
 		}
 		$this->load->view('admin/template',$data);
+	}
+
+	function toggle_sku_barang(){
+		$sku_id = $this->input->post("sku_id");
+		$data = array(
+			"isShown" => $this->input->post("isShown")
+		);
+
+		$this->common_model->db_update("nd_barang_sku", $data, "id", $sku_id);
+		// echo json_encode($this->input->post());
+		echo json_encode("OK");
+		
 	}
 
 	function stok_barang_rekap(){
@@ -141,7 +243,7 @@ class Inventory extends CI_Controller {
 					if(tbl_a.gudang_id=".$row->id.", ifnull(qty_keluar,0), 0 ),0 )),3)  as gudang_".$row->id."_qty , SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_masuk, 0 ),0 )) - SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_keluar, 0 ),0 ))  as gudang_".$row->id."_roll ";
 		}
 		
-		$data['data_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal, $tanggal_awal);
+		$data['data_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal, $tanggal_awal,"");
 		
 		$this->load->library('Excel/PHPExcel');
 
@@ -171,7 +273,7 @@ class Inventory extends CI_Controller {
 					if(tbl_a.gudang_id=".$row->id.", ifnull(qty_keluar,0), 0 ),0 )),3)  as gudang_".$row->id."_qty , SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_masuk, 0 ),0 )) - SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_keluar, 0 ),0 ))  as gudang_".$row->id."_roll ";
 		}
 		
-		$data['data_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal, $tanggal_awal);
+		$data['data_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal, $tanggal_awal,"");
 		$data['gudang_id'] = $gudang_id;
 		
 		$this->load->library('Excel/PHPExcel');
@@ -191,8 +293,11 @@ class Inventory extends CI_Controller {
 		foreach ($this->gudang_list_aktif as $row) {
 			$select .= ", SUM( if(gudang_id=".$row->id.", ifnull(qty_masuk,0), 0 ) ) - SUM( if(gudang_id=".$row->id.", ifnull(qty_keluar,0), 0 ) )  as gudang_".$row->id."_qty , SUM( if(gudang_id=".$row->id.", jumlah_roll_masuk, 0 ) ) - SUM( if(gudang_id=".$row->id.", jumlah_roll_keluar, 0 ) )  as gudang_".$row->id."_roll ";
 		}
+		$tanggal_awal = '2019-01-01';
 		
-		$stok_barang = $this->inv_model->get_stok_barang_list($select, $tanggal);
+		// $stok_barang = $this->inv_model->get_stok_barang_list($select, $tanggal);
+		$stok_barang = $this->inv_model->get_stok_barang_list_2($select, $tanggal, $tanggal_awal,"");
+
 		$gudang_list = $this->common_model->db_select("nd_gudang where status_aktif = 1 ORDER BY id desc");
 
 		
@@ -318,6 +423,155 @@ class Inventory extends CI_Controller {
 		header('Cache-Control: max-age=0');
 		$objWriter->save('php://output');
 	}
+	function stok_barang_excel_pertoko(){
+
+		$tanggal = is_date_formatter($this->input->get('tanggal'));
+		$toko_id = is_date_formatter($this->input->get('toko_id'));
+		$tanggal_awal = '2019-01-01';
+		$condShown = "";
+		$select_update = '';
+		foreach ($this->gudang_list_aktif as $row) {
+			$select_update .= ", 
+				ROUND(SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), 
+					if(tbl_a.gudang_id=".$row->id.", ifnull(qty_masuk,0), 0 ),0 )) - 
+				SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), 
+					if(tbl_a.gudang_id=".$row->id.", ifnull(qty_keluar,0), 0 ),0 )),3)  as gudang_".$row->id."_qty , SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_masuk, 0 ),0 )) - SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_keluar, 0 ),0 ))  as gudang_".$row->id."_roll ";
+		}
+		
+		// $stok_barang = $this->inv_model->get_stok_barang_list($select, $tanggal);
+		$cond_toko = "AND tbl_a.toko_id = ".$toko_id;
+		$stok_barang = $this->inv_model->get_stok_barang_list_pertoko($select_update, $tanggal, $tanggal_awal, $condShown, $cond_toko);
+		
+
+		$gudang_list = $this->common_model->db_select("nd_gudang where status_aktif = 1 ORDER BY id desc");
+
+		
+		$this->load->library('Excel/PHPExcel');
+
+		ini_set("memory_limit", "600M");
+
+		/** Caching to discISAM*/
+		$cacheMethod = PHPExcel_CachedObjectStorageFactory:: cache_to_discISAM;
+		$cacheSettings = array('');;
+
+		PHPExcel_Settings::setCacheStorageMethod($cacheMethod, $cacheSettings);
+
+		$objPHPExcel = new PHPExcel();
+
+		$styleArray = array(
+			'font'=>array(
+				'bold'=>true,
+				'size'=>12,
+				)
+			);
+
+		$objPHPExcel->getActiveSheet()->mergeCells("A4:A5");
+		$objPHPExcel->getActiveSheet()->mergeCells("B4:B5");
+		$objPHPExcel->getActiveSheet()->mergeCells("C4:C5");
+		
+
+		$coll = 'D'; $coll_next = 'E';
+		foreach ($this->gudang_list_aktif as $row) {
+			$objPHPExcel->getActiveSheet()->mergeCells($coll."4:".$coll_next."4");
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.'4',$row->nama);
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.'5','Yard/Kg');
+			$objPHPExcel->getActiveSheet()->setCellValue($coll_next.'5','Jumlah Roll');
+			$objPHPExcel->getActiveSheet()->getStyle($coll."4:".$coll_next."5")->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$coll++;
+			$coll_next++;
+			$coll++;
+			$coll_next++;
+		}
+
+		
+		$objPHPExcel->getActiveSheet()->mergeCells($coll."4:".$coll_next."4");
+		$objPHPExcel->getActiveSheet()->setCellValue($coll.'4',"TOTAL");
+		$objPHPExcel->getActiveSheet()->getStyle($coll."4:".$coll_next."5")->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+		$objPHPExcel->getActiveSheet()->setCellValue($coll.'5','Yard/Kg');
+		$objPHPExcel->getActiveSheet()->setCellValue($coll_next.'5','Jumlah Roll');
+		
+		$objPHPExcel->getActiveSheet()->mergeCells("A1:".$coll_next."1");
+		$objPHPExcel->getActiveSheet()->mergeCells("A2:".$coll_next."2");
+
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', ' STOK BARANG ')
+		->setCellValue('A2', ' Tanggal '.is_reverse_date($tanggal))
+		->setCellValue('A4', 'No')
+		->setCellValue('B4', 'Nama Beli')
+		->setCellValue('C4', 'Nama Jual')
+		;
+	
+
+		$row_no = 6;
+		$idx = 1;
+		foreach ($stok_barang as $row) {
+			$coll = "A";
+			
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$idx);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(7);
+			$coll++;
+
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$row->nama_barang.' '.$row->nama_warna);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(30);
+			$coll++;
+
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$row->nama_barang_jual.' '.$row->nama_warna_jual);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(30);
+			$coll++;
+
+			$subtotal_qty = 0;
+			$subtotal_roll = 0;
+			foreach ($gudang_list as $isi) { 
+
+				// $qty = $isi->nama.'_qty';
+				// $roll = $isi->nama.'_roll';
+
+				$qty = 'gudang_'.$isi->id.'_qty';
+				$roll = 'gudang_'.$isi->id.'_roll';
+
+				$subtotal_qty += $row->$qty;
+				$subtotal_roll += $row->$roll;
+				
+				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, number_format($row->$qty,'2','.',''));
+				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
+				$coll++;
+
+				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$row->$roll);
+				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
+				$coll++;
+				
+			}
+
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$subtotal_qty);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
+			$coll++;
+
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$subtotal_roll);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
+			$coll++;
+			$row_no++;
+			$idx++;
+
+		}
+
+		// $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+		//ob_end_clean();
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+		ob_end_clean();	
+
+
+		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+		header("Content-Disposition: attachment;filename=Stok_Barang_".date("dmY",strtotime($tanggal)).".xls");
+		header('Cache-Control: max-age=0');
+		$objWriter->save('php://output');
+	}
 
 	function stok_barang_detail_excel(){
 		$tanggal = is_date_formatter($this->input->get('tanggal'));
@@ -331,8 +585,6 @@ class Inventory extends CI_Controller {
 		$data['data_get'] = $data_get;
 
 		$this->load->view('admin/inventory/so_testing',$data);
-
-
 
 	}
 
@@ -394,7 +646,7 @@ class Inventory extends CI_Controller {
 		
 		$tanggal_awal = '2018-01-01';
 		$stok_opname_id = 0;
-		$getOpname = $this->common_model->get_latest_so($tanggal_start, $barang_id, $warna_id, $gudang_id);
+		$getOpname = $this->common_model->get_latest_so($tanggal_start, $barang_id, $warna_id, $gudang_id,'2');
 		foreach ($getOpname as $row) {
 			$tanggal_awal = $row->tanggal;
 			$stok_opname_id = $row->stok_opname_id;
@@ -416,6 +668,7 @@ class Inventory extends CI_Controller {
 
 		// $data['stok_detail'] = $this->sg_model->get_stok_barang_detail_eceran($gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
 		$data['stok_barang_eceran'] = $this->inv_model->get_stok_barang_eceran_list_detail($gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_awal_eceran, $stok_opname_id);
+		$data['kartu_stok_eceran'] = $this->inv_model->kartu_stok_eceran($gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_start, $stok_opname_id);
 
 
 		// $data['stok_barang'] = array();
@@ -430,6 +683,119 @@ class Inventory extends CI_Controller {
 			// print_r($data['stok_barang_eceran']);
 			// echo $gudang_id.'<br/>'. $barang_id.'<br/>'. $warna_id.'<br/>'.$tanggal_start.'<br/>'. $tanggal_end.'<br/>'. $tanggal_awal.'<br/>'. $stok_opname_id;
 			$this->load->view('admin/template_no_sidebar',$data);
+			$this->output->enable_profiler(TRUE);
+
+		}else{
+			$this->load->view('admin/template_no_sidebar',$data);
+		}
+	}
+
+	function kartu_stok_pertoko(){
+		$menu = is_get_url($this->uri->segment(1)) ;
+		$gudang_id = $this->uri->segment(2);
+		$barang_id = $this->uri->segment(3);
+		$warna_id = $this->uri->segment(4);
+		$toko_id = $this->uri->segment(5);
+		$tanggal_start = date("Y-m-1");
+		$tanggal_end = date("Y-m-t");
+
+		$barang = $this->common_model->get_data_barang($barang_id);
+		foreach ($barang as $row) {
+			$nama_beli = $row->nama;
+			$nama_jual = $row->nama_jual;
+		}
+
+		$warna = $this->common_model->db_select('nd_warna where id='.$warna_id);
+		foreach ($warna as $row) {
+			$warna_beli = $row->warna_beli;
+			$warna_jual = $row->warna_jual;
+		}
+
+		$gudang = $this->common_model->db_select('nd_gudang where id='.$gudang_id);
+		foreach ($gudang as $row) {
+			$nama_gudang = $row->nama;
+		}
+
+		if ($this->input->get('tanggal_start') && $this->input->get('tanggal_start') != '') {
+			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
+			if ($this->input->get('tanggal_end') != '') {
+				$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
+			}else{
+				$tanggal_start = date("Y-m-1");
+				$tanggal_end = date("Y-m-t");
+
+			}
+		}
+
+		$nama_toko = "";
+		foreach ($this->toko_list_aktif as $row) {
+			if($row->id == $toko_id){
+				$nama_toko = $row->nama;
+			}
+		}
+
+		$data = array(
+			'content' =>'admin/inventory/kartu_stok_pertoko',
+			'breadcrumb_title' => 'Stok',
+			'breadcrumb_small' => 'Kartu Stok',
+			'toko_id' => $toko_id,
+			'nama_toko' => $nama_toko,
+			'nama_menu' => $menu[0],
+			'nama_submenu' => $menu[1],
+			'common_data'=> $this->data,
+			'barang_id' => $barang_id,
+			'warna_id' => $warna_id,
+			'gudang_id' => $gudang_id,
+			'tanggal_start' => is_reverse_date($tanggal_start),
+			'tanggal_end' => is_reverse_date($tanggal_end),
+			'nama_gudang' => $nama_gudang,
+			'nama_beli' => $nama_beli,
+			'nama_jual' => $nama_jual,
+			'warna_beli' => $warna_beli,
+			'warna_jual' => $warna_jual,
+			'barang_data' => $barang );
+
+		
+		$tanggal_awal = '2018-01-01';
+		$stok_opname_id = 0;
+		$getOpname = $this->common_model->get_latest_so($tanggal_start, $barang_id, $warna_id, $gudang_id, $toko_id);
+		foreach ($getOpname as $row) {
+			$tanggal_awal = $row->tanggal;
+			$stok_opname_id = $row->stok_opname_id;
+		}
+
+		$data['stok_barang'] = $this->sg_model->get_stok_barang_satuan_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_start, $tanggal_end, $tanggal_awal, $stok_opname_id); 
+		$data['stok_awal'] = $this->sg_model->get_stok_barang_satuan_awal_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_start, $tanggal_awal, $stok_opname_id);
+
+		$tanggal_awal_eceran = '2018-01-01';
+		$getOpname = $this->common_model->get_latest_so_eceran_pertoko($toko_id, $tanggal_start, $barang_id, $warna_id, $gudang_id);
+		foreach ($getOpname as $row) {
+			$tanggal_awal_eceran = $row->tanggal;
+			$stok_opname_id = $row->stok_opname_id;
+		}
+		// $data['stok_detail'] = $this->inv_model->get_stok_barang_detail($gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
+		// $data['stok_detail'] = $this->inv_model->get_stok_barang_detail_2($gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
+		$data['stok_detail'] = $this->sg_model->get_stok_barang_detail_2_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
+	
+
+		// $data['stok_detail'] = $this->sg_model->get_stok_barang_detail_eceran($gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
+		$data['stok_barang_eceran'] = $this->sg_model->get_stok_barang_eceran_list_detail_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_awal_eceran, $stok_opname_id);
+		$data['kartu_stok_eceran'] = $this->sg_model->kartu_stok_eceran_pertoko($gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_start, $stok_opname_id);
+
+
+		// $data['stok_barang'] = array();
+		// $data['stok_awal'] = array();
+
+		// echo $data['stok_barang'];
+		// echo $gudang_id.",". $barang_id.",". $warna_id.",". $tanggal_start.",". $tanggal_end.",". $tanggal_awal.",". $stok_opname_id;
+
+		// print_r($data['stok_barang_eceran']);
+		if (is_posisi_id()==1) {
+			# code...
+			// print_r($data['stok_barang_eceran']);
+			// echo $gudang_id.'<br/>'. $barang_id.'<br/>'. $warna_id.'<br/>'.$tanggal_start.'<br/>'. $tanggal_end.'<br/>'. $tanggal_awal.'<br/>'. $stok_opname_id;
+			$this->load->view('admin/template_no_sidebar',$data);
+			$this->output->enable_profiler(TRUE);
 
 		}else{
 			$this->load->view('admin/template_no_sidebar',$data);
@@ -532,6 +898,8 @@ class Inventory extends CI_Controller {
 		$barang_id = $ini->post('barang_id');
 		$data = array(
 			'keterangan' => $ini->post('keterangan'),
+			'toko_id' => $ini->post('toko_id'),
+			'supplier_id' => 0,
 			'barang_id' => $ini->post('barang_id'),
 			'warna_id' => $ini->post('warna_id'),
 			'gudang_id' => $ini->post('gudang_id'),
@@ -640,21 +1008,128 @@ class Inventory extends CI_Controller {
 		$this->load->view('admin/template',$data);
 	}
 
+	function get_stok_eceran(){
+		$sku_id = $this->input->post("sku_id");
+		$barang_data = $this->common_model->db_select("nd_barang_sku where id=$sku_id");
+		foreach ($barang_data as $row) {
+			$barang_id = $row->barang_id;
+			$warna_id = $row->warna_id;
+		}
+		$gudang_id = $this->input->post("gudang_id");
+		$tanggal = is_date_formatter($this->input->post("tanggal"));
+		$stok_opname_id = is_date_formatter($this->input->post("stok_opname_id"));
+
+		$get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id);
+
+		$tanggal_awal = "2020-01-01";
+		$stok_opname_id = 0;
+		foreach ($get_stok_opname as $row) {
+            $tanggal_awal = $row->tanggal;
+            $stok_opname_id = $row->stok_opname_id;
+        }
+
+		$data = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, "0");
+		echo json_encode($data->result());
+	}
+
 	function mutasi_barang_insert(){
 		$ini = $this->input;
-		$data = array(
-			'gudang_id_before' => $ini->post('gudang_id_before') ,
-			'gudang_id_after' => $ini->post('gudang_id_after') ,
-			'tanggal' => is_date_formatter($ini->post('tanggal')) ,
-			'barang_id' => $ini->post('barang_id') ,
-			'warna_id' => $ini->post('warna_id') ,
-			'qty' => $ini->post('qty') ,
-			'jumlah_roll' => $ini->post('jumlah_roll') );
-		$this->common_model->db_insert('nd_mutasi_barang',$data);
+		// print_r($ini->post());
+		$rekap = json_decode($ini->post('rekap_qty'));
+		$data_detail = [];
+		// print_r($rekap);
+		
+		$sku_id = $this->input->post('sku_id');
+		$get_barang = $this->common_model->db_select("nd_barang_sku WHERE id=$sku_id");
+		
+		foreach ($get_barang as $row) {
+			$barang_id = $row->barang_id;
+			$warna_id = $row->warna_id;
+		}
 
+		$tgl = is_date_formatter($ini->post('tanggal'));
+		$toko_id = $ini->post('toko_id');
+		$gudang_id_before = $ini->post('gudang_id_before');
+		$gudang_id_after = $ini->post('gudang_id_after');
+		$qty = $ini->post('qty');
+		$jumlah_roll = $ini->post('jumlah_roll');
+		$detail = [];
+
+		$isEceran = $this->input->post('isEceran');
+		if ($isEceran != 1) {
+			foreach ($rekap as $k => $v) {
+				$supplier_id = $v->supplier_id;
+				$qty_detail = $v->qty;
+				array_push($detail, "(@mId, $supplier_id, $qty_detail, 1 )");
+			}
+	
+			$collection = implode(",",$detail);
+	
+			$data = array(
+				'tanggal' => $tgl,
+				'toko_id' => $toko_id,
+				'sku_id' => $sku_id,
+				'barang_id' => $barang_id,
+				'warna_id' => $warna_id,
+				'gudang_id_before' => $gudang_id_before,
+				'gudang_id_after' => $gudang_id_after,
+				'qty' => $ini->post('qty') ,
+				'jumlah_roll' => $ini->post('jumlah_roll'),
+				'user_id' => is_user_id()
+			);
+				
+			$id = $this->common_model->db_insert('nd_mutasi_barang',$data);
+	
+			foreach ($rekap as $k => $v) {
+				$data_detail[$k] = array(
+					'mutasi_barang_id' => $id,
+					'supplier_id' => $v->supplier_id,
+					'qty' => $v->qty,
+					'jumlah_roll' => 1
+				);
+			}
+	
+			if (count($data_detail) > 0) {
+				$this->common_model->db_insert_batch('nd_mutasi_barang_detail',$data_detail);
+			}
+		}else{
+
+			$keterangan = null;
+				
+			$data = array(
+				'tanggal' => $tgl,
+				'barang_id' => $barang_id ,
+				'warna_id' => $warna_id ,
+				'gudang_id' => $gudang_id_after ,
+				'gudang_id_posisi' => $gudang_id_before,
+				'toko_id' => $toko_id ,
+				'keterangan' => $keterangan,
+				'tipe' => 3,
+				'user_id' => is_user_id(),
+			);
+	
+			$result_id = $this->common_model->db_insert('nd_mutasi_stok_eceran', $data);
+	
+			foreach ($rekap as $k => $value) {
+				$data_detail[$k] = array(
+					'mutasi_stok_eceran_id' => $result_id,
+					'mutasi_stok_eceran_qty_source_id' => $value->id,
+					'qty' => $value->qty,
+					'supplier_id' => $value->supplier_id,
+					'jumlah_roll' => 1
+				);
+			}
+	
+			if (count($data_detail) > 0) {
+				$this->common_model->db_insert_batch("nd_mutasi_stok_eceran_qty", $data_detail);
+			}
+		}
+		
+
+		// $this->common_model->db_custom_query("CALL MUTASI_INSERT('$tgl',$toko_id,0,$sku_id,$barang_id,$warna_id,$gudang_id_before,$gudang_id_after,$qty,$jumlah_roll,".'"'.$collection.'"'.", is_user_id())");
+		
 
 		$this->session->set_flashdata('mutasi_barang', $ini->post('barang_id').'??'.$ini->post('gudang_id_before'));
-
 		redirect(is_setting_link('inventory/mutasi_barang'));
 
 	}
@@ -662,15 +1137,49 @@ class Inventory extends CI_Controller {
 	function mutasi_barang_update(){
 		$ini = $this->input;
 		$id = $this->input->post('mutasi_barang_id');
+		$rekap = json_decode($ini->post('rekap_qty'));
+		$data_detail = [];
+		$data_update = array();
+		// print_r($rekap);
+		// print_r($this->input->post());
+
 		$data = array(
-			'gudang_id_before' => $ini->post('gudang_id_before') ,
-			'gudang_id_after' => $ini->post('gudang_id_after') ,
-			'tanggal' => is_date_formatter($ini->post('tanggal')) ,
-			'barang_id' => $ini->post('barang_id') ,
-			'warna_id' => $ini->post('warna_id') ,
 			'qty' => $ini->post('qty') ,
-			'jumlah_roll' => $ini->post('jumlah_roll') );
-		$this->common_model->db_update('nd_mutasi_barang',$data,'id',$id);
+			'jumlah_roll' => $ini->post('jumlah_roll'), 
+			'user_id' => is_user_id()
+		);
+			
+		$this->common_model->db_update('nd_mutasi_barang',$data,'id', $id);
+
+		foreach ($rekap as $k => $v) {
+			if ($v->detail_id == 0) {
+				$data_detail[$k] = array(
+					'mutasi_barang_id' => $id,
+					'supplier_id' => $v->supplier_id,
+					'qty' => $v->qty,
+					'jumlah_roll' => 1
+				);
+			}else{
+				$data_update[] = array(
+					'id'=>$v->detail_id,
+					'mutasi_barang_id' => $id,
+					'supplier_id' => $v->supplier_id,
+					'qty' => $v->qty,
+					'jumlah_roll' => 1
+				);
+			}
+		}
+
+		
+		if (count($data_update) > 0) {
+			$this->common_model->db_update_batch('nd_mutasi_barang_detail', $data_update, "id");
+			
+		}
+
+		if (count($data_detail) > 0) {
+			$this->common_model->db_insert_batch('nd_mutasi_barang_detail',$data_detail);
+		}
+		
 		redirect(is_setting_link('inventory/mutasi_barang'));
 
 	}
@@ -687,10 +1196,10 @@ class Inventory extends CI_Controller {
         // paging
         $sLimit = "";
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -699,7 +1208,7 @@ class Inventory extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -714,7 +1223,7 @@ class Inventory extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -729,7 +1238,7 @@ class Inventory extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -781,6 +1290,7 @@ class Inventory extends CI_Controller {
 		redirect(is_setting_link('inventory/mutasi_barang'));
 	}
 
+
 	function mutasi_barang_detail(){
 		$menu = is_get_url($this->uri->segment(1)) ;
 		$tanggal = $this->uri->segment(2);
@@ -805,38 +1315,91 @@ class Inventory extends CI_Controller {
 	}
 
 	function cek_barang_qty(){
-		$barang_id = $this->input->post('barang_id');
-		$warna_id = $this->input->post('warna_id');
+		// $barang_id = $this->input->post('barang_id');
+		// $warna_id = $this->input->post('warna_id');
+		// $gudang_id = $this->input->post('gudang_id');
+		// $tanggal = is_date_formatter($this->input->post('tanggal'));
+		// $get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id);
+        // $tanggal_awal = '2018-01-01';
+        // $stok_opname_id = 0;
+        // foreach ($get_stok_opname as $row) {
+        //     $tanggal_awal = $row->tanggal;
+        //     $stok_opname_id = $row->stok_opname_id;
+        // }
+
+		// $data = $this->inv_model->cek_barang_qty($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
+		// echo json_encode($data);
+
+		$toko_id = $this->input->post('toko_id');
 		$gudang_id = $this->input->post('gudang_id');
+		$sku_id = $this->input->post("sku_id");
+		$barang_data = $this->common_model->db_select("nd_barang_sku where id=$sku_id");
+		foreach ($barang_data as $row) {
+			$barang_id = $row->barang_id;
+			$warna_id = $row->warna_id;
+		}
+
+		$isEceran = 0;
 		$tanggal = is_date_formatter($this->input->post('tanggal'));
-		$get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id);
-        $tanggal_awal = '2018-01-01';
-        $stok_opname_id = 0;
-        foreach ($get_stok_opname as $row) {
-            $tanggal_awal = $row->tanggal;
-            $stok_opname_id = $row->stok_opname_id;
-        }
+		// $get_stok_opname = $this->common_model->db_select("nd_stok_opname where tanggal <= '".$tanggal."' ORDER BY tanggal desc LIMIT 1");
+		$get_stok_opname = $this->common_model->get_latest_so($tanggal.' 23:59:59', $barang_id, $warna_id, $gudang_id,$toko_id);
+		$tanggal_awal = '2018-01-01';
+		$stok_opname_id = 0;
+		foreach ($get_stok_opname as $row) {
+			$tanggal_awal = $row->tanggal;
+			$stok_opname_id = $row->stok_opname_id;
+		}
 
-		$data = $this->inv_model->cek_barang_qty($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
-		echo json_encode($data);
+		// echo $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id;
+		$get = $this->sg_model->get_qty_stok_by_barang_detail($toko_id, $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
+		$result[0] = $get->result();
 
-	}
+		$res = array(
+			'data' => $tanggal, $barang_id, $warna_id, $gudang_id,
+			'tanggal_awal' => $tanggal_awal,
+			'stok_opname_id' => $stok_opname_id
+		);
 
-	function cek_barang_qty_eceran(){
-		$barang_id = $this->input->post('barang_id');
-		$warna_id = $this->input->post('warna_id');
-		$gudang_id = $this->input->post('gudang_id');
-		$tanggal = is_date_formatter($this->input->post('tanggal'));
-		$get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id);
-        $tanggal_awal = '2018-01-01';
-        $stok_opname_id = 0;
-        foreach ($get_stok_opname as $row) {
-            $tanggal_awal = $row->tanggal;
-            $stok_opname_id = $row->stok_opname_id;
-        }
+		$tanggal_awal = '2018-01-01';
+		$detail_id = $this->input->post('penjualan_list_detail_id');
+		$detail_id = ($detail_id=='' ? 0 : $detail_id);
+		$get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id);
+		$stok_opname_id = 0;
 
-		$data = $this->inv_model->cek_barang_qty_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
-		echo json_encode($data);
+		foreach ($get_stok_opname as $row) {
+			$tanggal_awal = $row->tanggal;
+			$stok_opname_id = $row->stok_opname_id;
+		}
+		
+		if($isEceran){
+			$result[1] = $this->sg_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
+			$result[1] = $result[1]->result();
+		}
+
+
+		$result[2] = array(
+			'toko' => $toko_id,
+			'gudang_id' => $gudang_id,
+			'barang' => $barang_id,
+			'warna' => $warna_id,
+			'tanggal'=> $tanggal,
+			'tanggal_awal' => $tanggal_awal,
+			'stok_opname_id' => $stok_opname_id,
+			'barang_data'=> $barang_data
+		);
+
+		$dt = $this->sg_model->get_barang_header($barang_id);
+
+		$result[3] = array(
+			'res'=>$res,
+			'var' => $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id, $tanggal,
+			'barang_head' => $dt
+		);
+		
+		// echo $tanggal_awal;
+
+		// echo $stok_opname_id;
+		echo json_encode($result);
 
 	}
 
@@ -986,6 +1549,50 @@ class Inventory extends CI_Controller {
 		header('Cache-Control: max-age=0');
 		$objWriter->save('php://output');
 	}
+//=====================================mutasi barang eceran=============================================
+
+	function get_mutasi_barang_eceran(){
+		$tanggal_start = $this->input->get('tanggal_start');
+		$tanggal_end = $this->input->get('tanggal_end');
+		$barang_id = $this->input->get('barang_id');
+		$warna_id = $this->input->get('warna_id');
+		
+		$cond = "";
+		if ($barang_id != "" && $barang_id != 0) {
+			$cond .= " AND barang_id = ".$barang_id;
+		}
+
+		if ($warna_id != "" && $warna_id != 0) {
+			$cond .= " AND warna_id = ".$warna_id;
+		}
+		
+		$res = $this->inv_model->get_mutasi_barang_eceran($tanggal_start, $tanggal_end, $cond);
+
+		echo json_encode($res);
+		// echo json_encode($cond);
+
+	}
+
+	function cek_barang_qty_eceran(){
+		$barang_id = $this->input->post('barang_id');
+		$warna_id = $this->input->post('warna_id');
+		$gudang_id = $this->input->post('gudang_id');
+		$tanggal = is_date_formatter($this->input->post('tanggal'));
+		$get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id,'2');
+        $tanggal_awal = '2018-01-01';
+        $stok_opname_id = 0;
+        foreach ($get_stok_opname as $row) {
+            $tanggal_awal = $row->tanggal;
+            $stok_opname_id = $row->stok_opname_id;
+        }
+
+		$data = $this->inv_model->cek_barang_qty_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
+		echo json_encode($data);
+
+	}
+
+
+	
 
 //=====================================mutasi persediaan barang=============================================
 
@@ -1538,17 +2145,18 @@ class Inventory extends CI_Controller {
 
 	function get_data_stok_opname_detail(){
 		$stok_opname_id = $this->input->post('stok_opname_id');
+		$toko_id = $this->input->post('toko_id');
 		$barang_id = $this->input->post('barang_id');
 		$warna_id = $this->input->post('warna_id');
 		$supplier_id = $this->input->post('supplier_id');
 		$tanggal = $this->input->post('tanggal');
 
-		$result['result'] = $this->common_model->db_select("nd_stok_opname_detail where stok_opname_id=$stok_opname_id and barang_id = $barang_id and warna_id = $warna_id and supplier_id = $supplier_id");
-		$result['resultEcer'] = $this->common_model->db_select("nd_stok_opname_eceran where stok_opname_id=$stok_opname_id and barang_id = $barang_id and warna_id = $warna_id and supplier_id = $supplier_id");
+		$result['result'] = $this->common_model->db_select("nd_stok_opname_detail where stok_opname_id=$stok_opname_id and toko_id=$toko_id and barang_id = $barang_id and warna_id = $warna_id and supplier_id = $supplier_id");
+		$result['resultEcer'] = $this->common_model->db_select("nd_stok_opname_eceran where stok_opname_id=$stok_opname_id and toko_id=$toko_id and barang_id = $barang_id and warna_id = $warna_id and supplier_id = $supplier_id");
 		$data = array();
 		$dataEcer = array();
 		foreach ($this->gudang_list_aktif as $row) {
-			$get_stok_opname = $this->common_model->get_latest_so_before($tanggal, $barang_id, $supplier_id, $warna_id, $row->id);
+			$get_stok_opname = $this->common_model->get_latest_so_before($tanggal, $toko_id, $barang_id, $supplier_id, $warna_id, $row->id);
 			$tanggal_awal = '2018-01-01';
 			$stok_opname_id_before = 0;
 			foreach ($get_stok_opname as $row2) {
@@ -1556,9 +2164,9 @@ class Inventory extends CI_Controller {
 				$stok_opname_id_before = $row2->stok_opname_id;
 			}
 			// echo $row->id,' ',$tanggal_awal,' ', $stok_opname_id_before.'<br/>';
-			array_push($data, $this->inv_model->cek_barang_qty($row->id, $barang_id,$warna_id, $supplier_id, $tanggal_awal, $stok_opname_id_before, $tanggal));
+			array_push($data, $this->inv_model->cek_barang_qty($row->id, $toko_id, $barang_id,$warna_id, $supplier_id, $tanggal_awal, $stok_opname_id_before, $tanggal));
 
-			$get_stok_opname = $this->common_model->get_latest_so_eceran_before($tanggal, $barang_id, $warna_id, $supplier_id, $row->id);
+			$get_stok_opname = $this->common_model->get_latest_so_eceran_before($tanggal, $toko_id, $barang_id, $warna_id, $supplier_id, $row->id);
 			$tanggal_awal = '2018-01-01';
 			$stok_opname_id_before = 0;
 			foreach ($get_stok_opname as $row2) {
@@ -1566,7 +2174,7 @@ class Inventory extends CI_Controller {
 				$stok_opname_id_before = $row2->stok_opname_id;
 			}
 			// echo $row->id.','. $barang_id.','.$warna_id.','. $tanggal_awal.','. $stok_opname_id_before."\n";
-			array_push($dataEcer, $this->inv_model->cek_total_barang_qty_eceran($row->id, $barang_id,$warna_id, $supplier_id, $tanggal_awal, $stok_opname_id_before, $tanggal));
+			array_push($dataEcer, $this->inv_model->cek_total_barang_qty_eceran($row->id, $toko_id, $barang_id,$warna_id, $supplier_id, $tanggal_awal, $stok_opname_id_before, $tanggal));
 			// print_r($this->inv_model->cek_barang_qty_eceran($row->id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id));
 		}
 		$result['data'] = $data;
@@ -1620,17 +2228,25 @@ class Inventory extends CI_Controller {
 
 	function stok_opname_detail_insert(){
 		$stok_opname_id = $this->input->post('stok_opname_id');
+		$toko_id = $this->input->post('toko_id');
 		$barang_id = $this->input->post('barang_id');
 		$warna_id = $this->input->post('warna_id');
 		$supplier_id = $this->input->post('supplier_id');
 		$gudang_id = $this->input->post('gudang_id');
 		$rekap = explode('--', $this->input->post('rekap_qty'));
+
+		$get_sku = $this->common_model->db_select_num_rows("nd_barang_sku WHERE barang_id='$barang_id' AND warna_id='$warna_id'");
+		if (!$get_sku) {
+			$this->register_new_sku($barang_id, $warna_id, 0);
+		}
+
 		foreach ($rekap as $key => $value) {
 			$dt = explode('??', $value);
 			if (isset($dt[2]) && $dt[2] == 0) {
 				if ($dt[0] != '' && $dt[0] != null) {
 					$data[$key] = array(
 						'stok_opname_id' => $stok_opname_id ,
+						'toko_id' => $toko_id,
 						'barang_id' => $barang_id,
 						'warna_id' => $warna_id,
 						'gudang_id' => $gudang_id,
@@ -1642,6 +2258,7 @@ class Inventory extends CI_Controller {
 			}else if(isset($dt[2]) && $dt[2] != 0){
 				$data_update = array(
 					'stok_opname_id' => $stok_opname_id ,
+					'toko_id' => $toko_id,
 					'barang_id' => $barang_id,
 					'warna_id' => $warna_id,
 					'gudang_id' => $gudang_id,
@@ -1662,7 +2279,7 @@ class Inventory extends CI_Controller {
 			$this->common_model->db_insert_batch('nd_stok_opname_detail', $data);
 		}
 
-		$result = $this->common_model->db_select("nd_stok_opname_detail where stok_opname_id=$stok_opname_id and barang_id = $barang_id and warna_id = $warna_id and gudang_id=$gudang_id");
+		$result = $this->common_model->db_select("nd_stok_opname_detail where stok_opname_id=$stok_opname_id and toko_id=$toko_id and barang_id = $barang_id and warna_id = $warna_id and gudang_id=$gudang_id");
 
 		// print_r($data);
 		echo json_encode($result);
@@ -1711,6 +2328,8 @@ class Inventory extends CI_Controller {
 		if (isset($data)) {
 			$this->common_model->db_insert_batch('nd_stok_opname_eceran', $data);
 		}
+
+		$this->register_new_sku($barang_id, $warna_id, 1);
 
 		$result = $this->common_model->db_select("nd_stok_opname_eceran where stok_opname_id=$stok_opname_id and barang_id = $barang_id and warna_id = $warna_id and gudang_id=$gudang_id");
 
@@ -1912,7 +2531,7 @@ class Inventory extends CI_Controller {
 					if(tbl_a.gudang_id=".$row->id.", ifnull(qty_keluar,0), 0 ),0 )),3)  as gudang_".$row->id."_qty , SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_masuk, 0 ),0 )) - SUM( if(tanggal >= ifnull(tanggal_stok,'$tanggal_awal'), if(tbl_a.gudang_id=".$row->id.", jumlah_roll_keluar, 0 ),0 ))  as gudang_".$row->id."_roll ";
 		}
 		
-		$data['stok_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal_end, $tanggal_awal);
+		$data['stok_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal_end, $tanggal_awal,"");
 		$data['assembly_list'] = $this->inv_model->get_assembly_list($tanggal_end, $tanggal_start);
 		$this->load->view('admin/template',$data);		
 	}
@@ -2041,6 +2660,11 @@ class Inventory extends CI_Controller {
 			$this->common_model->db_delete_batch("nd_assembly_detail_hasil", "id", $hasil_id);
 		}
 
+		$barang_id_sku = $dt->barang_id_hasil;
+		$warna_id_sku = $dt->warna_id_hasil;
+
+		$this->register_new_sku($barang_id_sku, $warna_id_sku, 0);
+
 		echo json_encode("OK");
 		
 	}
@@ -2055,8 +2679,5 @@ class Inventory extends CI_Controller {
 
 
 
-/** 
-============================================================================================================================================= 
-**/
 
 }

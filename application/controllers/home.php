@@ -25,7 +25,7 @@ class Home extends CI_Controller {
 		if($this->form_validation->run() == FALSE){
 			$this->load->view('login');
 		}else{
-			$session_data = $this->session->userdata('hameyean_logged_in');
+			$session_data = $this->session->userdata('usaha_logged_in');
 			redirect('admin');
 		}
 	}
@@ -52,7 +52,7 @@ class Home extends CI_Controller {
 	   			}
    			}
 
-   			$this->session->unset_userdata('hameyean_logged_in');
+   			$this->session->unset_userdata('usaha_logged_in');
    			$session_array = array();
    			foreach ($result as $row) {
    				// $user_type = $row->type;
@@ -63,7 +63,7 @@ class Home extends CI_Controller {
    					'time_start' => $row->time_start,
    					'time_end' => $row->time_end
    					);
-   				$this->session->set_userdata('hameyean_logged_in',$session_array);
+   				$this->session->set_userdata('usaha_logged_in',$session_array);
    			}
 
    			$data = array(
@@ -77,7 +77,7 @@ class Home extends CI_Controller {
 	}
 
 	function logout(){
-		$this->session->unset_userdata('hameyean_logged_in');
+		$this->session->unset_userdata('usaha_logged_in');
 		redirect('home');
 	}
 }

@@ -25,6 +25,10 @@ class Master extends CI_Controller {
 		$this->warna_list_aktif = $this->common_model->db_select('nd_warna where status_aktif = 1');
 		$this->barang_list_aktif = $this->common_model->get_barang_list_aktif();
 		$this->satuan_list_aktif = $this->common_model->db_select('nd_satuan where status_aktif = 1');
+
+		$this->load->model('stok/stok_general_model','sg_model',true);
+		$this->barang_sku_aktif = $this->common_model->get_sku_barang_aktif();
+		$this->mysqli_conn = $this->db->conn_id;
 		
 		date_default_timezone_set("Asia/Jakarta");		
 
@@ -105,7 +109,8 @@ class Master extends CI_Controller {
 			'password' => md5($this->input->post('password')),
 			'posisi_id' => $this->input->post('posisi_id'),
 			'time_start' => $this->input->post('time_start'),
-			'time_end' => $this->input->post('time_end')
+			'time_end' => $this->input->post('time_end'),
+			'status_aktif' => 1
 			);
 		$this->common_model->db_insert('nd_user',$data);
 		redirect(trim(base64_encode('master/user_list'),'='));
@@ -256,10 +261,10 @@ class Master extends CI_Controller {
         // paging
         $sLimit = "";
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -268,7 +273,7 @@ class Master extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -283,7 +288,7 @@ class Master extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -298,7 +303,7 @@ class Master extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -370,10 +375,11 @@ class Master extends CI_Controller {
 		$harga_jual = str_replace(',', '', $harga_jual);
 		$harga_beli = str_replace(',', '', $harga_beli);
 		$harga_ecer = str_replace(',', '', $harga_ecer);
+		$nama_jual = $this->input->post('nama_jual');
 
 		$data = array(
 			'nama' => $this->input->post('nama'),
-			'nama_jual' => $this->input->post('nama_jual'),
+			'nama_jual' => $nama_jual,
 			'harga_jual' => $harga_jual,
 			'harga_beli' => $harga_beli,
 			'harga_ecer' => $harga_ecer,
@@ -390,8 +396,97 @@ class Master extends CI_Controller {
 			// print_r($this->input->post());
 			// print_r($data);
 
+			$nama_satuan = "";
+			$nama_packaging = "";
+		
+			foreach ($satuan_list_aktif as $row) {
+				if ($row->id == $data['satuan_id']) {
+					$nama_satuan = $row->nama;
+				}
+
+				if ($row->id == $data['packaging_id']) {
+					$nama_packaging = $row->nama;
+				}
+			}
+
 		$this->common_model->db_update('nd_barang',$data,'id', $id);
-		redirect(trim(base64_encode('master/barang_list'),'='));
+		$this->update_sku_barang($id, $nama_jual, $nama_satuan, $nama_packaging);
+		redirect(is_setting_link('master/barang_list'));
+	}
+
+	function update_sku_barang($barang_id, $nama_jual, $nama_satuan, $nama_packaging){
+		$ket = $this->common_model->db_select("nd_barang_sku WHERE barang_id=$barang_id");
+		$warna_list = [];
+		$id_list = [];
+		foreach ($ket as $row) {
+			array_push($warna_list,$row->warna_id);
+			$id_list[$row->warna_id] = $row->id;
+		}
+
+		if (count($warna_list) > 0) {
+			$get_warna = $this->common_model->db_select("nd_warna where id in (".implode(",",$warna_list).")");
+
+			$new_data = array();
+			foreach ($get_warna as $row) {
+				array_push($new_data,array(
+					"id"=>$id_list[$row->id],
+					"nama_barang"=>$nama_jual." ".$row->warna_jual,
+					"nama_satuan"=>$nama_satuan,
+					"nama_packaging"=>$nama_packaging
+				));
+			}
+
+			$this->common_model->db_update_batch("nd_barang_sku", $new_data,"id");
+		}
+	}
+
+	function barang_sku_insert(){
+		$barang_id = $this->input->post('barang_id');
+		$warna_id = $this->input->post('warna_id');
+		$nama_barang = "";
+		$nama_satuan = "";
+		$nama_packaging = "";
+
+		$sku_id = "";
+		$get_barang_sku = $this->common_model->db_select("nd_barang_sku WHERE barang_id='$barang_id' AND warna_id='$warna_id'");
+		foreach ($get_barang_sku as $row) {
+			$sku_id = $row->id;
+		}
+		if ($sku_id == "") {
+			# code...
+			$get_data_barang = $this->common_model->db_select("nd_barang WHERE id='$barang_id'");
+			foreach ($get_data_barang as $row) {
+				$nama_barang = $row->nama_jual;
+				$satuan_id = $row->satuan_id;
+				$packaging_id = $row->packaging_id;
+			}
+	
+			$get_data_warna = $this->common_model->db_select("nd_warna WHERE id='$warna_id'");
+			foreach ($get_data_warna as $row) {
+				$nama_warna = $row->warna_jual;
+			}
+	
+			$get_nama_satuan = $this->common_model->db_select("nd_satuan WHERE id='$satuan_id'");
+			foreach ($get_nama_satuan as $row) {
+				$nama_satuan = $row->nama;
+			}
+			$get_nama_packaging = $this->common_model->db_select("nd_satuan WHERE id='$packaging_id'");
+			foreach ($get_nama_packaging as $row) {
+				$nama_packaging = $row->nama;
+			}
+			$nSku = array(
+				'barang_id' => $barang_id,
+				'warna_id' => $warna_id, 
+				'nama_barang' => $nama_barang.' '.$nama_warna, 
+				'nama_satuan' => $nama_satuan, 
+				'nama_packaging' => $nama_packaging, 
+				'user_id' => is_user_id(),
+				'status_aktif'=> 1
+			);
+	
+			$this->common_model->db_insert('nd_barang_sku',$nSku);
+		}
+		redirect(is_setting_link('master/barang_list'));
 	}
 
 //================================supplier list================================================
@@ -476,10 +571,10 @@ class Master extends CI_Controller {
         // paging
         $sLimit = "";
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -488,7 +583,7 @@ class Master extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -503,7 +598,7 @@ class Master extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -518,7 +613,7 @@ class Master extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -778,6 +873,17 @@ class Master extends CI_Controller {
 		redirect(trim(base64_encode('master/gudang_list'),'='));
 	}
 
+	function toggle_gudang_visibility(){
+		$gudang_id=$this->input->post('gudang_id');
+		$data = array(
+			'isVisible'=>$this->input->post("isVisible")
+		);
+
+		$this->common_model->db_update("nd_gudang",$data,"id",$gudang_id);
+		echo json_encode("OK");
+
+	}
+
 
 //================================close program date list================================================
 
@@ -849,4 +955,84 @@ class Master extends CI_Controller {
 		$this->common_model->db_update('nd_barang',$data, 'id', $barang_id);
 		redirect(is_setting_link('master/barang_eceran_mix_list'));
 	}
+/** 
+============================================================================================================================================= 
+**/
+
+	function stok_warning(){
+		$menu = is_get_url($this->uri->segment(1));
+
+		$data = array(
+			'content' =>'admin/master/stok_warning',
+			'breadcrumb_title' => 'Stok',
+			'breadcrumb_small' => 'Warning',
+			'nama_menu' => $menu[0],
+			'nama_submenu' => $menu[1],
+			'common_data'=> $this->data,
+			);	
+
+		$data['stok_warning_list'] = $this->sg_model->get_stok_warning();
+
+		$this->load->view('admin/template',$data);		
+	}
+
+	function qty_warning_insert(){
+		$qty_alert = $this->input->post('qty_alert');
+		$qty_warning = $this->input->post('qty_warning');
+		$data = array(
+			'sku_id' => $this->input->post('sku_id'),
+			'toko_id' => $this->input->post('toko_id'),
+			'nama_satuan' => $this->input->post('nama_satuan'),
+			'qty_alert' => ($qty_alert == '' ? 0 : $qty_alert),
+			"qty_warning" => ($qty_warning == '' ? 0 : $qty_warning)
+		);
+
+		$this->common_model->db_insert("nd_stok_warning", $data);
+
+		redirect(is_setting_link('master/stok_warning'));
+	}
+
+	function qty_warning_insert_ajax(){
+		$qty_alert = $this->input->post('qty_alert');
+		$qty_warning = $this->input->post('qty_warning');
+		$data = array(
+			'sku_id' => $this->input->post('sku_id'),
+			'toko_id' => $this->input->post('toko_id'),
+			'nama_satuan' => $this->input->post('nama_satuan'),
+			'qty_alert' => ($qty_alert == '' ? 0 : $qty_alert),
+			"qty_warning" => ($qty_warning == '' ? 0 : $qty_warning)
+		);
+
+		$this->common_model->db_insert("nd_stok_warning", $data);
+
+		redirect(is_setting_link('master/stok_warning'));
+	}
+
+	function qty_warning_update(){
+
+		$id = $this->input->post('id');
+		$qty_alert = $this->input->post('qty_alert');
+		$qty_warning = $this->input->post('qty_warning');
+		$data = array(
+			'sku_id' => $this->input->post('sku_id'),
+			'toko_id' => $this->input->post('toko_id'),
+			'nama_satuan' => $this->input->post('nama_satuan'),
+			'qty_alert' => ($qty_alert == '' ? 0 : $qty_alert),
+			"qty_warning" => ($qty_warning == '' ? 0 : $qty_warning)
+		);
+
+		$this->common_model->db_update("nd_stok_warning", $data,'id', $id);
+
+		redirect(is_setting_link('master/stok_warning'));
+	}
+
+
+	function qty_warning_delete(){
+		$id = $this->input->post('id');
+		$this->common_model->db_delete("nd_stok_warning", "id", $id);
+		echo json_encode("OK");
+	}
+	
+
+
 }

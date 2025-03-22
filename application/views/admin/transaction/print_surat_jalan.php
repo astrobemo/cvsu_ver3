@@ -7,6 +7,9 @@ function print_surat_jalan(printer_name){
 	$i = 1; $baris_print = 0;
 	$baris_idx = 16;
 
+	$ppn_pembagi = 1+($ppn_berlaku/100);
+
+
 	foreach ($data_penjualan_detail_group as $row) {
 
 		$nama_warna = explode('??', $row->nama_warna);
@@ -135,8 +138,8 @@ function print_surat_jalan(printer_name){
 					   	
 					   	<?
 					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
-					   	$harga_raw = $harga_total/1.1;
-					   	$harga_raw_satuan = $row->harga_jual/1.1;
+					   	$harga_raw = $harga_total/$ppn_pembagi;
+					   	$harga_raw_satuan = $row->harga_jual/$ppn_pembagi;
 					   	$harga_raw_total += $harga_raw;
 					   	$ppn = $harga_total - $harga_raw;
 					   	$ppn_total += $ppn;
@@ -481,8 +484,8 @@ function print_surat_jalan(printer_name){
 					   	
 					   	<?
 					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
-					   	$harga_raw = $harga_total/1.1;
-					   	$harga_raw_satuan = $row->harga_jual/1.1;
+					   	$harga_raw = $harga_total/$ppn_pembagi;
+					   	$harga_raw_satuan = $row->harga_jual/$ppn_pembagi;
 					   	$harga_raw_total += $harga_raw;
 					   	$ppn = $harga_total - $harga_raw;
 					   	$ppn_total += $ppn;

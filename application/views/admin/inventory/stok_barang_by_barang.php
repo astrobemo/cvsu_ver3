@@ -81,100 +81,106 @@
 									<th scope="col" rowspan='2'>
 										Nama Jual
 									</th>
-									<th scope="col" rowspan='2'>
+									<th hidden scope="col" rowspan='2'>
 										Status
 									</th>
-									<!-- <th scope="col">
+									<th scope="col"  rowspan='2'>
 										Satuan
-									</th> -->
+									</th>
 									<?foreach ($gudang_list as $row) { 
 										${'total_yard_'.$row->id} = 0;
 										${'total_roll_'.$row->id} = 0;?>
-										<th colspan='3'><?=$row->nama;?></th>
+										<th colspan='2'><?=$row->nama;?></th>
 									<?}?>
 									<th colspan='2'>TOTAL</th>
 
 								</tr>
 								<tr>
 									<?foreach ($this->gudang_list_aktif as $row) { ?>
-										<th>Yard/Kg</th>
-										<th>Jumlah Roll</th>
-										<th><i class='fa fa-list'></i></th>
+										<th style="border-top:1px solid #ddd">Yard/Kg</th>
+										<th style="border-top:1px solid #ddd">Jumlah Roll</th>
+										<th hidden><i class='fa fa-list'></i></th>
 
 									<?}?>
-									<th>Yard/Kg</th>
-									<th>Jumlah Roll</th>
+									<th style="border-top:1px solid #ddd">Yard/Kg</th>
+									<th style="border-top:1px solid #ddd">Jumlah Roll</th>
 								</tr>
 							</thead>
 							<tbody>
 								<?
-								foreach ($stok_barang as $row) { ?>
-									<tr>
-										<!-- <td>
-											<span class='barang_id' hidden="hidden"><?=$row->barang_id;?></span>
-											<?//=$row->nama_barang;?> <?=$row->nama_warna;?>
-											<?//=$row->barang_id;?><?//=$row->warna_id;?>
-										</td> -->
-										<td>
-											<?=$row->nama_barang_jual;?> <?=$row->nama_warna_jual;?>
-										</td>
-										<td>
-											<?if ($row->status_barang == 0) { ?>
-												<span style='color:red'>Tidak Aktif</span> 
-											<? }else{?>
-												Aktif
-											<?} ?>
-										</td>
-										<?
-										$subtotal_qty = 0;
-										$subtotal_roll = 0;
-										foreach ($gudang_list as $isi) { ?>
-											<?
-											$qty = $isi->nama.'_qty';
-											$roll = $isi->nama.'_roll';
-											$subtotal_qty += $row->$qty;
-											$subtotal_roll += $row->$roll;
-
-											${'total_yard_'.$isi->id} += $row->$qty;
-											${'total_roll_'.$isi->id} += $row->$roll;
-
-											?>
-											<td><?=number_format($row->$qty,'2',',','.');?> <?=$row->nama_satuan;?></td>
-											<td><?=number_format($row->$roll,'0',',','.');?></td>
-											<td>									
-												<a href="<?=base_url().is_setting_link('inventory/kartu_stok').'/'.$isi->id.'/'.$row->barang_id.'/'.$row->warna_id;?>" class='btn btn-xs yellow-gold' onclick="window.open(this.href, 'newwindow', 'width=1250, height=650'); return false;"><i class='fa fa-search'></i></a>
+								foreach ($stok_barang as $row) { 
+									if ($row->status_barang != 0) {?>
+										<tr>
+											<!-- <td>
+												<span class='barang_id' hidden="hidden"><?=$row->barang_id;?></span>
+												<?//=$row->nama_barang;?> <?=$row->nama_warna;?>
+												<?//=$row->barang_id;?><?//=$row->warna_id;?>
+											</td> -->
+											<td>
+												<?=$row->nama_barang_jual;?> <?=$row->nama_warna_jual;?>
 											</td>
-										<?}?>
-
-										<td>
-											<b><?=number_format($subtotal_qty,'2',',','.');?></b> 
-										</td>
-										<td>
-											<b><?=number_format($subtotal_roll,'0',',','.');?></b>											
-										</td>
-									</tr>
+											<td hidden>
+												<?if ($row->status_barang == 0) { ?>
+													<span style='color:red'>Tidak Aktif</span> 
+												<? }else{?>
+													Aktif
+												<?} ?>
+											</td>
+											<td>
+												<?=$row->nama_satuan;?>
+											</td>
+											<?
+											$subtotal_qty = 0;
+											$subtotal_roll = 0;
+											foreach ($gudang_list as $isi) { ?>
+												<?
+												$qty = 'gudang_'.$isi->id.'_qty';
+												$roll = 'gudang_'.$isi->id.'_roll';
+												$subtotal_qty += $row->$qty;
+												$subtotal_roll += $row->$roll;
+	
+												${'total_yard_'.$isi->id} += $row->$qty;
+												${'total_roll_'.$isi->id} += $row->$roll;
+	
+												?>
+												<td><?=number_format($row->$qty,'2',',','.');?> <?//=$row->nama_satuan;?></td>
+												<td><?=number_format($row->$roll,'0',',','.');?></td>
+												<td hidden>									
+													<a href="<?=base_url().is_setting_link('inventory/kartu_stok').'/'.$isi->id.'/'.$row->barang_id.'/'.$row->warna_id;?>" class='btn btn-xs yellow-gold' onclick="window.open(this.href, 'newwindow', 'width=1250, height=650'); return false;"><i class='fa fa-search'></i></a>
+												</td>
+											<?}?>
+	
+											<td>
+												<b><?=number_format($subtotal_qty,'2',',','.');?></b> 
+											</td>
+											<td>
+												<b><?=number_format($subtotal_roll,'0',',','.');?></b>											
+											</td>
+										</tr>
+									<?}?>
 								<? } ?>
-								<tr style='font-size:1.1em'>
-									<td></td>
-									<td>
+							</tbody>
+							<tfoot>
+								<tr style='font-size:1.1em; background:lightgoldenrodyellow'>
+									<th></th>
+									<th>
 										<b>TOTAL</b>
-									</td>
+									</th>
 									<?
 										$total_yard = 0; $total_roll = 0;
 										foreach ($gudang_list as $row) { 
 											$total_yard += ${'total_yard_'.$row->id};
 											$total_roll += ${'total_roll_'.$row->id};
 											?>
-											<td><?=number_format(${'total_yard_'.$row->id},'2',',','.');?> </td>
-											<td><?=${'total_roll_'.$row->id};?></td>
-											<td>									
-											</td>
+											<th><?=number_format(${'total_yard_'.$row->id},'2',',','.');?> </th>
+											<th><?=${'total_roll_'.$row->id};?></th>
+											<th hidden>									
+											</th>
 										<?}?>
-									<td><b><?=number_format($total_yard,'2',',','.');?></b> </td>
-									<td><b><?=$total_roll;?></b> </td>
+									<th><b><?=number_format($total_yard,'2',',','.');?></b> </th>
+									<th><b><?=$total_roll;?></b> </th>
 								</tr>
-
-							</tbody>
+							</tfoot>
 						</table>
 						<hr/>
 					</div>

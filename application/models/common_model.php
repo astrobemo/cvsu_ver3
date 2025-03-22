@@ -7,6 +7,12 @@ class Common_Model extends CI_Model {
 		return $query;
 	}
 
+	function db_custom_query($query){
+		$query = $this->db->query("$query;");
+		// $this->db->free_db_resource();
+		return $query;
+	}
+
 	function db_select($table){
 		$query = $this->db->query("SELECT * 
 			FROM $table");
@@ -37,25 +43,58 @@ class Common_Model extends CI_Model {
 	}
 
 	function db_insert($table,$data){
+		$this->db->query("START TRANSACTION");
 		$this->db->insert($table,$data);
 		$insert_id = $this->db->insert_id();
+		$this->db->query("COMMIT");
+		
+		if ($this->db->trans_status() === FALSE) {
+			$this->db->query("ROLLBACK");
+			return false;
+		}
 		return $insert_id;
 	}
 
 	function db_insert_batch($table, $data){
-		$query = $this->db->insert_batch($table,$data);
+		$this->db->query("START TRANSACTION");
+		$this->db->insert_batch($table,$data);
+		$affected_rows = $this->db->affected_rows();
+		$this->db->query("COMMIT");
+		if ($this->db->trans_status() === FALSE) {
+			$this->db->query("ROLLBACK");
+			return false;
+		}
+
+		return $affected_rows;
+
 	}
 
 	function db_update($table,$data,$column,$selector){
+		$this->db->query("START TRANSACTION");
 		$this->db->where($column, $selector);
 		$this->db->update($table, $data);
-		return $this->db->last_query();
+		$affected_rows = $this->db->affected_rows();
+		$this->db->query("COMMIT");
+		if ($this->db->trans_status() === FALSE) {
+			$this->db->query("ROLLBACK");
+			return false;
+		}
+
+		return $affected_rows;
 	}
 
 	function db_update_batch($table, $data, $param)
 	{
+		$this->db->query("START TRANSACTION");
 		$this->db->update_batch($table, $data, $param);
-		return $this->db->last_query();
+		$affected_rows = $this->db->affected_rows();
+		$this->db->query("COMMIT");
+		if ($this->db->trans_status() === FALSE) {
+			$this->db->query("ROLLBACK");
+			return false;
+		}
+
+		return $affected_rows;
 	}
 
 	function db_update_multiple_cond($table,$data,$array){
@@ -104,7 +143,7 @@ class Common_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id)
+	function get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id, $toko_id)
 	{
 		$query = $this->db->query("SELECT t1.*, t2.tanggal
 			FROM (
@@ -113,6 +152,7 @@ class Common_Model extends CI_Model {
 				WHERE barang_id = $barang_id
 				AND warna_id = $warna_id
 				AND gudang_id = $gudang_id
+				AND toko_id = $toko_id
 			) t1
 			LEFT JOIN (
 				SELECT *
@@ -154,7 +194,7 @@ class Common_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function get_latest_so_before($tanggal, $barang_id, $supplier_id, $warna_id, $gudang_id)
+	function get_latest_so_before($tanggal, $toko_id, $barang_id, $supplier_id, $warna_id, $gudang_id)
 	{
 		$query = $this->db->query("SELECT t1.*, t2.tanggal
 			FROM (
@@ -164,6 +204,7 @@ class Common_Model extends CI_Model {
 				AND warna_id = $warna_id
 				AND supplier_id = $supplier_id
 				AND gudang_id = $gudang_id
+				AND toko_id = $toko_id
 			) t1
 			LEFT JOIN (
 				SELECT *
@@ -178,7 +219,7 @@ class Common_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function get_latest_so_eceran_before($tanggal, $barang_id, $warna_id, $supplier_id,  $gudang_id)
+	function get_latest_so_eceran_before($tanggal, $toko_id, $barang_id, $warna_id, $supplier_id,  $gudang_id)
 	{
 		$query = $this->db->query("SELECT t1.*, t2.tanggal
 			FROM (
@@ -188,11 +229,94 @@ class Common_Model extends CI_Model {
 				AND warna_id = $warna_id
 				AND gudang_id = $gudang_id
 				AND supplier_id = $supplier_id
+				AND toko_id = $toko_id
 			) t1
 			LEFT JOIN (
 				SELECT *
 				FROM nd_stok_opname
 				WHERE tanggal < '$tanggal'
+				AND status_aktif = 1
+			) t2
+			ON t1.stok_opname_id = t2.id
+			WHERE t2.id is not null
+			ORDER BY tanggal DESC LIMIT 1
+
+		");
+		
+		return $query->result();
+	}
+
+	function get_sku_barang_aktif(){
+		$query = $this->db->query("SELECT *
+			FROM nd_barang_sku
+			WHERE status_aktif = 1
+		");
+		
+		return $query->result();
+	}
+
+	function register_new_sku($barang_id, $warna_id){
+		$query = $this->db->query("INSERT INTO nd_barang_sku(barang_id, warna_id, nama_barang, nama_satuan, nama_packaging, user_id, status_aktif) 
+		SELECT *
+		FROM (
+			SELECT barang_id, warna_id, concat(nama_jual,' ', warna_jual), nds1.nama as nama_satuan, nds2.nama as nama_packaging,'1',nd_barang.status_aktif
+			FROM nd_barang
+			LEFT JOIN nd_warna
+			ON t1.warna_id = nd_warna.id
+			LEFT JOIN nd_satuan nds1
+			ON nd_barang.satuan_id = nds1.id
+			LEFT JOIN nd_satuan nds2
+			ON nd_barang.packaging_id = nds2.id
+			GROUP BY barang_id, warna_id
+		)res");
+		$insert_id = $this->db->insert_id();
+		return $insert_id;
+	}
+
+
+//=============================get so eceran===================================
+
+	function get_latest_so_pertoko($tanggal, $barang_id, $warna_id, $gudang_id, $toko_id)
+	{
+		$query = $this->db->query("SELECT t1.*, t2.tanggal
+			FROM (
+				SELECT *
+				FROM nd_stok_opname_detail
+				WHERE barang_id = $barang_id
+				AND warna_id = $warna_id
+				AND gudang_id = $gudang_id
+				AND toko_id = $toko_id
+			) t1
+			LEFT JOIN (
+				SELECT *
+				FROM nd_stok_opname
+				WHERE tanggal <= '$tanggal'
+				AND status_aktif = 1
+			) t2
+			ON t1.stok_opname_id = t2.id
+			WHERE t2.id is not null
+			ORDER BY tanggal DESC LIMIT 1
+
+
+		");
+		return $query->result();
+	}
+
+	function get_latest_so_eceran_pertoko($toko_id, $tanggal, $barang_id, $warna_id, $gudang_id)
+	{
+		$query = $this->db->query("SELECT t1.*, t2.tanggal
+			FROM (
+				SELECT *
+				FROM nd_stok_opname_eceran
+				WHERE barang_id = $barang_id
+				AND warna_id = $warna_id
+				AND gudang_id = $gudang_id
+				AND toko_id = $toko_id
+			) t1
+			LEFT JOIN (
+				SELECT *
+				FROM nd_stok_opname
+				WHERE tanggal <= '$tanggal'
 				AND status_aktif = 1
 			) t2
 			ON t1.stok_opname_id = t2.id

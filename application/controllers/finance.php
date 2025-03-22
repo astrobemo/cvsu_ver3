@@ -275,10 +275,13 @@ class Finance extends CI_Controller {
 			$data['pembayaran_hutang_awal'] = $this->fi_model->get_pembayaran_hutang_awal_detail($pembayaran_hutang_id); 
 			$data['pembayaran_hutang_detail'] = $this->fi_model->get_pembayaran_hutang_detail($pembayaran_hutang_id); 
 			$data['pembayaran_hutang_nilai'] = $this->common_model->db_select("nd_pembayaran_hutang_nilai where pembayaran_hutang_id=".$pembayaran_hutang_id);
+			$data['retur_beli'] = $this->fi_model->get_retur_beli_detail($pembayaran_hutang_id);
+		
 		}elseif ($toko_id != '' && $supplier_id != '') {
 			$data['pembayaran_hutang_data'] = array();
 			$data['pembayaran_hutang_awal'] = $this->fi_model->get_hutang_awal_by_date($tanggal_start, $tanggal_end, $toko_id, $supplier_id); 
 			$data['pembayaran_hutang_detail'] = $this->fi_model->get_hutang_list_by_date($tanggal_start, $tanggal_end, $toko_id, $supplier_id); 
+			$data['retur_beli'] = $this->fi_model->get_retur_beli_belum_lunas($supplier_id, $toko_id);
 			$data['pembayaran_hutang_nilai'] = array();
 			$data['bank_history'] = array();
 			$data['bank_default'] = array();
@@ -289,6 +292,7 @@ class Finance extends CI_Controller {
 			$data['pembayaran_hutang_nilai'] = array();
 			$data['bank_history'] = array();
 			$data['bank_default'] = array();
+			$data['retur_beli'] = array();
 
 		}
 		$this->load->view('admin/template',$data);
@@ -336,6 +340,13 @@ class Finance extends CI_Controller {
 						$hutang_awal_id[$idx] = $data_get[1];
 						$idx++;
 					}
+				}elseif (strpos($key, 'retur_') !== false) {
+					// echo $key.'-->'.$value.'<br/>';
+					$data_get = explode('_', $key);
+					if ($value != '' && $value != 0) {
+						$retur_beli_id[$idx] = $data_get[1];
+						$idx++;
+					}
 				}
 			}
 
@@ -347,6 +358,18 @@ class Finance extends CI_Controller {
 						'pembelian_id' => $value ,
 						'amount' => str_replace('.', '', $post['bayar_'.$value]),
 						'data_status' => 1
+						 );
+					$idx++;
+				}
+			}
+
+			if (isset($retur_beli_id)) {
+				foreach ($retur_beli_id as $key => $value) {
+					$data_detail[$idx] = array(
+						'pembayaran_hutang_id' => $result_id,
+						'pembelian_id' => $value ,
+						'amount' => str_replace('.', '', $post['retur_'.$value]),
+						'data_status' => 3
 						 );
 					$idx++;
 				}
@@ -563,23 +586,43 @@ class Finance extends CI_Controller {
 
 	function piutang_list(){
 		$menu = is_get_url($this->uri->segment(1)) ;
-		$tanggal = date('Y-m-d');
-		if ($this->input->get('tanggal') != '') {
-			$tanggal = is_date_formatter($this->input->get('tanggal'));
+		$tanggal_start = date('2024-09-01');
+		$tanggal_end = date('Y-m-d');
+		if ($this->input->get('tanggal_start') != '' && $this->input->get('tanggal_end') != '') {
+			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
+			$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
 		}
 
 		$data = array(
-			'content' =>'admin/finance/piutang_list',
+			'content' =>'admin/finance/piutang_list_by_toko',
 			'breadcrumb_title' => 'Finance',
 			'breadcrumb_small' => 'Daftar Piutang',
 			'nama_menu' => $menu[0],
 			'nama_submenu' => $menu[1],
 			'common_data'=> $this->data,
-			'tanggal' => $tanggal,
+			'tanggal_start' => $tanggal_start,
+			'tanggal_end' => $tanggal_end,
 			'data_isi'=> $this->data );
 
-		$data['piutang_list'] = $this->fi_model->get_piutang_list_all($tanggal); 
+		// $data['piutang_list'] = $this->fi_model->get_piutang_list_all($tanggal_start, $tanggal_end); 
+		$select_toko = "";
+
+		foreach ($this->toko_list_aktif as $row) {
+			$select_toko .= "sum(if(toko_id = ".$row->id.", sisa_piutang, 0)) as sisa_piutang_".$row->id.", 
+			MAX(if(toko_id = ".$row->id.", tanggal_start, '')) as tanggal_start_".$row->id.", 
+			MAX(if(toko_id = ".$row->id.", tanggal_end, '')) as tanggal_end_".$row->id.",
+			sum(if(toko_id = ".$row->id.", sisa_kontra, 0)) as sisa_kontra_".$row->id.",
+			group_concat(if(toko_id = ".$row->id.", sisa_kontra_data, '')) as sisa_kontra_data_".$row->id.",
+			group_concat(if(toko_id = ".$row->id.", pembayaran_piutang_id, '')) as pembayaran_piutang_id_".$row->id.",";
+		}
+		$data['piutang_list'] = $this->fi_model->get_piutang_list_all_by_toko($tanggal_start, $tanggal_end, $select_toko); 
+
+		
 		$this->load->view('admin/template',$data);
+		if (is_posisi_id()==1) {
+            $this->output->enable_profiler(TRUE);
+			
+		}
 	}
 
 	function piutang_list_detail(){
@@ -651,6 +694,7 @@ class Finance extends CI_Controller {
 				}
 				$data['pembayaran_piutang_awal_detail'][$row->id] = $this->fi_model->get_pembayaran_piutang_awal_detail($row->id);
 				$data['pembayaran_piutang_detail'][$row->id] = $this->fi_model->get_pembayaran_piutang_detail($row->id);
+				$data['retur_jual'][$row->id] = $this->fi_model->get_pembayaran_retur_jual_detail($row->id);
 				$data['pembayaran_piutang_nilai'][$row->id] = $this->common_model->db_select("nd_pembayaran_piutang_nilai WHERE pembayaran_piutang_id=".$row->id);
 
 			}
@@ -664,7 +708,8 @@ class Finance extends CI_Controller {
 					$data['periode'][$row->id]['tanggal_end'] = is_reverse_date($row2->tanggal_end);
 				}
 				$data['pembayaran_piutang_awal_detail'][$row->id] = $this->fi_model->get_pembayaran_piutang_awal_detail($row->id);
-				$data['pembayaran_piutang_detail'][$row->id] = $this->fi_model->get_pembayaran_piutang_detail($row->id);
+				$data['pembayaran_piutang_detail'][$row->id] = $this->fi_model->get_pembayaran_piutang_detail($row->id);				
+				$data['retur_jual'][$row->id] = $this->fi_model->get_pembayaran_retur_jual_detail($row->id);
 				$data['pembayaran_piutang_nilai'][$row->id] = $this->common_model->db_select("nd_pembayaran_piutang_nilai WHERE pembayaran_piutang_id=".$row->id);
 			}
 
@@ -733,6 +778,7 @@ class Finance extends CI_Controller {
 
 		if ($pembayaran_piutang_id != '') {
 			$data['pembayaran_piutang_data'] = $this->fi_model->get_pembayaran_piutang_data($pembayaran_piutang_id);
+			$toko_id = $data['pembayaran_piutang_data'][0]->toko_id;
 			$periode = $this->fi_model->get_periode_penjualan($pembayaran_piutang_id);
 			foreach ($periode as $row) {
 				$data['tanggal_start'] = $row->tanggal_start;
@@ -744,7 +790,8 @@ class Finance extends CI_Controller {
 			}
 			
 			$data['pembayaran_piutang_awal_detail'] = $this->fi_model->get_pembayaran_piutang_awal_detail($pembayaran_piutang_id); 
-			$data['pembayaran_piutang_detail'] = $this->fi_model->get_pembayaran_piutang_detail($pembayaran_piutang_id); 
+			$data['pembayaran_piutang_detail'] = $this->fi_model->get_pembayaran_piutang_detail($pembayaran_piutang_id, $toko_id); 
+			$data['retur_jual'] = $this->fi_model->get_pembayaran_retur_jual_detail($pembayaran_piutang_id); 
 			$data['pembayaran_piutang_nilai'] = $this->common_model->db_select("nd_pembayaran_piutang_nilai where pembayaran_piutang_id=".$pembayaran_piutang_id);
 			$data['bank_history'] = $this->fi_model->get_customer_bank_bayar_history($customer_id);
             $data['dp_list_detail'] = $this->fi_model->get_dp_berlaku($customer_id, $pembayaran_piutang_id); 
@@ -758,8 +805,10 @@ class Finance extends CI_Controller {
 
 			$data['pembayaran_piutang_data'] = array();
 			$data['pembayaran_piutang_awal_detail'] = $this->fi_model->get_piutang_awal_by_date($tanggal_start, $tanggal_end, $toko_id, $customer_id); 
-			$data['pembayaran_piutang_detail'] = $this->fi_model->get_piutang_list_by_date($tanggal_start, $tanggal_end, $toko_id, $customer_id,$cond_jt); 
-			$data['pembayaran_hutang_nilai'] = array();
+			$data['pembayaran_piutang_detail'] = $this->fi_model->get_piutang_list_by_date($tanggal_start, $tanggal_end, $toko_id, $customer_id, $cond_jt); 
+			$data['pembayaran_piutang_nilai'] = array();
+
+			$data['retur_jual'] = $this->fi_model->get_retur_jual($toko_id, $customer_id);
 			$data['bank_history'] = array();
             $data['dp_list_detail'] = array();
 			
@@ -770,8 +819,14 @@ class Finance extends CI_Controller {
 			$data['pembayaran_piutang_detail'] = array(); 
 			$data['bank_history'] = array();
             $data['dp_list_detail'] = array();
+			$data['retur_jual'] = array();
 		}
+
 		$this->load->view('admin/template',$data);
+
+		if (is_posisi_id()==1) {
+			$this->output->enable_profiler(TRUE);
+		}
 	}
 
 	function pembayaran_piutang_insert(){
@@ -808,6 +863,13 @@ class Finance extends CI_Controller {
 						$piutang_awal_id[$idx] = $data_get[1];
 						$idx++;
 					}
+				}elseif (strpos($key, 'retur_') !== false) {
+					// echo $key.'-->'.$value.'<br/>';
+					$data_get = explode('_', $key);
+					if ($value != '' && $value != 0) {
+						$retur_jual_id[$idx] = $data_get[1];
+						$idx++;
+					}
 				}
 				
 			}
@@ -824,6 +886,18 @@ class Finance extends CI_Controller {
 						'penjualan_id' => $value ,
 						'amount' => str_replace('.', '', $post['bayar_'.$value]),
 						'data_status' => 1
+						);
+					$idx++;
+				}
+			}
+
+			if (isset($retur_jual_id)) {
+				foreach ($retur_jual_id as $key => $value) {
+					$data_detail[$idx] = array(
+						'pembayaran_piutang_id' => $result_id,
+						'penjualan_id' => $value ,
+						'amount' => str_replace('.', '', $post['retur_'.$value]),
+						'data_status' => 3
 						);
 					$idx++;
 				}

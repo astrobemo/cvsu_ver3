@@ -7,6 +7,11 @@ application/cache/*
 application/logs/*
 !application/logs/index.html
 !application/logs/.htaccess
+application/core/*
+application/config/*
+application/hooks/*
+application/libraries/*
+application/third_party/*
 
 assets/
 system/
@@ -16,5 +21,7 @@ image/
 uploads/
 user_guide/
 
+
 /backup_cvsu_041221_0054.sql
 /backup_cvsu_230223_0735.sql
+

@@ -354,6 +354,49 @@
 			<!-- /.modal-dialog -->
 		</div>
 
+		<div class="modal fade" id="portlet-config-sku" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-body">
+						<form action="<?=base_url('master/barang_sku_insert')?>" class="form-horizontal" id="form_sku_data" method="post">
+							<h3 class='block' style="background:lightgreen; padding-left:10px;"> SKU Barang </h3>
+							<div class="form-group" >
+			                    <label class="control-label col-md-3">Barang<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+			                    	<select name="barang_id" class='form-control' id="barang-id-sku" onchange="tokoChange('2')">
+										<?foreach ($this->barang_list_aktif as $row) {?>
+											<option value="<?=$row->id;?>"><?=$row->nama_jual;?></option>
+										<?}?>
+									</select>
+			                    </div>
+			                </div>
+			                <div class="form-group" >
+			                    <label class="control-label col-md-3">Keterangan<span class="required">
+			                    * </span>
+			                    </label>
+			                    <div class="col-md-6">
+			                    	<select name="warna_id" class='form-control' id="warna-id-sku" onchange="tokoChange('2')">
+										<?foreach ($this->warna_list_aktif as $row) {?>
+											<option value="<?=$row->id;?>"><?=$row->warna_jual;?></option>
+										<?}?>
+									</select>
+			                    </div>
+			                </div>
+				                
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn blue btn-sku-save" onclick="skuFormSubmit()">Save</button>
+						<button type="button" class="btn default" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+				<!-- /.modal-content -->
+			</div>
+			<!-- /.modal-dialog -->
+		</div>
+
 		<div class="row margin-top-10">
 			<div class="col-md-12">
 				<div class="portlet light">
@@ -383,6 +426,10 @@
 							</select>
 							<a href="#portlet-config" data-toggle='modal' class="btn btn-default btn-sm btn-form-add">
 							<i class="fa fa-plus"></i> Tambah </a>
+
+							<?if (is_posisi_id() == 1) {?>
+								<a href="#portlet-config-sku" data-toggle='modal' class="btn btn-default btn-sm btn-form-add">
+								<i class="fa fa-plus"></i> Tambah SKU </a>							<?}?>
 						</div>
 					</div>
 					<div class="portlet-body">
@@ -465,6 +512,8 @@ jQuery(document).ready(function() {
 	//  Metronic.init(); // init metronic core components
 	// Layout.init(); // init current layout
 	// TableAdvanced.init();
+
+	$(`#barang-id-sku, #warna-id-sku`).select2();
 
 	oTable = $('#general_table').DataTable();
 	oTable.state.clear();
@@ -657,6 +706,10 @@ jQuery(document).ready(function() {
    		}
    	});
 });
+
+function skuFormSubmit(){
+	$('#form_sku_data').submit();
+}
 
 function tokoChange(tipe){
 	if (tipe == 1) {

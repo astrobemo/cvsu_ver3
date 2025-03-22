@@ -149,6 +149,9 @@
 							<thead>
 								<tr style='background:#eee' >
 									<th scope="col" style='width:70px !important;'>
+										Toko
+									</th>
+									<th scope="col" style='width:70px !important;'>
 										No Faktur
 									</th>
 									<th scope="col" style='width:100px !important;'>
@@ -206,6 +209,7 @@
 										}
 									?>
 									<tr class='text-center' >
+										<td><?=$row->nama_toko?></td>
 										<td>
 											<a href="<?=base_url().is_setting_link('transaction/pembelian_list_detail')?>/<?=$row->id;?>" target='_blank'><?=$row->no_faktur;?></a>
 										</td>
@@ -237,6 +241,7 @@
 											<span class='id' hidden="hidden"><?=$row->id;?></span>
 											<span class='nama'><?=str_replace('??', '<br/>', $row->nama_barang);?></span> 
 											<hr style='margin:5px 0' />
+											<?=($row->diskon != 0 ? 'diskon<br/>' : '')?>
 											Total :<b> <?=count($roll)?> Item</b>
 										</td>
 										<td>
@@ -254,6 +259,7 @@
 												$g_total += ($pengali_type[$key] == 1 ? $qty[$key] : $roll[$key]) * $value;
 											}?>
 											<hr style='margin:5px 0' />
+											<?=($row->diskon != 0 ? "<br/><b>-".str_replace(',00', '', number_format($row->diskon,'0',',','.'))."</b>" : ''); $g_total -= $row->diskon; $subtotal -= $row->diskon;?>
 											<b> <?=str_replace(',00', '', number_format($subtotal,'0',',','.')).'<br/>';?></b>
 										</td>
 										<td class='status_column'>

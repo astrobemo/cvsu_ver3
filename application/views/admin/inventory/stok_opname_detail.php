@@ -137,6 +137,7 @@
 										</td>
 										<td>
 											<?if (is_posisi_id()==1) {?>
+												TOKO ID : <span id='toko-id-selected'></span><br/> 
 												Barang ID : <span id='barang-id-selected'></span><br/> 
 												Warna ID : <span id='warna-id-selected'></span><br/>
 												Supplier ID : <span id='supplier-id-selected'></span>
@@ -179,6 +180,7 @@
 																<form class='form-stok-detail' style='position:absolute; margin-left:20px' method='post' hidden >
 																	<input name='stok_opname_id' value="<?=$stok_opname_id?>" <?=$hidden?> > <br/>
 																	<input name='gudang_id' value="<?=$row->id?>" <?=$hidden?> ><br/>
+																	<input name='toko_id' <?=$hidden?> ><br/>
 																	<input name='barang_id' <?=$hidden?> ><br/>
 																	<input name='warna_id' <?=$hidden?> ><br/>
 																	<input name='rekap_qty' <?=$hidden?> ><br/>
@@ -236,6 +238,7 @@
 																<form class='form-stok-detail' style='position:absolute; margin-left:20px' method='post' hidden >
 																	<input name='stok_opname_id' value="<?=$stok_opname_id?>" <?=$hidden?> > <br/>
 																	<input name='gudang_id' value="<?=$row->id?>" <?=$hidden?> ><br/>
+																	<input name='toko_id' <?=$hidden?> ><br/>
 																	<input name='barang_id' <?=$hidden?> ><br/>
 																	<input name='warna_id' <?=$hidden?> ><br/>
 																	<input name='rekap_qty' <?=$hidden?> ><br/>
@@ -351,6 +354,7 @@ count_gudang = 0;
 		// window["count_gudang<?=$row->id?>"] = 0;
 	<?}?>
 
+var toko_id_now = '';
 var barang_id_now = '';
 var warna_id_now = '';
 var barang_id_select = '';		
@@ -443,7 +447,7 @@ jQuery(document).ready(function() {
 	    for (var i = 0; i < rows.length; i++){table.append(rows[i])}*/
 	});
 
-	$("#barang_id_select, #warna_id_select, #supplier_id_select" ).change(function(){
+	$("#toko_id_select, #barang_id_select, #warna_id_select, #supplier_id_select" ).change(function(){
 		if($('#barang_id_select').val() != '' && $("#warna_id_select").val() != '' && $("#supplier_id_select").val() != '' && $("#toko_id_select").val() != '' ){
 			var totalan = 0;
 			totalan = count_gudang;
@@ -458,25 +462,29 @@ jQuery(document).ready(function() {
 				// count_gudang = 0;
 				searchAndDrawTable();
 			}else{
+				toko_id_now = $("#toko-id-selected").html();
 				barang_id_now = $("#barang-id-selected").html();
 				warna_id_now = $("#warna-id-selected").html();
 				supplier_id_now = $("#supplier-id-selected").html();
 				
+				toko_id_select = $('#toko_id_select').val();		
 				barang_id_select = $('#barang_id_select').val();		
 				warna_id_select = $('#warna_id_select').val();
 				supplier_id_select = $('#supplier_id_select').val();
 				
 
-				if (barang_id_now != barang_id_select || warna_id_now != warna_id_select || supplier_id_now != supplier_id_select) {
+				if (toko_id_now != toko_id_select || barang_id_now != barang_id_select || warna_id_now != warna_id_select || supplier_id_now != supplier_id_select) {
 					bootbox.confirm("Table belum di save, yakin ubah nama barang ? ", function(respond){
 						if(respond){
 							count_gudang = 0;
 							searchAndDrawTable();
 						}else{
+							$("#toko_id_select").val(toko_id_now);
 							$("#barang_id_select").val(barang_id_now);
 							$("#warna_id_select").val(warna_id_now);
 							$("#supplier_id_select").val(supplier_id_now);
 
+							$('#toko_id_select').change();
 							$('#barang_id_select').change();
 							$('#warna_id_select').change();
 							$('#supplier_id_select').change();
@@ -504,13 +512,16 @@ jQuery(document).ready(function() {
 					count_gudang = 0;
 					searchAndDrawTable();
 				}else{
+					toko_id_now = $("#toko-id-selected").html();
 					barang_id_now = $("#barang-id-selected").html();
 					warna_id_now = $("#warna-id-selected").html();
 					supplier_id_now = $("#supplier-id-selected").html();
+					$("#toko_id_select").val(toko_id_now);
 					$("#barang_id_select").val(barang_id_now);
 					$("#warna_id_select").val(warna_id_now);
 					$("#supplier_id_select").val(supplier_id_now);
 
+					$('#toko_id_select').change();
 					$('#barang_id_select').change();
 					$('#warna_id_select').change();
 					$('#supplier_id_select').change();
@@ -633,6 +644,7 @@ function searchAndDrawTable(){
 	$('#table-body input').attr('disabled', true);
 
 	const data_st = {};
+	const toko_id = $("#toko_id_select").val();
 	const barang_id = $("#barang_id_select").val();
 	const warna_id = $("#warna_id_select").val();
 	const supplier_id = $("#supplier_id_select").val();
@@ -648,6 +660,7 @@ function searchAndDrawTable(){
 	$("#nama-barang").html(nama_lengkap);
 
 	
+	$('#toko-id-selected').html(toko_id);
 	$('#barang-id-selected').html(barang_id);
 	$('#warna-id-selected').html(warna_id);
 	$('#supplier-id-selected').html(supplier_id);
@@ -657,6 +670,7 @@ function searchAndDrawTable(){
 	
 	const url = "inventory/get_data_stok_opname_detail";
 	data_st['stok_opname_id'] = stok_opname_id;
+	data_st['toko_id'] = toko_id;
 	data_st['barang_id'] = barang_id;
 	data_st['warna_id'] = warna_id;
 	data_st['supplier_id'] = supplier_id;
@@ -675,7 +689,6 @@ function searchAndDrawTable(){
 	});
 	
 	ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
-		console.log(data_respond);
 		let res = JSON.parse(data_respond)
 		$.each(res.result,function(k,v){
 			baris_gudang[v.gudang_id] += `<tr>
@@ -752,6 +765,7 @@ function searchAndDrawTable(){
 
 		$(".form-stok-detail [name=barang_id]").val(barang_id);
 		$(".form-stok-detail [name=warna_id]").val(warna_id);
+		$(".form-stok-detail [name=toko_id]").val(toko_id);
 
 		if (status_aktif == 1) {
 			<?//if (is_posisi_id() > 3) {?>

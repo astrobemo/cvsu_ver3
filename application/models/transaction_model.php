@@ -2,6 +2,11 @@
 
 class Transaction_Model extends CI_Model {
 
+	// public function __construct() {
+    //     parent::__construct();
+    //     $this->load->database('mysqli');
+    // }
+
 
 //===============================po pembelian===========================================
 	function get_po_pembelian_list_ajax($aColumns, $sWhere, $sOrder, $sLimit){
@@ -385,7 +390,7 @@ class Transaction_Model extends CI_Model {
 
 //==========================================penjualan================================
 
-	function get_penjualan_list_ajax($aColumns, $sWhere, $sOrder, $sLimit){
+	function get_penjualan_list_ajax($aColumns, $sWhere, $sOrder, $sLimit, $tanggal_start, $tanggal_end){
 		$cond = '';
 		// if (is_posisi_id() > 3) {
 		// 	$cond = " AND tanggal = '".date('Y-m-d')."' AND penjualan_type_id != 0";  
@@ -394,10 +399,16 @@ class Transaction_Model extends CI_Model {
 		// }
 		$query = $this->db->query("SELECT *
 			FROM (
-				SELECT tbl_a.status_aktif, concat(YEAR(tanggal),LPAD(no_faktur,4,'0')) as nf, no_faktur_lengkap as no_faktur, tanggal, tbl_e.text as penjualan_type_id, ROUND(ifnull(g_total,0) - ifnull(diskon,0),2) as g_total , ifnull(diskon,0) as diskon, ifnull(ongkos_kirim,0) as ongkos_kirim, if(penjualan_type_id = 3,if(nama_keterangan = '','no_name', nama_keterangan), tbl_c.nama) as nama_customer, (ifnull(total_bayar,0) + ifnull(bayar_piutang,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ongkos_kirim) as keterangan, concat_ws('??',tbl_a.id,no_faktur) as data, if(tbl_a.status = -1,-1,0) as status
+				SELECT tbl_a.status_aktif, concat(YEAR(tanggal), MONTH(tanggal),LPAD(no_faktur,5,'0')) as nf, no_faktur_lengkap as no_faktur, tanggal, 
+				tbl_e.text as penjualan_type_id, ROUND(ifnull(g_total,0) - ifnull(diskon,0),2) as g_total , ifnull(diskon,0) as diskon, 
+				ifnull(ongkos_kirim,0) as ongkos_kirim, if(penjualan_type_id = 3,if(nama_keterangan = '','no_name', nama_keterangan), tbl_c.nama) as nama_customer, 
+				(ifnull(total_bayar,0) + ifnull(bayar_piutang,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ongkos_kirim) as keterangan, 
+				concat_ws('??',tbl_a.id,no_faktur) as data, if(tbl_a.status = -1,-1,0) as status
 				FROM (
-					SELECT *, if (penjualan_type_id = 0,'',concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) ) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan
+					WHERE tanggal >= '$tanggal_start'
+					AND tanggal <= '$tanggal_end'
 					)as tbl_a
 				LEFT JOIN (
 					SELECT sum(if(pengali_harga=1,qty, jumlah_roll) * t1.harga_jual) as g_total, penjualan_id 
@@ -463,9 +474,16 @@ class Transaction_Model extends CI_Model {
 	}
 
 	function get_data_penjualan($id){
-		$query = $this->db->query("SELECT tbl_a.id, penjualan_type_id, revisi, tanggal, customer_id,gudang_id, no_faktur_lengkap as no_faktur, no_surat_jalan, jatuh_tempo, diskon, tbl_a.status_aktif, ongkos_kirim, tbl_a.keterangan, status , po_number, fp_status, if(penjualan_type_id = 3,if(nama_keterangan = '','no_name', nama_keterangan), tbl_b.nama) as nama_keterangan, if(penjualan_type_id = 3,'',if(kota = '','-',kota)) as kota , tbl_c.nama as nama_gudang, tbl_d.text as tipe_penjualan, no_faktur_lengkap, ifnull(tbl_e.amount,0) as bayar_dp, no_surat_jalan,if(penjualan_type_id = 3,ifnull(alamat_keterangan,'-') , if (alamat = '','-',alamat)) as alamat_keterangan, toko_id, ifnull(tbl_b.npwp, '00.000.000.0-000.000') as npwp_customer, no_faktur as no_faktur_raw
+		$query = $this->db->query("SELECT tbl_a.id, penjualan_type_id, revisi, tanggal, customer_id,gudang_id, 
+		no_faktur_lengkap as no_faktur, no_surat_jalan, jatuh_tempo, diskon, tbl_a.status_aktif, ongkos_kirim, 
+		tbl_a.keterangan, status , po_number, fp_status, 
+		if(penjualan_type_id = 3,if(nama_keterangan = '','no_name', nama_keterangan), tbl_b.nama) as nama_keterangan, 
+		if(penjualan_type_id = 3,'',if(kota = '','-',kota)) as kota , tbl_c.nama as nama_gudang, tbl_d.text as tipe_penjualan, 
+		no_faktur_lengkap, ifnull(tbl_e.amount,0) as bayar_dp, no_surat_jalan,if(penjualan_type_id = 3,ifnull(alamat_keterangan,'-') , 
+		if (alamat = '','-',alamat)) as alamat_keterangan, ifnull(tbl_b.npwp, '00.000.000.0-000.000') as npwp_customer, 
+		no_faktur as no_faktur_raw, toko_id_legacy as toko_id
 			FROM (
-				SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap, concat('SJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_surat_jalan
+				SELECT *, concat('SJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_surat_jalan
 				FROM nd_penjualan
 				WHERE id = $id
 				) as tbl_a
@@ -481,6 +499,12 @@ class Transaction_Model extends CI_Model {
 				WHERE pembayaran_type_id = 1
 				) tbl_e
 			ON tbl_a.id = tbl_e.penjualan_id
+			LEFT JOIN (
+				SELECT group_concat(DISTINCT toko_id) as toko_id, penjualan_id
+				FROM nd_penjualan_detail
+				GROUP BY penjualan_id
+				) tbl_f
+			ON tbl_a.id = tbl_f.penjualan_id
 			", false);
 
 		return $query->result();
@@ -645,7 +669,7 @@ class Transaction_Model extends CI_Model {
 	function search_faktur_jual($no_faktur){
 		$query = $this->db->query("SELECT id, no_faktur_lengkap as no_faktur
 			FROM (
-				SELECT id, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				SELECT id
 				FROM nd_penjualan
 				)as tbl_a
 			WHERE no_faktur_lengkap LIKE '%$no_faktur%'
@@ -683,7 +707,7 @@ class Transaction_Model extends CI_Model {
 				        	AND warna_id = $warna_id
 				        	) nd_penjualan_detail
 				        LEFT JOIN (
-				        	SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				        	SELECT *
 				        	FROM nd_penjualan
 				        	WHERE status_aktif = 1
 				        	AND tanggal >= '$tanggal_awal'
@@ -813,11 +837,12 @@ class Transaction_Model extends CI_Model {
 		// return $this->db->last_query();
 	}*/
 
-	function get_qty_stok_by_barang_detail($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id){
+	function get_qty_stok_by_barang_detail($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $toko_id){
 		$query = $this->db->query("SELECT qty, sum(ifnull(jumlah_roll_masuk,0)) - sum(ifnull(jumlah_roll_keluar,0)) as jumlah_roll
 				FROM(
 					(
-				        SELECT barang_id, warna_id, t2.gudang_id, qty, sum(jumlah_roll) as jumlah_roll_masuk, 0 as jumlah_roll_keluar, tanggal, no_faktur, 'a' as tipe, t2.id as id
+				        SELECT barang_id, warna_id, t2.gudang_id, qty, sum(jumlah_roll) as jumlah_roll_masuk, 0 as jumlah_roll_keluar, 
+						tanggal, no_faktur, 'a' as tipe, t2.id as id
 				        FROM (
 				        	SELECT a.id, pembelian_id, barang_id, warna_id, b.qty, b.jumlah_roll
 				        	FROM (
@@ -839,13 +864,15 @@ class Transaction_Model extends CI_Model {
 				        		) nd_pembelian 
 				        	WHERE status_aktif = 1
 				        	AND gudang_id = $gudang_id
+							AND toko_id = $toko_id
 				        	) t2
 				        ON t1.pembelian_id = t2.id
 				        WHERE t2.id is not null
 			        	AND gudang_id = $gudang_id
 				        GROUP BY qty
 				    )UNION(
-				    	SELECT barang_id, warna_id, gudang_id, qty , 0, sum(jumlah_roll) as jumlah_roll_keluar, tanggal, no_faktur, 'j' as tipe, t2.id as id
+				    	SELECT barang_id, warna_id, gudang_id, qty , 0, sum(jumlah_roll) as jumlah_roll_keluar, 
+						tanggal, no_faktur, 'j' as tipe, t2.id as id
 				        FROM (
 				        	SELECT a.id, penjualan_id, barang_id, warna_id, b.qty, b.jumlah_roll, gudang_id
 				        	FROM (
@@ -853,6 +880,7 @@ class Transaction_Model extends CI_Model {
 					        	FROM nd_penjualan_detail
 					        	WHERE barang_id = $barang_id
 					        	AND warna_id = $warna_id
+								AND toko_id = $toko_id
 				        		)a
 							LEFT JOIN nd_penjualan_qty_detail b
 							ON b.penjualan_detail_id = a.id
@@ -878,6 +906,7 @@ class Transaction_Model extends CI_Model {
 				        	AND barang_id = $barang_id
 				        	AND warna_id = $warna_id
 				        	AND gudang_id = $gudang_id
+							AND toko_id = $toko_id
 							) a
 						LEFT JOIN (
 							SELECT qty as qty, sum(jumlah_roll) as jumlah_roll, group_concat(concat(qty,'??', jumlah_roll,'??', id) SEPARATOR '--') as data_qty, penyesuaian_stok_id
@@ -894,6 +923,7 @@ class Transaction_Model extends CI_Model {
 			        	AND barang_id = $barang_id
 			        	AND warna_id = $warna_id
 				        AND gudang_id = $gudang_id
+						AND toko_id = $toko_id
 						GROUP BY qty
 				    )UNION(
 				    	SELECT barang_id, warna_id, gudang_id, qty ,0, sum(jumlah_roll),  tanggal, keterangan, 'ps2' as tipe, id
@@ -903,6 +933,7 @@ class Transaction_Model extends CI_Model {
 			        	AND warna_id = $warna_id
 		        		AND tipe_transaksi = 2
 				        AND gudang_id = $gudang_id
+						AND toko_id = $toko_id
 						GROUP BY qty
 				    )UNION(
 				    	SELECT barang_id, warna_id, gudang_id, qty ,0, sum(jumlah_roll),  tanggal, keterangan, 'ec1' as tipe, t1.id
@@ -913,6 +944,7 @@ class Transaction_Model extends CI_Model {
 							AND barang_id = $barang_id
 							AND warna_id = $warna_id
 							AND gudang_id = $gudang_id
+							AND toko_id = $toko_id
 							AND status_aktif = 1
 							)t1
 							LEFT JOIN (
@@ -933,11 +965,127 @@ class Transaction_Model extends CI_Model {
 				        	AND warna_id = $warna_id
 				        	AND gudang_id = $gudang_id
 				        	AND stok_opname_id = $stok_opname_id
+							AND toko_id = $toko_id
 							GROUP BY qty, barang_id, warna_id, gudang_id, stok_opname_id
                         ) t1
                         LEFT JOIN nd_stok_opname t2
                         ON t1.stok_opname_id = t2.id
 						GROUP BY qty
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						(qty), 0, sum(jumlah_roll),
+						tanggal, concat('Diambil untuk <b>',nama_barang,'</b>'), 'ask',
+						t1.id
+				        FROM (
+							SELECT tA.*, concat(nama_jual,' ', warna_jual) as nama_barang
+							FROM (
+								SELECT *
+								FROM nd_assembly
+								WHERE tanggal >= '$tanggal_awal'
+								AND gudang_id = $gudang_id 
+								AND barang_id_sumber = $barang_id
+								AND warna_id_sumber = $warna_id
+								AND toko_id = $toko_id
+							)tA
+							LEFT JOIN nd_barang as b2
+							ON tA.barang_id_hasil = b2.id
+							LEFT JOIN nd_warna as w2
+							ON tA.warna_id_hasil = w2.id
+
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id, 
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll,
+							group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
+							FROM nd_assembly_detail_sumber 
+							GROUP BY assembly_id, supplier_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						GROUP BY barang_id, warna_id, gudang_id, tanggal
+				    )UNION(
+				        SELECT barang_id, warna_id, gudang_id, 
+						(qty), sum(jumlah_roll), 0, 
+						tanggal, concat('Diambil dari <b>',nama_barang,'</b>'), 'asm',
+						t1.id
+				        FROM (
+							SELECT tA.*, concat(nama_jual,' ', warna_jual) as nama_barang
+							FROM (
+								SELECT *
+								FROM nd_assembly
+								WHERE tanggal >= '$tanggal_awal'
+								AND gudang_id = $gudang_id 
+								AND barang_id_hasil = $barang_id
+								AND warna_id_hasil = $warna_id
+								AND toko_id = $toko_id
+
+							)tA
+							LEFT JOIN nd_barang as b1
+							ON tA.barang_id_sumber = b1.id
+							LEFT JOIN nd_warna as w1
+							ON tA.warna_id_sumber = w1.id
+                        ) t1
+                        LEFT JOIN (
+							SELECT assembly_id, barang_id, warna_id, supplier_id,
+							sum(qty * if(jumlah_roll = 0,1,jumlah_roll) ) as qty, sum(jumlah_roll) as jumlah_roll,
+							group_concat(concat(qty,',',jumlah_roll) SEPARATOR '??') as qty_data
+							FROM nd_assembly_detail_hasil 
+							GROUP BY assembly_id
+							)t2
+                        ON t2.assembly_id = t1.id
+						WHERE t2.assembly_id is not null
+						GROUP BY barang_id, warna_id, gudang_id, tanggal
+				    )UNION(
+				    	SELECT barang_id, warna_id, gudang_id, 
+						qty as qty_masuk, jumlah_roll as jumlah_roll_masuk, 
+						0 as qty_keluar, 0 as jumlah_roll_keluar, 
+						tanggal, '', 'a' as tipe, nd_retur_jual_detail.id
+				        FROM (
+				        	SELECT *
+				        	FROM nd_retur_jual
+				        	WHERE status_aktif = 1
+				        	AND tanggal >= '$tanggal_awal'
+							AND toko_id = $toko_id
+				        	) nd_retur_jual
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_jual_detail 
+				        	WHERE gudang_id = $gudang_id
+				        	AND barang_id = $barang_id
+				        	AND warna_id = $warna_id
+				        	) nd_retur_jual_detail
+				        ON nd_retur_jual_detail.retur_jual_id = nd_retur_jual.id
+				        LEFT JOIN (
+				            SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id
+				            FROM nd_retur_jual_qty
+				            GROUP BY retur_jual_detail_id
+				            ) nd_retur_jual_qty
+				        ON nd_retur_jual_qty.retur_jual_detail_id = nd_retur_jual_detail.id
+				    )UNION(
+				    	SELECT barang_id, warna_id, gudang_id, 
+						0 as qty_masuk, 0 as jumlah_roll_masuk, 
+						qty as qty_keluar, jumlah_roll as jumlah_roll_keluar, 
+						tanggal, '', 'a' as tipe, nd_retur_beli_detail.id
+				        FROM (
+				        	SELECT *
+				        	FROM nd_retur_beli
+				        	WHERE status_aktif = 1
+				        	AND tanggal >= '$tanggal_awal' 
+							AND toko_id = $toko_id
+				        	) nd_retur_beli
+				        LEFT JOIN (
+				        	SELECT *
+				        	FROM nd_retur_beli_detail 
+				        	WHERE gudang_id = $gudang_id
+				        	AND barang_id = $barang_id
+				        	AND warna_id = $warna_id
+				        	) nd_retur_beli_detail
+				        ON nd_retur_beli_detail.retur_beli_id = nd_retur_beli.id
+				        LEFT JOIN (
+				            SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, retur_beli_detail_id
+				            FROM nd_retur_beli_qty
+				            GROUP BY retur_beli_detail_id
+				            ) nd_retur_beli_qty
+				        ON nd_retur_beli_qty.retur_beli_detail_id = nd_retur_beli_detail.id
 				    )
 				) tbl_a
 				LEFT JOIN nd_barang tbl_b
@@ -948,16 +1096,20 @@ class Transaction_Model extends CI_Model {
 				GROUP BY qty
 				ORDER BY qty asc
 				");
-		
-		return $query;
+		$result['result'] = $query;
+		$result['query'] = $this->db->last_query();
+		return $result;
 		// return $this->db->last_query();
 	}
 
 	function get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $penjualan_detail_id){
-		$query = $this->db->query("SELECT tA.stok_eceran_qty_id, tA.qty - ifnull(tB.qty,0) as qty, tA.tipe, ifnull(tC.qty,0) as qty_jual, ifnull(tC.id,0) as penjualan_qty_detail_id
+		$query = $this->db->query("SELECT tA.stok_eceran_qty_id, tA.supplier_id, 
+		tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0) as qty, tA.tipe, 
+		ifnull(tC.qty,0) as qty_jual, 
+		ifnull(tC.id,0) as penjualan_qty_detail_id
 				FROM (
 					(
-						SELECT barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id
+						SELECT barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, t2.supplier_id
 						FROM (
 							SELECT *
 							FROM nd_mutasi_stok_eceran
@@ -970,7 +1122,7 @@ class Transaction_Model extends CI_Model {
 						LEFT JOIN nd_mutasi_stok_eceran_qty t2
 						ON t2.mutasi_stok_eceran_id = t1.id
 					)UNION(
-						SELECT barang_id, warna_id, id as stok_eceran_qty_id, qty, 2 , gudang_id
+						SELECT barang_id, warna_id, id as stok_eceran_qty_id, qty, 2 , gudang_id, supplier_id
 						FROM nd_stok_opname_eceran
 						WHERE barang_id = $barang_id
 						AND warna_id = $warna_id
@@ -992,7 +1144,6 @@ class Transaction_Model extends CI_Model {
 						WHERE status_aktif=1
 						AND t2.id != $penjualan_detail_id
 						GROUP BY stok_eceran_qty_id, eceran_source
-
 				)tB
 				ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
 				AND tA.tipe = tB.eceran_source
@@ -1002,7 +1153,13 @@ class Transaction_Model extends CI_Model {
 					WHERE penjualan_detail_id = $penjualan_detail_id
 				) tC
 				ON tA.stok_eceran_qty_id = tC.stok_eceran_qty_id
-				AND tA.tipe = tC.eceran_source
+				LEFT JOIN (
+						SELECT sum(qty) as qty_mutasi, mutasi_stok_eceran_qty_source_id
+						FROM nd_mutasi_stok_eceran_qty
+						WHERE mutasi_stok_eceran_qty_source_id is not null
+						GROUP BY mutasi_stok_eceran_qty_source_id
+				)tD
+				ON tA.stok_eceran_qty_id = tD.mutasi_stok_eceran_qty_source_id
 				WHERE barang_id is not null
 				AND warna_id is not null
 				AND tA.qty - ifnull(tB.qty,0) > 0
@@ -1011,115 +1168,6 @@ class Transaction_Model extends CI_Model {
 		return $query;
 		// return $this->db->last_query();
 	}
-
-//==========================================retur barang================================
-
-	function get_retur_list(){
-		$query = $this->db->query("SELECT tbl_a.*, if(tbl_a.retur_type_id = 1, tbl_c.nama, 'no name') as nama_customer, username, created_date, no_faktur_lengkap, group_concat(harga) as harga, group_concat(qty) as qty, group_concat(jumlah_roll) as jumlah_roll, nama_barang, group_concat(nama_gudang) as nama_gudang, group_concat(nama_barang) as nama_barang,group_concat(warna_jual) as nama_warna, group_concat(nama_gudang) as nama_gudang
-			FROM (
-				SELECT *, concat('FRJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
-				FROM nd_retur_jual
-
-			) tbl_a
-			LEFT JOIN (
-				SELECT nd_retur_jual_detail.*, qty, jumlah_roll, retur_jual_detail_id, nd_barang.nama_jual as nama_barang, nd_gudang.nama as nama_gudang, warna_jual
-				FROM nd_retur_jual_detail
-				LEFT JOIN (
-					SELECT sum(qty*jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id
-					FROM nd_retur_jual_qty
-					GROUP BY retur_jual_detail_id 
-					) nd_retur_jual_qty
-				ON nd_retur_jual_detail.id = nd_retur_jual_qty.retur_jual_detail_id
-				LEFT JOIN nd_barang
-				ON nd_retur_jual_detail.barang_id = nd_barang.id
-				LEFT JOIN nd_gudang
-				ON nd_retur_jual_detail.gudang_id = nd_gudang.id
-				LEFT JOIN nd_warna
-				ON nd_retur_jual_detail.warna_id = nd_warna.id
-			) tbl_b
-			ON tbl_a.id = tbl_b.retur_jual_id
-			LEFT JOIN nd_customer tbl_c
-			ON tbl_a.customer_id = tbl_c.id
-			LEFT JOIN nd_user tbl_d
-			ON tbl_a.user_id = tbl_d.id
-			GROUP BY tbl_a.id
-		");
-		return $query->result();
-	}
-
-	function get_retur_data($id){
-		$query = $this->db->query("SELECT tbl_a.*, if(tbl_a.retur_type_id = 1, tbl_c.nama, nama_keterangan) as nama_customer, username, created_date, no_faktur_lengkap, if(tbl_a.retur_type_id = 1, tbl_c.alamat, '-') as alamat
-			FROM (
-				SELECT *, concat('FRJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
-				FROM nd_retur_jual
-				WHERE id = $id
-			) tbl_a
-			LEFT JOIN (
-				SELECT *
-				FROM nd_retur_jual_qty
-				) tbl_b
-			ON tbl_a.id = tbl_b.retur_jual_detail_id
-			LEFT JOIN nd_customer tbl_c
-			ON tbl_a.customer_id = tbl_c.id
-			LEFT JOIN nd_user tbl_d
-			ON tbl_a.user_id = tbl_d.id
-		");
-		return $query->result();
-	}
-
-	function get_retur_detail($id){
-		$query = $this->db->query("SELECT tbl_a.*, jumlah_roll, tbl_c.nama_jual as nama_barang, tbl_d.warna_jual as nama_warna, tbl_e.nama as nama_satuan, data_qty, qty, jumlah_roll
-			FROM (
-				SELECT *
-				FROM nd_retur_jual_detail 
-				WHERE retur_jual_id = $id
-			) tbl_a
-			LEFT JOIN (
-				SELECT retur_jual_detail_id, sum(qty * jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, group_concat(concat_ws('??',qty, jumlah_roll) SEPARATOR '--') as data_qty 
-				FROM nd_retur_jual_qty
-				GROUP BY retur_jual_detail_id
-				) tbl_b
-			ON tbl_a.id = tbl_b.retur_jual_detail_id
-			LEFT JOIN nd_barang tbl_c
-			ON tbl_a.barang_id = tbl_c.id
-			LEFT JOIN nd_warna tbl_d
-			ON tbl_a.warna_id = tbl_d.id
-			LEFT JOIN nd_satuan tbl_e
-			ON tbl_c.satuan_id = tbl_e.id
-		");
-		return $query->result();
-	}
-
-	function get_retur_jual_detail($id){
-		$query = $this->db->query("SELECT tbl_a.*, nama_barang, nama_satuan, tbl_c.nama as nama_gudang, 
-		tbl_d.warna_jual as nama_warna, tbl_e.qty as qty, tbl_e.jumlah_roll as jumlah_roll, data_qty
-			FROM (
-				SELECT *
-				FROM nd_retur_jual_detail
-				WHERE retur_jual_id = $id
-				) as tbl_a
-			LEFT JOIN (
-				SELECT nd_barang.id, nd_barang.nama_jual as nama_barang, nd_satuan.nama as nama_satuan 
-				FROM nd_barang
-				LEFT JOIN nd_satuan
-				ON nd_barang.satuan_id = nd_satuan.id
-				) as tbl_b
-			ON tbl_a.barang_id = tbl_b.id
-			LEFT JOIN nd_gudang as tbl_c
-			ON tbl_a.gudang_id = tbl_c.id
-			LEFT JOIN nd_warna as tbl_d
-			ON tbl_a.warna_id = tbl_d.id
-			LEFT JOIN (
-				SELECT sum(qty * jumlah_roll) as qty, sum(jumlah_roll) as jumlah_roll, retur_jual_detail_id,  group_concat(concat_ws('??',qty,jumlah_roll) SEPARATOR '--') as data_qty
-				FROM nd_retur_jual_qty
-				group by retur_jual_detail_id
-				) as tbl_e
-			ON tbl_e.retur_jual_detail_id = tbl_a.id
-			", false);
-
-		return $query->result();
-	}
-
 
 //==========================================dp_list================================
 
@@ -1221,7 +1269,7 @@ class Transaction_Model extends CI_Model {
 						WHERE pembayaran_type_id = 1
 						) t1
 					LEFT JOIN (
-						SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as pembayaran_data
+						SELECT *
 						FROM nd_penjualan
 						WHERE status_aktif = 1
 						AND tanggal >= '$from'
@@ -1293,7 +1341,7 @@ class Transaction_Model extends CI_Model {
 						WHERE dp_masuk_id = $dp_masuk_id
 						) t1
 					LEFT JOIN (
-						SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as pembayaran_data
+						SELECT *
 						FROM nd_penjualan
 						WHERE status_aktif = 1
 						AND customer_id = $customer_id
@@ -1419,7 +1467,7 @@ class Transaction_Model extends CI_Model {
 	function get_penjualan_history($from, $to){
 		$query = $this->db->query("SELECT tbl_a.id, tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, ifnull(g_total,0) as g_total , ifnull(diskon,0) as diskon, ifnull(ongkos_kirim,0) as ongkos_kirim, if (penjualan_type_id = 3, concat(' ',nama_keterangan, ' (non-pelanggan) '), tbl_c.nama) as nama_customer, (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ongkos_kirim) as keterangan, concat_ws('??',tbl_a.id,no_faktur) as data, created , username
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan 
 					WHERE DATE(created) >= '$from'
 					AND DATE(created) <= '$to'
@@ -1457,7 +1505,7 @@ class Transaction_Model extends CI_Model {
 	function get_piutang_list(){
 		$query = $this->db->query("SELECT tbl_a.status_aktif, ifnull(tbl_c.nama,'no name') as nama_customer, sum(ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ongkos_kirim) as sisa_piutang, concat_ws('??',tbl_a.id,no_faktur) as data, if(tbl_a.status = -1,-1,0) as status, customer_id, MIN(tanggal) as tanggal_start, MAX(tanggal) as tanggal_end
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan 
 					WHERE status_aktif = 1
 					AND customer_id != 0
@@ -1504,7 +1552,7 @@ class Transaction_Model extends CI_Model {
 				(
 					SELECT tbl_a.status_aktif, sum((ifnull(g_total,0) - ifnull(diskon,0)) + ongkos_kirim - ifnull(total_bayar,0)) as sisa_piutang, concat_ws('??',tbl_a.id,no_faktur_lengkap) as data, if(tbl_a.status = -1,-1,0) as status, customer_id, MIN(tanggal) as tanggal_start, MAX(tanggal) as tanggal_end, tbl_a.toko_id
 					FROM (
-						SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+						SELECT *
 						FROM nd_penjualan 
 						WHERE status_aktif = 1
 						AND penjualan_type_id != 3
@@ -1582,7 +1630,7 @@ class Transaction_Model extends CI_Model {
 	function get_piutang_list_by_date($tanggal_start, $tanggal_end, $toko_id, $customer_id){
 		$query = $this->db->query("SELECT tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tbl_e.nama as customer, customer_id, total as total_jual, amount, ifnull(total,0) - ifnull(amount,0) as sisa_piutang, tbl_a.id as penjualan_id, jatuh_tempo
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan
 					WHERE tanggal >= '$tanggal_start'
 					AND tanggal <= '$tanggal_end'
@@ -1626,7 +1674,7 @@ class Transaction_Model extends CI_Model {
 	function get_piutang_awal_by_date($tanggal_start, $tanggal_end, $toko_id, $customer_id){
 		$query = $this->db->query("SELECT 1, no_faktur, nama as customer, customer_id, amount as total_jual, 0 as amount, ifnull(amount,0) - 0 as sisa_piutang, a.id as penjualan_id, jatuh_tempo
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_piutang_awal
 					WHERE tanggal >= '$tanggal_start'
 					AND tanggal <= '$tanggal_end'

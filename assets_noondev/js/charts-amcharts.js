@@ -19,7 +19,7 @@ var ChartsAmcharts = function() {
                 "position": "left",
                 "axisAlpha" : 0.15,
                 "minimum" : 100000,
-                "maximum" : 1000000,
+                "maximum" : 3000000,
                 "dashLength" : 3,
         
             }],
@@ -41,7 +41,7 @@ var ChartsAmcharts = function() {
             }
         });
         
-        var url = "admin/get_penjualan_tahun";
+        var url = "admin/get_penjualan_tahun?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;
@@ -51,7 +51,7 @@ var ChartsAmcharts = function() {
             $.each(JSON.parse(data_respond),function(k,v){
              chartData[j] = {
                  'month': v.tanggal,
-                 'penjualan': v.amount
+                 'penjualan': parseFloat(v.amount).toFixed(2)
              }
              j++;
             });
@@ -120,7 +120,7 @@ var ChartsAmcharts = function() {
         // var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
         var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
         
-        var url = "admin/get_barang_jual_warna_terbanyak";
+        var url = "admin/get_barang_jual_warna_terbanyak?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;
@@ -169,7 +169,7 @@ var ChartsAmcharts = function() {
         });
 
         var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
-        var url = "admin/get_barang_jual_warna_terbanyak";
+        var url = "admin/get_barang_jual_warna_terbanyak?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;
@@ -245,7 +245,7 @@ var ChartsAmcharts = function() {
 
         var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
         
-        var url = "admin/get_barang_jual_terbanyak";
+        var url = "admin/get_barang_jual_terbanyak?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;
@@ -263,7 +263,7 @@ var ChartsAmcharts = function() {
 
             });
         });
-        // console.log(chartData);
+        console.log(chartData);
 
         chart.dataProvider = chartData;
         chart.validateData();
@@ -294,7 +294,7 @@ var ChartsAmcharts = function() {
         });
 
         var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
-        var url = "admin/get_barang_jual_terbanyak";
+        var url = "admin/get_barang_jual_terbanyak?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;
@@ -309,10 +309,12 @@ var ChartsAmcharts = function() {
                 j++;
 
             });
+            console.log(chartData);
 
             chart.dataProvider = chartData;
             chart.validateData();
         });
+        
 
         $('#chart_3').closest('.portlet').find('.fullscreen').click(function() {
             chart.invalidateSize();
@@ -370,7 +372,7 @@ var ChartsAmcharts = function() {
 
         var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
         
-        var url = "admin/get_customer_beli_terbanyak";
+        var url = "admin/get_customer_beli_terbanyak?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;
@@ -420,7 +422,7 @@ var ChartsAmcharts = function() {
         });
 
         var warna = ['#FF0F00','#FF6600','#FF9E01','#FCD202','#F8FF01','#B0DE09','#04D215','#0D8ECF','#0D52D1','#2A0CD0'];
-        var url = "admin/get_customer_beli_terbanyak";
+        var url = "admin/get_customer_beli_terbanyak?tahun="+tahun;
         var data_st  ={};
         var chartData = [];
         var j = 0;

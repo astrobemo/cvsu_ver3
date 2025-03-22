@@ -1,4 +1,4 @@
-'<?php echo link_tag('assets/global/plugins/jqvmap/jqvmap/jqvmap.css'); ?>
+<?php echo link_tag('assets/global/plugins/jqvmap/jqvmap/jqvmap.css'); ?>
 <?php echo link_tag('assets/global/plugins/morris/morris.css'); ?>
 
 		<div class="page-content">
@@ -25,19 +25,38 @@
 							</div>
 							<div class="portlet-body">
 								<form>
-								<table>
-									<tr>
-										<td>Tanggal</td>
-										<td> : </td>
-										<td>
-											<input name='tanggal_start' class='date-picker text-center' style='width:100px' value="<?=$tanggal_start?>">s/d
-											<input name='tanggal_end' class='date-picker text-center' style='width:100px' value="<?=$tanggal_end?>">
-										</td>
-										<td>
-											<button class='btn btn-xs default'>OK</button>
-										</td>
-									</tr>
-								</table>
+									<table>
+										<tr>
+											<td>Tanggal</td>
+											<td> : </td>
+											<td>
+												<input name='tanggal_start' id="tanggalStartInput"  class='date-picker text-center' style='width:100px' value="<?=$tanggal_start?>">s/d
+												<input name='tanggal_end' id="tanggalEndInput" class='date-picker text-center' style='width:100px' value="<?=$tanggal_end?>">
+											</td>
+										</tr>
+										<tr>
+											<td>Periode Tahun</td>
+											<td> : </td>
+											<td>
+												<select style='width:100px' name="tahun" id="tahunInput">
+													<?
+														$tahun_start = $tahun-5;
+														$tahun_end = $tahun+2;
+													?>
+													<?for ($i=$tahun_start; $i < $tahun_end ; $i++) {?>
+														<option value="<?=$i?>" <?=($i == $tahun ? 'selected' : '')?> ><?=$i?></option>
+													<?}?>
+												</select>
+											</td>
+										</tr>
+										<tr>
+											<td></td>
+											<td></td>
+											<td>
+												<button style='width:100px' class='btn btn-xs default'>OK</button>
+											</td>
+										</tr>
+									</table>
 								</form>
 								<hr/>
 
@@ -75,16 +94,16 @@
 											<hr/>
 										</div>
 										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>Chart Rekap Penjualan Per Tahun <?=date('Y');?></b> </h4>
+											<h4><b>Chart Rekap Penjualan Per Tahun <?=$tahun;?></b> </h4>
 											<div id="chart_1" class="chart" style="height: 200px;">
 											</div>
 										</div>
 									</div>
 
 									<hr/>
-									<div class="row list-separated">
-										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>10 Penjualan Warna Terbanyak <?=date('Y');?></b> </h4>
+									<div class="row list-separated" hidden>
+										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12" >
+											<h4><b>10 Penjualan Warna Terbanyak <?=$tahun;?></b> </h4>
 
 											<div id="chart_warna_1" class="chart" style="height: 200px;">
 											</div>
@@ -93,7 +112,7 @@
 										</div>
 
 										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>10 Penjualan Warna Terbanyak <?=date('Y');?></b> </h4>
+											<h4><b>10 Penjualan Warna Terbanyak <?=$tahun;?>></b> </h4>
 
 											<div id="chart_warna_2" class="chart" style="height: 400px;">
 											</div>
@@ -104,8 +123,8 @@
 
 									<hr/>
 									<div class="row list-separated">
-										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>10 Penjualan Barang Terbanyak <?=date('Y');?></b> </h4>
+										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12" hidden>
+											<h4><b>10 Penjualan Barang Terbanyak <?=$tahun;?></b> </h4>
 
 											<div id="chart_2" class="chart" style="height: 200px;">
 											</div>
@@ -114,7 +133,7 @@
 										</div>
 
 										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>10 Penjualan Barang Terbanyak <?=date('Y');?></b> </h4>
+											<h4><b>10 Penjualan Barang Terbanyak <?=$tahun;?></b> </h4>
 
 											<div id="chart_3" class="chart" style="height: 400px;">
 											</div>
@@ -127,7 +146,7 @@
 
 									<div class="row list-separated">
 										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>10 Pelanggan Terbaik <?=date('Y');?></b> </h4>
+											<h4><b>10 Pelanggan Terbaik <?=$tahun;?></b> </h4>
 
 											<div id="chart_4" class="chart" style="height: 200px;">
 											</div>
@@ -136,7 +155,7 @@
 										</div>
 
 										<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-											<h4><b>10 Pelanggan Terbaik <?=date('Y');?></b> </h4>
+											<h4><b>10 Pelanggan Terbaik <?=$tahun;?>></b> </h4>
 
 											<div id="chart_5" class="chart" style="height: 400px;">
 											</div>
@@ -166,14 +185,14 @@
 <script src="<?=base_url('assets_noondev/js/index3.js'); ?>" type="text/javascript"></script>
 
 <script>
+
+	const tahun = '<?=$tahun?>';
 $(document).ready(function() {   
 	//$("#sidebar").load("sidebar.html"); 
    	Metronic.init(); // init metronic core componets
    	Layout.init(); // init layout
    	Index.init(); // init index page
-   	ChartsAmcharts.init(); 
-
-    
+   	ChartsAmcharts.init();  
 });
 </script>
 <!-- END JAVASCRIPTS -->

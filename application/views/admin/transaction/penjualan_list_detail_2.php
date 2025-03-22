@@ -53,6 +53,11 @@
 	font-weight: bold;
 }
 
+.no-faktur-sub{
+	font-size: 1.2em;
+	font-weight: bold;
+}
+
 .input-no-border{
 	border: none;
 }
@@ -402,13 +407,18 @@
 								    </table>
 								</td>
 								<td class='text-right'>
-									<div class='note note-info'>
+									<div class='note note-info' style="margin-bottom:0px">
 										<?if (is_posisi_id() == 1) {?>
-											<h1>TERSDT</h1>
+											<!-- <h1>TERSDT</h1> -->
 										<?}?>
 										<span class='no-faktur-lengkap'> <?=$no_faktur_lengkap;?></span><br>
 										<?=($no_faktur_lengkap != '' ? 'revisi : <b>'.$revisi.'</b>' : '' );?>
 									</div>
+									<?foreach ($penjualan_invoice as $row) {?>
+										<div class='no-faktur-sub' style="background:<?=$is_toko[$row->toko_id]['color']?>; border-left: 5px solid #ccc; width: 100%; padding:5px 8px; margin-bottom:0px"><?=$row->no_faktur_lengkap?></div>
+									<?}?>
+									
+									
 								</td>
 							</tr>
 						</table>
@@ -471,7 +481,7 @@
 								$g_total_after = 0;
 								foreach ($penjualan_detail as $row) { ?>
 									 
-									<tr id='id_<?=$row->id;?>' style="background-color:<?=$row->color_code;?>">
+									<tr id='id_<?=$row->id;?>' class='item-<?=$row->toko_id?>' style="background-color:<?=$row->color_code;?>">
 										<td>
 											<?=$idx;?> 
 										</td>
@@ -573,7 +583,8 @@
 								} ?>
 
 								<tr class='subtotal-data' >
-									<td colspan='5' class='text-right'><b></b></td>
+									<td colspan='5' class='text-right'>
+									</td>
 									<td class='text-left'><b>TOTAL<?//=str_replace('.00', '',$qty_total);?></b></td>
 									<td class='text-left'><b><?=number_format($g_total_blmppn,'2','.',',');?></b></td>
 									<td class='text-left'><b><?=number_format($ppn_total,'2','.',',');?></b></td>
@@ -581,7 +592,7 @@
 									<td>
 										<?=number_format($diskon,'0','.',',')?> / <?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?>
 										<?/* if ($status == 1 ) {?>
-												<b>Rp. </b><input <?=($status != 1 ? 'readonly' : '');?> class='diskon amount_number_comma text-center' name='diskon' style='width:120px'  value="<?=number_format($diskon,'0','.',',')?>"> /
+												<b>Rp. </b><input <?=($status != 1 ? 'readonly' : '');?> class='diskon  text-center' name='diskon' style='width:120px'  value="<?=number_format($diskon,'0','.',',')?>"> /
 												<input <?=($status != 1 ? 'readonly' : '');?> class='diskon-persen text-center' name='diskon_persen' style='width:60px' value="<?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?>"> %
 											<?}else{?>
 												Rp.<?=number_format($diskon,'0','.',',')?> /<?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?> %
@@ -600,7 +611,7 @@
 									<td colspan='6' class='text-right'><b>DISKON</b></td>
 									<td colspan='2' class='text-center'>
 										<?if ($status == 1 ) {?>
-											<b>Rp. </b><input <?=($status != 1 ? 'readonly' : '');?> class='diskon amount_number_comma text-center' name='diskon' style='width:120px'  value="<?=number_format($diskon,'0','.',',')?>"> /
+											<b>Rp. </b><input <?=($status != 1 ? 'readonly' : '');?> class='diskon  text-center' name='diskon' style='width:120px'  value="<?=number_format($diskon,'0','.',',')?>"> /
 											<input <?=($status != 1 ? 'readonly' : '');?> class='diskon-persen text-center' name='diskon_persen' style='width:60px' value="<?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?>"> %
 										<?}else{?>
 											Rp.<?=number_format($diskon,'0','.',',')?> /<?=number_format($diskon/($g_total == 0 ? 1 : $g_total) * 100,'2','.',',')?> %
@@ -617,12 +628,20 @@
 							</tbody>
 						</table>
 						<hr/>
-							<p class='btn-detail-toggle' style='cursor:pointer'><b>Detail <i class='fa fa-caret-down'></i></b></p>
+							<p class='btn-detail-toggle' style='cursor:pointer'>
+								<b>Detail <i class='fa fa-caret-down'></i></b>
+								<?foreach ($is_toko as $key => $value) {
+									if ($value['item'] > 0) {?>
+										<button class='btn btn-xs' style="background:<?=$value['color']?>; border: 1px solid #ccc; width: 250px; padding:5px 8px"><?=$value['nama'];?> : <?=$value['item']?> item</button>
+									<?}?>
+								<?}?>
+							</p>
 						
 							<table id='general-detail-table' class='table table-bordered' hidden>
 								<thead>
 									<tr>
 										<th>Barang</th>
+										<th>Toko</th>
 										<th>Keterangan</th>
 										<th>Qty</th>
 										<th>Total</th>
@@ -637,6 +656,7 @@
 								foreach ($penjualan_detail as $row) {?>
 									<tr>
 										<td><?=$row->nama_barang?></td>
+										<td><?=$is_toko[$row->toko_id]['nama']?></td>
 										<td><?=$row->nama_warna?></td>
 										<td><?=$row->jumlah_roll?></td>
 										<td><?=str_replace('.0000', '',$row->qty)?></td>
@@ -710,7 +730,7 @@
 												<tr>
 													<td><?=$row->nama;?></td>
 													<td>
-														<input <?=$stat;?> style='<?=$style;?>' class='amount_number_comma bayar-input' id='bayar_<?=$row->id;?>' value="<?=number_format($bayar,'0','.',',');?>">
+														<input <?=$stat;?> style='<?=$style;?>' class=' bayar-input' id='bayar_<?=$row->id;?>' value="<?=number_format($bayar,'0','.',',');?>">
 														<?if ($penjualan_id != '') { ?>
 															<a data-toggle="popover" style='color:black' data-trigger='click' data-html="true" data-content="<input <?=$stat;?> style='<?=$style;?>' class='keterangan_bayar' name='keterangan_<?=$row->id;?>' value='<?=$keterangan;?>'>">
 																<i class='fa fa-edit'></i>
@@ -723,7 +743,7 @@
 													<td><?=$row->nama;?></td>
 													<td>
 														<a data-toggle="popover" style='color:black' data-trigger='hover' data-html="true" data-content="Hanya untuk tipe kredit pelanggan">
-															<input <?=$stat;?> id='bayar_<?=$row->id;?>'  class='amount_number_comma bayar-input bayar-kredit' value="<?=number_format($bayar,'0','.',',');?>">
+															<input <?=$stat;?> id='bayar_<?=$row->id;?>'  class=' bayar-input bayar-kredit' value="<?=number_format($bayar,'0','.',',');?>">
 														</a>
 													</td>
 												</tr>
@@ -732,7 +752,7 @@
 													<td><?=$row->nama;?></td>
 													<td>
 														<a data-toggle="popover" style='color:black' data-trigger='hover' data-html="true" data-content="Nama Bank : <b><?=$nama_bank?></b><br/>No Rek : <b><?=$no_rek_bank?></b><br/>No Akun : <b><?=$no_akun?></b><br/>Nama Bank : <b><?=$nama_bank?></b><br/>Tanggal Giro : <b><?=$tanggal_giro?></b><br/>Jatuh Tempo : <b><?=$jatuh_tempo_giro?></b><br/>">
-															<input <?=$stat;?> style='<?=$style;?>' class='amount_number_comma bayar-giro' id='bayar_<?=$row->id;?>' value="<?=number_format($bayar,'0','.',',');?>">
+															<input <?=$stat;?> style='<?=$style;?>' class=' bayar-giro' id='bayar_<?=$row->id;?>' value="<?=number_format($bayar,'0','.',',');?>">
 														</a>
 														<?if ($penjualan_id != '' && is_posisi_id() != 6 && $status != 0) { ?>
 															<a data-toggle="modal" href='#portlet-config-giro' style='color:black' style='<?=$style;?>' >
@@ -744,13 +764,14 @@
 											<?}else{?>
 												<tr>
 													<td><?=$row->nama;?></td>
-													<td><input <?=$stat;?> style='<?=$style;?>' class='amount_number_comma bayar-input' id='bayar_<?=$row->id;?>' value="<?=number_format($bayar,'0','.',',');?>"></td>
+													<td><input <?=$stat;?> style='<?=$style;?>' class=' bayar-input' id='bayar_<?=$row->id;?>' value="<?=number_format($bayar,'0','.',',');?>"></td>
 												</tr>
 											<?}?>
 
 										<?}?>
 									</table>
 								</td>
+								<?$g_total = $g_total_after?>
 								<td style='vertical-align:top;font-size:2.5em;' class='text-right'>
 									<table style='float:right;'>
 										<tr style='border:2px solid #c9ddfc'>
@@ -850,6 +871,10 @@ var ppn_berlaku = "<?=get_ppn_berlaku($ori_tanggal);?>";
 var ppn_persen = ppn_berlaku/100;
 var ppn_pembagi = 1+parseFloat(ppn_persen);
 var isBarangMix = false;
+var barangSku = <?=json_encode($this->barang_sku_aktif)?>;
+var keteranganList = <?=json_encode($this->warna_list_aktif)?>;
+
+console.log('toko',<?=json_encode($is_toko)?>);
 /*
 
 1. qty-table itu table qty yang diambil BUKAN table stok
@@ -863,6 +888,9 @@ Rekap QTY consist of
 3. jumlah_roll
 4. supplier_id
  */
+
+ </script>
+ <script>
 jQuery(document).ready(function() {	
 
 //===========================change toko================================
@@ -894,6 +922,7 @@ jQuery(document).ready(function() {
 				var printer_name = $("#printer-name [value='"+selected+"']").text();
 				printer_name = $.trim(printer_name);
 				var action = $('[name=print_target]').val();
+				// alert(action);	
 				if (action == 1 ) {
 					print_faktur(printer_name);
 				}else if(action == 2){
@@ -973,7 +1002,7 @@ jQuery(document).ready(function() {
 		$('[data-toggle="popover"]').popover();
 
 
-	    $('#warna_id_select,#warna_id_select_edit, #barang_id_select,#barang_id_select_edit').select2({
+	    $('#warna_id_select_edit, #barang_id_select,#barang_id_select_edit, #customer_id_select, #customer_id_select2').select2({
 	        placeholder: "Pilih...",
 	        allowClear: true
 	    });
@@ -1133,8 +1162,31 @@ jQuery(document).ready(function() {
 	    $('#barang_id_select').change(function(){
 	    	var barang_id = $('#barang_id_select').val();
 	   		var data = $("#form_add_barang [name=data_barang] [value='"+barang_id+"']").text().split('??');
+			const keteranganSelected = getKeterangan(barangSku, barang_id);
+			
+			$('#warna_id_select').empty();
+			const dropdown = document.querySelector(`#warna_id_select`);
+			let mEcer;
+			keteranganList.forEach(function(item) {
+				if (keteranganSelected.includes(item.id) && item.id != 888) {
+					const option = document.createElement('option');
+					option.value = item.id;
+					option.text = item.warna_jual;
+					dropdown.appendChild(option);
+				}else if(item.id == 888){
+					mEcer = item;
+				}
+			});
+
+			if (mEcer) {
+				const option = document.createElement('option');
+				option.value = mEcer.id;
+				option.text = mEcer.warna_jual;
+				dropdown.appendChild(option);
+			}
+			
 			if (penjualan_type_id == 3) {
-				$('#form_add_barang [name=harga_jual]').val(reset_number_comma(data[2]));
+				$('#form_add_barang [name=harga_jual]').val((data[2]));
 				harga_jual = data[2];
 				if (harga_jual != 0 ) {
 					harga_jual_add_change($('#form_add_barang').find(".harga_jual_add"));
@@ -1150,9 +1202,9 @@ jQuery(document).ready(function() {
 				let harga_jual = 0;
 				ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
 					if (data_respond > 0) {
-						$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data_respond));
+						$('#form_add_barang [name=harga_jual]').val((data_respond));
 					}else if(data[2] > 0){
-						$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data[2]));
+						$('#form_add_barang [name=harga_jual]').val((data[2]));
 						<?if (is_posisi_id() == 1) {?>
 							// alert(data);
 						<?}?>
@@ -1185,7 +1237,7 @@ jQuery(document).ready(function() {
 			$('#qty-table-stok').closest('td').find('.nama_satuan').html(data[0]);
 			$('#qty-table-stok').closest('td').find('.nama_packaging').html(data[1])
 
-	    });
+	    }); 
 
 		$(".harga_jual_add").change(function(){
 			// alert('test');
@@ -1554,8 +1606,16 @@ jQuery(document).ready(function() {
 		    });
 	    <?}?>
 
-	    <?if ($penjualan_id != '') {?>
+	    <?if ($penjualan_id != '') {?>	
 	    	$('.btn-close').click(function(){
+				let toko_list = [];
+				let total_toko = [];
+				<?foreach($this->toko_list_aktif as $row){?>
+					toko_list.push(<?=$row->id?>);
+				<?}?>
+				<?foreach ($is_toko as $key => $value) {?>
+					total_toko.push(<?=$value['item']?>);
+				<?}?>
 	    		var kembali = reset_number_comma($('.kembali').html());
 	    		var g_total = reset_number_comma($('.g_total').html());
 	    		var tanggal = "<?=$ori_tanggal;?>";
@@ -1564,7 +1624,7 @@ jQuery(document).ready(function() {
 	    			bootbox.alert("Error! Total tidak boleh 0");
 	    		}else {
 	    			if (kembali >= 0 ) {
-	    				window.location.replace(baseurl+'transaction/penjualan_list_close?id='+id+"&tanggal="+tanggal);
+	    				window.location.replace(baseurl+'transaction/penjualan_list_close?id='+id+"&tanggal="+tanggal+"&list_toko="+toko_list.join(',')+"&total_toko="+total_toko.join(','));
 	    			}else{
 	    				bootbox.alert('Kembali tidak boleh minus');
 	    			}
@@ -2175,6 +2235,7 @@ jQuery(document).ready(function() {
 		data['is_eceran'] = isEceran;
 		data['tanggal'] = $('#form_add_barang [name=tanggal]').val();
 
+		var toko_before = $('#form_add_barang .toko_id_before').html();
 		var barang_before = $('#form_add_barang .barang_id_before').html();
 		var warna_before = $('#form_add_barang .warna_id_before').html();
 		var gudang_before = $('#form_add_barang .gudang_id_before').html();
@@ -2185,7 +2246,7 @@ jQuery(document).ready(function() {
 		
 		const eceranBeforeTrue = (eceran_before === 'true');
 		if (warna_id != 888 || isBarangMix == false) {
-			if (barang_id != barang_before || warna_id != warna_before || gudang_id != gudang_before || eceranBeforeTrue != isEceran) {
+			if (barang_id != barang_before || warna_id != warna_before || gudang_id != gudang_before || eceranBeforeTrue != isEceran || toko_id != toko_before) {
 				var url = "stok/stok_general/get_qty_stock_by_barang_detail";
 				
 				//alert('test');
@@ -2289,8 +2350,9 @@ jQuery(document).ready(function() {
 					$('#stok-info-add').find('.stok-roll').html(jumlah_roll);
 					$('#qty-table input').val();
 					// alert(data_respond);
-					console.log(data_respond);
+					// console.log(data_respond);
 	
+					$('#form_add_barang .toko_id_before').html(toko_id);
 					$('#form_add_barang .barang_id_before').html(barang_id);
 					$('#form_add_barang .warna_id_before').html(warna_id);
 					$('#form_add_barang .gudang_id_before').html(gudang_id);
@@ -2753,8 +2815,9 @@ jQuery(document).ready(function() {
 		var g_total = reset_number_comma($('.g_total').html()) ;
 		$('#bayar-data tr td input').each(function(){
 			if ($(this).attr('class') != 'keterangan_bayar') {
+				const number = $(this).val().replace(/\./g, '');
 				// alert(reset_number_comma($(this).val()));
-				bayar += parseFloat(reset_number_comma($(this).val()));
+				bayar += parseFloat(reset_number_comma(number));
 			};
 		});
 		// alert(currency.rupiah(bayar));
@@ -2979,7 +3042,7 @@ jQuery(document).ready(function() {
 				$('.eceran-form').addClass("eceran-active");
 				$(".table-qty").hide();
 				$(".add-eceran").show();
-				$('#form_add_barang [name=harga_jual]').val(reset_number_comma(data[4]));
+				$('#form_add_barang [name=harga_jual]').val((data[4]));
 				harga_jual = data[4];
 				if (harga_jual != 0 ) {
 					harga_jual_add_change($('#form_add_barang').find(".harga_jual_add"));
@@ -2991,7 +3054,7 @@ jQuery(document).ready(function() {
 				$(".table-qty").show();
 				$(".add-eceran").hide();
 				if (penjualan_type_id == 3) {
-					$('#form_add_barang [name=harga_jual]').val(reset_number_comma(data[2]));
+					$('#form_add_barang [name=harga_jual]').val((data[2]));
 					harga_jual = data[2];
 					if (harga_jual != 0 ) {
 						harga_jual_add_change($('#form_add_barang').find(".harga_jual_add"));
@@ -3007,9 +3070,9 @@ jQuery(document).ready(function() {
 					let harga_jual = 0;
 					ajax_data_sync(url,data_st).done(function(data_respond  /*,textStatus, jqXHR*/ ){
 						if (data_respond > 0) {
-							$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data_respond));
+							$('#form_add_barang [name=harga_jual]').val((data_respond));
 						}else if(data[2] > 0){
-							$('#form_add_barang [name=harga_jual]').val(currency.rupiah(data[2]));
+							$('#form_add_barang [name=harga_jual]').val((data[2]));
 							<?if (is_posisi_id() == 1) {?>
 								// alert(data);
 							<?}?>
@@ -3112,6 +3175,13 @@ jQuery(document).ready(function() {
 
 <!-- script buat eceran mix -->
 <script>
+
+	function getKeterangan(barangList, barang_id){
+		const filteredList = barangList.filter(item=>item.barang_id == barang_id)
+		.map(item=>item.warna_id);
+		return filteredList;
+	}
+
 	function addRowMix(table){
 		$(`${table} tbody`).append(`<tr data-supplier='0' class=''>
 			<td><input class='qty-row text-center' style='width:80px'></td>

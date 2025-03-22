@@ -176,6 +176,27 @@
 														?>
 													</td>
 												</tr>
+											<?}
+											
+											if (count($retur_jual[$baris->id])) {?>
+												<tr>
+													<td colspan="3" style="background-color:yellow" class="text-center"> -- retur jual-- </td>
+												</tr>
+											<?}
+											foreach ($retur_jual[$baris->id] as $row) { ?>
+												<tr>
+													<td>
+														<?=is_reverse_date($row->tanggal);?>
+													</td>
+													<td>
+														<?=$row->no_faktur_lengkap;?>
+													</td>
+													<td>
+														<?=number_format($row->sisa_piutang,'0',',','.');
+														$total -= $row->sisa_piutang;
+														?>
+													</td>
+												</tr>
 											<?}?>
 											<tr style='font-size:1.2em; border-top:2px solid #ccc;'>
 												<td></td>

@@ -2,18 +2,20 @@
 
 class Report_Model extends CI_Model {
 	
-	function get_penjualan_report($from, $to, $cond, $customer_cond, $cond_toko, $cond_barang_warna, $cond_supplier){
+	function get_penjualan_report($from, $to, $cond, $customer_cond, $cond_toko, $cond_barang_warna, $cond_supplier, $penjualan_type_cond){
 		$query = $this->db->query("SELECT tbl_a.id, no_faktur as nf, tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, qty, jumlah_roll, 
 			nama_barang, harga_jual, total, diskon, ongkos_kirim, if(customer_id != 0, tbl_c.nama, concat(nama_keterangan, ' (non-pelanggan)')) as nama_customer,
 			(ifnull(total_bayar,0) + ifnull(total_lunas,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) as keterangan, tbl_a.id as data , 
-			jatuh_tempo, pembayaran_type_id, data_bayar, pengali_harga, pembayaran_piutang_id, ifnull(npwp, '00.000.000.0-000.000') as npwp, nama_jual
+			jatuh_tempo, pembayaran_type_id, data_bayar, pengali_harga, pembayaran_piutang_id, ifnull(npwp, '00.000.000.0-000.000') as npwp, nama_jual, ppn, 
+			no_faktur_pertoko, toko_info
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan 
 					WHERE tanggal >= '$from'
 					AND tanggal <= '$to'
 					AND status_aktif = 1
 					$customer_cond
+					$penjualan_type_cond
 					ORDER BY tanggal desc
 					)as tbl_a
 				LEFT JOIN (
@@ -62,6 +64,14 @@ class Report_Model extends CI_Model {
 					GROUP BY penjualan_id
 					) tbl_e
 				ON tbl_e.penjualan_id = tbl_a.id
+				LEFT JOIN (
+					SELECT GROUP_CONCAT(no_faktur_lengkap ORDER BY toko_id asc SEPARATOR '??') as no_faktur_pertoko, 
+					group_concat(toko_id ORDER BY toko_id asc SEPARATOR '??') as toko_info, penjualan_id
+					FROM nd_penjualan_invoice
+					WHERE status_aktif = 1
+					GROUP BY penjualan_id
+				) tbl_f
+				ON tbl_f.penjualan_id = tbl_a.id
 				WHERE tbl_b.nama_barang is not null
 				$cond
 				ORDER BY tanggal, nf asc
@@ -74,7 +84,7 @@ class Report_Model extends CI_Model {
 	function get_penjualan_report_excel($from, $to, $cond, $customer_cond){
 		$query = $this->db->query("SELECT tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, qty, jumlah_roll, nama_barang, nama_jual, harga_jual, total, diskon, ongkos_kirim,  if(customer_id != 0, tbl_c.nama, concat(nama_keterangan, ' (non-pelanggan)')) as nama_customer, (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) as keterangan, data_bayar, pembayaran_type_id
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan 
 					WHERE tanggal >= '$from'
 					AND tanggal <= '$to'
@@ -116,7 +126,7 @@ class Report_Model extends CI_Model {
 	function get_penjualan_laba_report($from, $to, $cond, $customer_cond){
 		$query = $this->db->query("SELECT tbl_a.id, tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, qty, jumlah_roll, nama_barang, harga_jual, total, diskon, ongkos_kirim, if(customer_id != 0, tbl_c.nama, concat(nama_keterangan, ' (non-pelanggan)')) as nama_customer, (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) as keterangan, tbl_a.id as data , jatuh_tempo, hpp
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan 
 					WHERE tanggal >= '$from'
 					AND tanggal <= '$to'
@@ -194,7 +204,89 @@ class Report_Model extends CI_Model {
 //==================================pembelian list==========================================
 
 	function get_pembelian_report($from, $to, $cond, $cond_barang, $cond_warna){
-		$query = $this->db->query("SELECT tbl_a.id, tbl_a.status_aktif, if(no_faktur='',no_surat_jalan, no_faktur) as no_faktur, tanggal, qty, jumlah_roll, nama_barang, nama_jual, harga_beli, total, diskon, ifnull(tbl_c.nama,'no name') as nama_supplier, (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0))) as keterangan2, tbl_a.id as data , jatuh_tempo, tbl_e.nama as nama_gudang, tbl_d.pembayaran_hutang_id, tanggal_bayar, pengali_type, sisa_hutang_bayar as keterangan
+		$query = $this->db->query("SELECT tbl_a.id, tbl_a.status_aktif, if(no_faktur='',no_surat_jalan, no_faktur) as no_faktur, tanggal, qty, jumlah_roll, 
+		nama_barang, nama_jual, harga_beli, total, diskon, ifnull(tbl_c.nama,'no name') as nama_supplier, 
+		(ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0))) as keterangan2, tbl_a.id as data , 
+		jatuh_tempo, tbl_e.nama as nama_gudang, tbl_d.pembayaran_hutang_id, tanggal_bayar, pengali_type, sisa_hutang_bayar as keterangan, nd_toko.nama as nama_toko
+				FROM (
+					SELECT group_concat(concat_ws(' ',nama,warna_beli) SEPARATOR '??') as nama_barang, group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_jual,  group_concat(nd_pembelian_detail.harga_beli SEPARATOR '??') as harga_beli, group_concat(qty SEPARATOR '??') as qty ,group_concat(jumlah_roll SEPARATOR '??') as jumlah_roll, group_concat(total SEPARATOR '??') as total, sum(if(pengali_type = 1,qty,jumlah_roll) *nd_pembelian_detail.harga_beli) as g_total, pembelian_id, group_concat(pengali_type SEPARATOR '??') as pengali_type
+					FROM (
+						SELECT t_a.id, if(pengali_type = 1,t_b.qty, t_b.jumlah_roll)*t_a.harga_beli as total, t_a.harga_beli, pembelian_id, t_b.qty, t_b.jumlah_roll, barang_id, warna_id, pengali_type
+						FROM nd_pembelian_detail t_a
+						LEFT JOIN (
+							SELECT pembelian_detail_id, sum(qty* if(jumlah_roll= 0,1, jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll
+							FROM nd_pembelian_qty_detail
+							GROUP BY pembelian_detail_id
+						) t_b
+						ON t_a.id = t_b.pembelian_detail_id
+						LEFT JOIN nd_barang
+						ON t_a.barang_id = nd_barang.id
+						WHERE t_b.qty != 0
+						$cond_barang
+						$cond_warna
+						) as nd_pembelian_detail
+					LEFT JOIN nd_barang
+					ON nd_pembelian_detail.barang_id = nd_barang.id
+					LEFT JOIN nd_warna
+					ON nd_pembelian_detail.warna_id = nd_warna.id
+					GROUP BY pembelian_id
+					) as tbl_b
+				LEFT JOIN (
+					SELECT *
+					FROM nd_pembelian 
+					WHERE tanggal >= '$from'
+					AND tanggal <= '$to'
+					AND status_aktif = 1
+					$cond
+					ORDER BY tanggal desc
+					)as tbl_a
+				ON tbl_b.pembelian_id = tbl_a.id
+				LEFT JOIN nd_supplier as tbl_c
+				ON tbl_a.supplier_id = tbl_c.id
+				LEFT JOIN (
+					SELECT pembelian_id, sum(t1.amount) as total_bayar, group_concat(t1.pembayaran_hutang_id) as pembayaran_hutang_id, group_concat(tanggal_transfer) as tanggal_bayar
+					FROM nd_pembayaran_hutang_detail t1
+					LEFT JOIN (
+						SELECT MAX(tanggal_transfer) as tanggal_transfer, pembayaran_hutang_id
+						FROM nd_pembayaran_hutang_nilai
+						GROUP BY pembayaran_hutang_id
+						) t2
+					ON t1.pembayaran_hutang_id = t2.pembayaran_hutang_id
+					GROUP BY pembelian_id
+					) as tbl_d
+				ON tbl_d.pembelian_id = tbl_a.id
+				LEFT JOIN nd_gudang tbl_e
+				ON tbl_a.gudang_id = tbl_e.id
+				LEFT JOIN (
+					SELECT amount_bill - ifnull(amount_paid, 0) - ifnull(potongan_hutang,0) as sisa_hutang_bayar, tA.pembayaran_hutang_id
+					FROM (
+						SELECT sum(amount) as amount_bill, pembayaran_hutang_id
+						FROM nd_pembayaran_hutang_detail
+						GROUP BY pembayaran_hutang_id
+					)tA
+					LEFT JOIN (
+						SELECT sum(amount) as amount_paid, pembayaran_hutang_id
+						FROM nd_pembayaran_hutang_nilai
+						GROUP BY pembayaran_hutang_id
+					)tB
+					ON tA.pembayaran_hutang_id = tB.pembayaran_hutang_id
+					LEFT JOIN nd_pembayaran_hutang tC
+					ON tA.pembayaran_hutang_id = tC.id
+				) tbl_e
+				ON tbl_d.pembayaran_hutang_id = tbl_e.pembayaran_hutang_id
+				LEFT JOIN nd_toko 
+				ON tbl_a.toko_id = nd_toko.id
+				WHERE tbl_a.id is not null
+				ORDER BY tanggal asc, no_faktur asc
+			", false);
+
+		return $query->result();
+	}
+
+	function get_pembelian_report_excel($from, $to, $cond, $cond_barang, $cond_warna){
+		$query = $this->db->query("SELECT if(no_faktur='',no_surat_jalan, no_faktur) as no_faktur, tanggal, qty, jumlah_roll, nama_barang, nama_jual, harga_beli, total, diskon, 
+		ifnull(tbl_c.nama,'no name') as nama_supplier, (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0))) as keterangan, 
+		tbl_a.id as data , jatuh_tempo, tbl_e.nama as nama_gudang,  pengali_type
 				FROM (
 					SELECT group_concat(concat_ws(' ',nama,warna_beli) SEPARATOR '??') as nama_barang, group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_jual,  group_concat(nd_pembelian_detail.harga_beli SEPARATOR '??') as harga_beli, group_concat(qty SEPARATOR '??') as qty ,group_concat(jumlah_roll SEPARATOR '??') as jumlah_roll, group_concat(total SEPARATOR '??') as total, sum(if(pengali_type = 1,qty,jumlah_roll) *nd_pembelian_detail.harga_beli) as g_total, pembelian_id, group_concat(pengali_type SEPARATOR '??') as pengali_type
 					FROM (
@@ -268,58 +360,15 @@ class Report_Model extends CI_Model {
 		return $query->result();
 	}
 
-	function get_pembelian_report_excel($from, $to, $cond, $cond_barang, $cond_warna){
-		$query = $this->db->query("SELECT no_faktur, tanggal, qty, jumlah_roll, nama_barang, nama_jual, harga_beli, total, diskon, ifnull(tbl_c.nama,'no name') as nama_supplier, (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0))) as keterangan, tbl_a.id as data , jatuh_tempo, tbl_e.nama as nama_gudang
-				FROM (
-					SELECT group_concat(concat_ws(' ',nama,warna_beli) SEPARATOR '??') as nama_barang, group_concat(concat_ws(' ',nama_jual,warna_jual) SEPARATOR '??') as nama_jual,  group_concat(nd_pembelian_detail.harga_beli SEPARATOR '??') as harga_beli, group_concat(qty SEPARATOR '??') as qty ,group_concat(jumlah_roll SEPARATOR '??') as jumlah_roll, group_concat((qty *nd_pembelian_detail.harga_beli) SEPARATOR '??') as total, sum(qty *nd_pembelian_detail.harga_beli) as g_total, pembelian_id 
-					FROM (
-						SELECT (qty) as qty, jumlah_roll, pembelian_id, barang_id, warna_id, harga_beli
-						FROM nd_pembelian_detail
-						WHERE qty != 0
-						$cond_barang
-						$cond_warna
-						) as nd_pembelian_detail
-					LEFT JOIN nd_barang
-					ON nd_pembelian_detail.barang_id = nd_barang.id
-					LEFT JOIN nd_warna
-					ON nd_pembelian_detail.warna_id = nd_warna.id
-					GROUP BY pembelian_id
-					) as tbl_b
-				LEFT JOIN (
-					SELECT *
-					FROM nd_pembelian 
-					WHERE tanggal >= '$from'
-					AND tanggal <= '$to'
-					AND status_aktif = 1
-					$cond
-					ORDER BY tanggal desc
-					)as tbl_a
-				ON tbl_b.pembelian_id = tbl_a.id
-				LEFT JOIN nd_supplier as tbl_c
-				ON tbl_a.supplier_id = tbl_c.id
-				LEFT JOIN (
-					SELECT pembelian_id, sum(amount) as total_bayar
-					FROM nd_pembayaran_pembelian
-					GROUP BY pembelian_id
-					) as tbl_d
-				ON tbl_d.pembelian_id = tbl_a.id
-				LEFT JOIN nd_gudang tbl_e
-				ON tbl_a.gudang_id = tbl_e.id
-				WHERE tbl_a.id is not null
-				ORDER BY tanggal asc, no_faktur asc
-			", false);
-
-		return $query->result();
-	}
-
 
 //==========================================penerimaan list================================
 	function get_penjualan_bayar_by_date($tanggal_start, $tanggal_end){
-		$query = $this->db->query("SELECT tbl_a.tanggal, no_faktur_lengkap as no_faktur, group_concat(pembayaran_type_id) as pembayaran_type_id, group_concat(amount) as bayar , g_total as amount, if (penjualan_type_id = 3, nama_keterangan, tbl_c.nama) as nama_customer, tbl_b.keterangan as keterangan_transfer
+		$query = $this->db->query("SELECT tbl_a.tanggal, no_faktur_lengkap as no_faktur, group_concat(pembayaran_type_id) as pembayaran_type_id, 
+		group_concat(amount) as bayar , g_total as amount, if (penjualan_type_id = 3, if(nama_keterangan = '', 'non-pelanggan', nama_keterangan), tbl_c.nama) as nama_customer, tbl_b.keterangan as keterangan_transfer
 			FROM (
 				SELECT nd_penjualan.*, g_total
 				FROM (
-					SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+					SELECT *
 					FROM nd_penjualan 
 					WHERE tanggal >= '$tanggal_start'
 					AND tanggal <= '$tanggal_end'
@@ -351,7 +400,7 @@ class Report_Model extends CI_Model {
 	function get_retur_jual_by_date($tanggal_start, $tanggal_end){
 		$query = $this->db->query("SELECT tanggal, no_faktur_lengkap as no_faktur, sum( harga * qty ) as amount
 			FROM (
-				SELECT *, concat('FRJ', DATE_FORMAT(tanggal,'%d%m%y'),'-',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+				SELECT *
 				FROM nd_retur_jual
 				WHERE tanggal >= '$tanggal_start'
 				AND tanggal <= '$tanggal_end'
@@ -442,6 +491,88 @@ class Report_Model extends CI_Model {
 			", false);
 
 		return $query->result();
+	}	
+
+//================================buku laporan keluar=============================
+
+	function get_barang_keluar_report($tanggal_start, $tanggal_end, $cond, $cond2){
+		$query = $this->db->query("SELECT sum(e.qty * if(e.jumlah_roll = 0,1,e.jumlah_roll)) as qty, 
+		sum(e.jumlah_roll) as jumlah_roll, c.nama as nama_beli, d.warna_beli as nama_warna, 
+		sum(1) as count,barang_id, warna_id, sum(b.harga_jual*e.qty) / sum(e.qty) as harga_rata, 
+		satuan.nama as nama_satuan, packaging.nama as nama_packaging
+				FROM (
+					SELECT *
+					FROM nd_penjualan 
+					WHERE tanggal >= '$tanggal_start'
+					AND tanggal <= '$tanggal_end'
+					AND status_aktif = 1
+					$cond
+					ORDER BY tanggal desc
+					)as a
+				LEFT JOIN (
+					SELECT *
+					FROM nd_penjualan_detail
+					$cond2
+					) b
+				LEFT JOIN nd_penjualan_qty_detail e
+				ON b.id = e.penjualan_detail_id
+				ON b.penjualan_id = a.id
+				LEFT JOIN nd_barang c
+				ON b.barang_id = c.id
+				LEFT JOIN nd_warna d
+				ON b.warna_id = d.id
+				LEFT JOIN nd_satuan as satuan
+				ON c.satuan_id = satuan.id
+				LEFT JOIN nd_satuan as packaging
+				ON c.packaging_id = packaging.id
+				WHERE b.barang_id is not null
+				AND b.warna_id is not null
+				GROUP BY barang_id, warna_id
+				ORDER BY c.nama, d.warna_beli asc
+			", false);
+
+		return $query->result();
+	}
+
+
+	function get_barang_keluar_detail_report($tanggal_start, $tanggal_end, $cond, $cond2){
+		$query = $this->db->query("SELECT tanggal, e.qty, e.jumlah_roll, c.nama as nama_beli, 
+		d.warna_beli as nama_warna, b.harga_jual, no_faktur_lengkap as no_faktur, 
+		satuan.nama as nama_satuan, packaging.nama as nama_packaging, a.id as penjualan_id
+				FROM (
+					SELECT *
+					FROM nd_penjualan 
+					WHERE tanggal >= '$tanggal_start'
+					AND tanggal <= '$tanggal_end'
+					AND status_aktif = 1
+					$cond
+					ORDER BY tanggal desc
+					)as a
+				LEFT JOIN (
+					SELECT *
+					FROM nd_penjualan_detail
+					$cond2
+					) b
+				ON b.penjualan_id = a.id
+				LEFT JOIN (
+					SELECT sum(qty * if(jumlah_roll = 0,1,jumlah_roll)) as qty, sum(jumlah_roll) as jumlah_roll, penjualan_detail_id
+					FROM nd_penjualan_qty_detail
+					GROUP BY penjualan_detail_id
+				) e
+				ON b.id = e.penjualan_detail_id
+				LEFT JOIN nd_barang c
+				ON b.barang_id = c.id
+				LEFT JOIN nd_warna d
+				ON b.warna_id = d.id
+				LEFT JOIN nd_satuan as satuan
+				ON c.satuan_id = satuan.id
+				LEFT JOIN nd_satuan as packaging
+				ON c.packaging_id = packaging.id
+				WHERE b.barang_id is not null
+				AND b.warna_id is not null
+			", false);
+
+		return $query->result();
 	}
 
 //================================buku laporan piutang=============================
@@ -451,7 +582,7 @@ class Report_Model extends CI_Model {
 			FROM (
 				SELECT tbl_a.id, no_faktur as nf, tbl_a.status_aktif, no_faktur_lengkap as no_faktur, tanggal, qty, jumlah_roll, nama_barang, harga_jual, total, diskon, ongkos_kirim, if(customer_id != 0, tbl_c.nama, concat(nama_keterangan, ' (non-pelanggan)')) as nama_customer, ( (ifnull(total_bayar,0) + ifnull(total_lunas,0) ) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) as keterangan, tbl_a.id as data , jatuh_tempo, concat(DATE_FORMAT(tanggal,'%d-%b-%y'),'??',pembayaran_type_id,'??',data_bayar) as pembayaran_data, pelunasan_data, tbl_a.id as penjualan_id
 					FROM (
-						SELECT *, concat(DATE_FORMAT(tanggal,'%Y'),'/CVSUN/INV/',LPAD(no_faktur,4,'0')) as no_faktur_lengkap
+						SELECT *
 						FROM nd_penjualan 
 						$cond_date
 						AND status_aktif = 1

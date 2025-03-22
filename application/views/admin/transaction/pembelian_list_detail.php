@@ -596,10 +596,8 @@
 				                    <div class="col-md-6">
 				                    	<select name="barang_id" class='form-control input1' id='barang_id_select_edit'>
 			                				<option value=''>Pilih</option>
-			                				<?foreach ($this->barang_list_aktif as $row) {
-				                    			if ($row->toko_id == $toko_id) {?>
-													<option value="<?=$row->id?>"><?=$row->nama;?></option>
-												<?}?>
+			                				<?foreach ($this->barang_list_aktif as $row) {?>
+												<option value="<?=$row->id?>"><?=$row->nama;?></option>
 				                    		<? } ?>
 				                    	</select>
 				                    	<select name='data_barang' hidden>
@@ -969,7 +967,7 @@ jQuery(document).ready(function() {
 	FormEditPembelian.init();
 	FormNewPembelianDetail.init();
 
-	$('#barang_id_select,#warna_id_select, #po_list').select2({
+	$('#barang_id_select,#barang_id_select_edit,#warna_id_select, #po_list').select2({
         allowClear: true
     });
 
@@ -995,6 +993,19 @@ jQuery(document).ready(function() {
 		});
     <?}?>
 
+	$(".btn-add-qty-row").click(function(){
+		var baris = `<tr><td><input name='qty'></td>
+						<td><input name='jumlah_roll'></td>
+						<td><input name='subtotal' tabindex='-1'></td>
+						<td></td>
+					</tr><tr><td><input name='qty'></td>
+						<td><input name='jumlah_roll'></td>
+						<td><input name='subtotal' tabindex='-1'></td>
+						<td></td>
+					</tr>`;
+		$('#qty-table').append(baris);
+	});
+
     $("#form_edit_data [name=no_faktur]").change(function(){
     	$('#form_edit_data .note-change-faktur').show();
     });
@@ -1003,10 +1014,10 @@ jQuery(document).ready(function() {
     	var ini = $(this).closest('tr');
     	var form = $('#form_edit_barang');
     	var barang_id = ini.find('.barang_id').html();
-    	$("#barang_id_select_edit").change();
+    	$("#barang_id_select_edit").val(barang_id).change();
+    	form.find("[name=data_barang]").val(barang_id);
 
     	form.find("[name=pembelian_detail_id]").val(ini.find('.id').html());
-    	form.find("[name=barang_id]").val(barang_id);
     	form.find("[name=warna_id]").val(ini.find('.warna_id').html());
     	form.find("[name=warna_id]").change();
    		var data = $("#form_edit_barang [name=data_barang] [value='"+barang_id+"']").text().split('??');

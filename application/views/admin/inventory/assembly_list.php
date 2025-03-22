@@ -202,21 +202,19 @@
 										<div class="stok-add-container" style="background:#ddd" id="form-add-barang-container">
 											<h2 class='text-center'>FORM</h2>
 											<form id="form-add-barang" action="<?=base_url()?>inventory/assembly_list_insert" method="POST">
-												<input type="date" value="<?=date('Y-m-d')?>" name="" id="newTanggal" class='form-control'>
+												<input readonly value="<?=date('Y-m-d')?>" name="" id="newTanggal" class='form-control date-picker'>
 												<select name="toko_id"  id="toko_id_new" class="form-control">
-													<?$isChecked = false;
-													foreach ($this->toko_list_aktif as $row) {?>
-														<option  <?=($isChecked ? "" : "selected"); $isChecked = true;?> value="<?=$row->id?>"><?=$row->nama;?></option>
+													<?foreach ($this->toko_list_aktif as $row) {?>
+														<option value="<?=$row->id?>"><?=$row->nama;?></option>
 													<?}?>
 												</select>
 												<select name="gudang_id" id="gudang_id_new" class="form-control">
-													<?$isChecked = false;
-													foreach ($this->gudang_list_aktif as $row) {?>
-														<option <?=($isChecked ? "" : "selected"); $isChecked = true;?> value="<?=$row->id?>"><?=$row->nama;?></option>
+													<?foreach ($this->gudang_list_aktif as $row) {?>
+														<option <?=($row->status_default == 1 ? "selected" : ""); $isChecked = true;?> value="<?=$row->id?>"><?=$row->nama;?></option>
 													<?}?>
 												</select>
 												<label style='margin-top:5px;' onClick="setEqual('equal_new')">
-													<input type="checkbox" checked value='1' name="equal_status" id="equal_new" >Sumber = Hasil</label>
+													<input type="checkbox" checked value='1' name="equal_status" id="equal_new" >QTY Sumber = QTY Hasil</label>
 												<hr style="margin:5px 0" />
 												<select name="barang_id_sumber" id="barang_id_new_sumber" class="form-control" >
 													<option value="">Barang Sumber</option>
@@ -477,7 +475,7 @@
 										<td><?=$row->qty_hasil?></td>
 										<td>
 											<button class="btn btn-xs green" onclick="editData('<?=$row->id?>')"><i class="fa fa-edit"></i></button>
-											<?if (is_posisi_id()==1) {?>
+											<?if (is_posisi_id() <= 3 || is_posisi_id() == 9) {?>
 												<button class="btn btn-xs red" onclick="deleteData('<?=$row->id?>')"><i class="fa fa-times"></i></button>
 											<?}?>
 										</td>
@@ -621,7 +619,7 @@ jQuery(document).ready(function(){
 	$('#barang_id_new_sumber, #barang_id_new_hasil, #warna_id_new_hasil').select2();
 
 	addTanggal.change(function(){
-		tempItem.tanggal = addTanggal.val();
+		tempItem.tanggal = addTanggal.val().split('/').reverse().join('-');
 	});
 
 	tokoNew.change(function(){
@@ -658,9 +656,35 @@ jQuery(document).ready(function(){
 			tempItem.nama_sumber=barang.text;
 			tempItem.satuan_id_sumber=satuanBarang[`s-${brgData[0]}`][0];
 			tempItem.satuan_sumber=satuanBarang[`s-${brgData[0]}`][1];
+
+			const barangIdHasil = brgNewHasil.val();
+
+			if (brgData[0] != barangIdHasil) {
+				bootbox.confirm({
+					message: "Jenis barang Hasil sama dengan barang sumber ?",
+					buttons: {
+					confirm: {
+					label: 'Ya',
+					className: 'btn-primary'
+					},
+					cancel: {
+					label: 'Tidak',
+					className: 'btn-default'
+					}
+					},
+					callback: function(respond){
+					if (respond) {
+							brgNewHasil.val(brgData[0]).change();
+						}
+					}
+				})
+			}
+
 			if(brgNewHasil.val() == ''){
 				checkMixStatus();
 			}
+
+			
 			
 		}
 	});
@@ -709,8 +733,8 @@ function newAssembly(){
 	getStok();
 	setEqual('equal_new');
 
-	addTanggal.val("<?=date('Y-m-d')?>");
-	tempItem.tanggal = addTanggal.val();
+	addTanggal.val("<?=date('d/m/Y')?>");
+	tempItem.tanggal = addTanggal.val().split('/').reverse().join('-');
 	tempItem.id = '';
 	// tempItem.toko_id = list.toko_id;
 	// tempItem.gudang_id = list.gudang_id;
@@ -736,6 +760,13 @@ function newAssembly(){
 	brgNewHasil.val(tempItem.barang_id_hasil).change();
 
 	warnaNewHasil.val(tempItem.warna_id_hasil).change();
+
+	brgNewSumber.prop('disabled',false);
+	brgNewHasil.prop('disabled',false);
+	warnaNewHasil.prop('disabled',false);
+	tokoNew.prop('disabled',false);
+	gudangNew.prop('disabled',false);
+
 }
 
 function checkMixStatus(){
@@ -838,7 +869,7 @@ function setStokShow(){
 	totalStokRollTemp = 0;
 	let rowIndex=0;
 	stokList.forEach((stok, index) => {
-		if (stok.jumlah_roll > 0) {
+		if (stok.jumlah_roll > 0 && stok.qty) {
 			totalStokTemp += stok.qty * stok.jumlah_roll;
 			totalStokRollTemp += parseInt(stok.jumlah_roll);
 			let qIdx = stok.qty.toString().replace(".00","");
@@ -876,6 +907,9 @@ function setStokShow(){
 		document.querySelector('#hasil-roll').innerHTML = '0';
 		$(`#qty-table-hasil tbody`).html("");
 	}
+
+	
+
 }
 
 function ambilStok(index){
@@ -949,6 +983,7 @@ function unAmbilStok(index){
 function unAmbilHasil(index){
 	
 	const row = document.querySelectorAll("#qty-table-hasil tbody tr")[index];
+	console.log(row);
 	const roll = row.querySelector(".roll");
 
 	const qtyVal = parseFloat(row.querySelector(".qty").innerHTML.toString().trim());
@@ -962,6 +997,52 @@ function unAmbilHasil(index){
 			rolVal -= 1;
 			roll.innerHTML = rolVal;
 
+			if(document.querySelector(`#id-${qIdx}`) === null ){
+
+				const qtyHasil = document.querySelector('#hasil-qty').innerHTML;
+				const rollHasil = document.querySelector('#hasil-roll').innerHTML
+				totalStokTemp += parseFloat(qtyHasil);
+				totalStokRollTemp += parseFloat(rollHasil);
+				const nSumber = JSON.stringify(tempItem.rekap_hasil[`q-${qIdx}`]);
+
+				for (let _i = 0; _i < stokList.length; _i++) {
+					if (stokList[_i].qty == qIdx) {
+						stokList[_i].jumlah_roll = 1;
+					}
+				}
+
+				let addRow = '';
+				
+				const text = $(`#qty-table-stok tbody`).html();
+				addRow = text;
+				const rowCount = document.querySelectorAll(`#qty-table-stok tbody tr`).length;
+				console.log(rowCount);
+				let rowIndex = rowCount;
+				if (text.toString().includes('No Stok')) {
+					rowIndex = 0;
+					addRow = '';
+				};
+				
+				let sId = tempItem.rekap_hasil[`q-${qIdx}`].supplier_id;
+				let sName = tempItem.rekap_hasil[`q-${qIdx}`].nama_supplier;
+				let sQty = tempItem.rekap_hasil[`q-${qIdx}`].qty;
+				addRow += `<tr id='id-${qIdx}'>
+					<td>
+						<span class='nama_supplier'>${sName}</span>
+						<span class='supplier_id' hidden>${sId}</span>
+					</td>
+					<td class='text-center qty'>${sQty}</td>
+					<td class='text-center roll'>${0}</td>
+					<td>
+						<button class='btn btn-xs red' id='btn-unget-${rowIndex}' onClick="unAmbilStok('${rowIndex}')">-</button>
+						<button class='btn btn-xs green' id='btn-get-${rowIndex}' onClick="ambilStok('${rowIndex}')">+</button>
+					</td>
+				</tr>`;
+
+				
+				$(`#qty-table-stok tbody`).html(addRow);
+				// setStokShow();
+			}
 			const rowStok = document.querySelector(`#id-${qIdx}`);
 			const rollStok = rowStok.querySelector(".roll");
 			const rollVal = parseInt(rollStok.innerHTML) + 1;
@@ -975,7 +1056,6 @@ function unAmbilHasil(index){
 	}else{
 		tempItem.rekap_sumber[`q-${qIdx}`] =  JSON.parse(JSON.stringify(tempItem.rekap_hasil[`q-${qIdx}`]));
 	}
-
 	
 	showRekap();
 }
@@ -1002,8 +1082,6 @@ function showRekap(){
 
 	let tbody = '';
 	let index = 0;
-
-	// console.log(tempItem.equal_status, 'es');
 
 	if (tempItem.equal_status == 1) {
 		for(const list in tempItem.rekap_hasil){
@@ -1034,8 +1112,10 @@ function showRekap(){
 	
 	document.querySelector('#sumber-qty-ambil').innerHTML = total;
 	document.querySelector('#sumber-roll-ambil').innerHTML = totalRoll;
-	document.querySelector('#sumber-qty').innerHTML = totalStokTemp - total;
-	document.querySelector('#sumber-roll').innerHTML = totalStokRollTemp - totalRoll;
+	const sisa = totalStokTemp - total;
+	const sisaRoll = totalStokRollTemp - totalRoll;
+	document.querySelector('#sumber-qty').innerHTML = (sisa < 0 ? 0 : sisa);
+	document.querySelector('#sumber-roll').innerHTML = (sisaRoll < 0 ? 0 : sisaRoll)
 	tempItem.qty_sumber = total;	
 	tempItem.jumlah_roll_sumber = totalRoll;	
 
@@ -1210,17 +1290,26 @@ function editData(id){
 			tempItem.qty_hasil= list.qty_hasil;
 			tempItem.jumlah_roll_hasil= list.jumlah_roll_hasil;
 
+			const tgl = list.tanggal.split('-').reverse().join('/');
+			addTanggal.val(tgl);
 			tokoNew.val(tempItem.toko_id).change();
 			gudangNew.val(tempItem.gudang_id).change();
 			brgNewSumber.val(tempItem.barang_id_sumber+'-'+tempItem.warna_id_sumber).change();
 			brgNewHasil.val(tempItem.barang_id_hasil).change();
-
 			warnaNewHasil.val(tempItem.warna_id_hasil).change();
-					
-			// console.log(list);
+			brgNewSumber.prop('disabled',true);
+			brgNewHasil.prop('disabled',true);
+			warnaNewHasil.prop('disabled',true);
+			tokoNew.prop('disabled',true);
+			gudangNew.prop('disabled',true);
+
+			// addTanggal.val(`${tgl}`);
+			// $("#newTanggal").val();
+			// console.log(tgl);
 
 			setTimeout(() => {
 				dialog.modal('hide');
+				console.log(typeof list.rekap_sumber);
 				const rS = JSON.parse(list.rekap_sumber);
 				const nRS = {};
 				rS.forEach(item => {
@@ -1245,6 +1334,7 @@ function editData(id){
 				}
 				
 				setEqual('equal_new');
+				
 				$(`#equal_new`).uniform.update();
 
 				if (list.equal_status == 0) {

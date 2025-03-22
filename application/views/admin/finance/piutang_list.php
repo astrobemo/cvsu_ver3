@@ -35,7 +35,8 @@
 					</div>
 					<div class="portlet-body">
 						<form>
-							Per Tanggal : <input readonly name='tanggal' class='date-picker' style='max-width:150px;' value="<?=is_reverse_date($tanggal)?>">
+							Transaksi : <input readonly name='tanggal_start' class='date-picker' style='max-width:150px;' value="<?=is_reverse_date($tanggal_start)?>">
+							s/d <input readonly name='tanggal_end' class='date-picker' style='max-width:150px;' value="<?=is_reverse_date($tanggal_end)?>">
 							<button class='btn btn-xs btn-default'><i class='fa fa-search'></i></button>
 						</form>
 						<hr/>

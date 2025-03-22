@@ -51,6 +51,7 @@
 									<!-- <th scope="col">
 										Tanggal
 									</th> -->
+									<th>No</th>
 									<th scope="col" style='width:150px !important'>
 										No Faktur
 									</th>
@@ -74,6 +75,7 @@
 								foreach ($penjualan_list as $row) { ?>
 									<tr>
 										<!-- <td><?=is_reverse_date($row->tanggal);?></td> -->
+										<td><?=($idx+1);?></td>
 										<td><?=$row->no_faktur;?></td>
 										<td><?=$row->nama_customer;?></td>
 										<td><?=number_format($row->amount,'0',',','.');?></td>
@@ -108,7 +110,7 @@
 								<?}?>
 
 								<tr style='font-size:1.1em;font-weight:bold; border-top:2px solid black'>
-									<td colspan = '2'>Total Transaksi</td>
+									<td colspan = '3'>Total Transaksi</td>
 									<td><?=$idx;?></td>
 									<?foreach ($pembayaran_type as $row2) { ?>
 										<td>

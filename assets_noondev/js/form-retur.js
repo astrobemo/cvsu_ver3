@@ -15,11 +15,8 @@ var FormNewReturDetail = function () {
                 errorClass: 'help-block help-block-error', // default input error message class
                 focusInvalid: true, // do not focus the last invalid input
                 rules: {
-                    barang_id: {
+                    barang_id_source: {
                         required: true,
-                    },
-                    warna_id: {
-                        required: true
                     },
                     harga_jual: {
                         required: true

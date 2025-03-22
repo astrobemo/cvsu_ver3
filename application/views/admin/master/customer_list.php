@@ -369,7 +369,7 @@ jQuery(document).ready(function() {
 
             var btn_edit = "";
             var btn_status = "";
-            <?if (is_posisi_id() <= 3) {?>
+            <?if (is_master_admin()) {?>
             	btn_edit = "<a href='#portlet-config-edit' data-toggle='modal' class='btn-xs btn green btn-edit'><i class='fa fa-edit'></i> </a>";
 	            if (status_aktif == 1 ) {
 	            	btn_status = "<a class='btn-xs btn red btn-remove'><i class='fa fa-times'></i> </a>";

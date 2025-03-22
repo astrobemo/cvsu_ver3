@@ -42,8 +42,9 @@ class Admin extends CI_Controller {
 		if (is_posisi_id() < 3) {
 			$content = 'admin/dashboard';
 		}else{
-			$content = 'admin/dashboard_staff';
 		}
+		$content = 'admin/dashboard_staff';
+
 		$data = array(
 			'content' => $content,
 			'breadcrumb_title' => 'Dashboard',
@@ -60,7 +61,11 @@ class Admin extends CI_Controller {
 		$data['notifikasi_faktur_kosong'] = array();
 		$data['recap_pembelian_bulanan'] = array();
 		$data['recap_penjualan_bulanan'] = array();
-		// echo 'tet';
+		// $data['test'] = $this->common_model->db_custom_query("CALL TESTING2();");
+
+		// $test = $this->common_model->db_custom_query("CALL TESTING3();");
+
+		// print_r($data['test']->result());
 		$this->load->view('admin/template',$data);
 	}
 
@@ -265,32 +270,59 @@ class Admin extends CI_Controller {
 
 	function get_penjualan_bulan(){
 
-		$recap_list = $this->admin_model->get_list_penjualan_by_date(date('Y-m-01'), date('Y-m-t'));
+		$tanggal_start = $this->input->post('tanggal_start');
+		$tanggal_end = $this->input->post('tanggal_end');
+
+		$recap_list = $this->admin_model->get_list_penjualan_by_date($tanggal_start, $tanggal_end);
 		echo json_encode($recap_list);
 	}
 
 	function get_penjualan_tahun(){
 
-		$recap_list = $this->admin_model->get_list_penjualan_tahunan(date('Y-01-01'), date('Y-12-31'));
+		$tgl_start = date('Y-01-01');
+		$tgl_end = date('Y-12-31');
+
+		if ($this->input->get('tahun') != '') {
+			$tahun = $this->input->get('tahun');
+			$tgl_start = date($tahun.'-01-01');
+			$tgl_end = date($tahun.'-12-31');
+		}
+
+		$recap_list = $this->admin_model->get_list_penjualan_tahunan($tgl_start, $tgl_end);
 
 		echo json_encode($recap_list);
 	}
 
 	function get_barang_jual_terbanyak(){
-		$recap_list = $this->admin_model->get_barang_jual_terbanyak(date('Y'));
+		$tahun = date('Y');
+
+		if ($this->input->get('tahun') != '') {
+			$tahun = $this->input->get('tahun');
+		}
+		$recap_list = $this->admin_model->get_barang_jual_terbanyak($tahun);
 
 		echo json_encode($recap_list);
 	}
 
 	function get_customer_beli_terbanyak(){
-		$recap_list = $this->admin_model->get_customer_beli_terbanyak(date('Y'));
+		$tahun = date('Y');
+
+		if ($this->input->get('tahun') != '') {
+			$tahun = $this->input->get('tahun');
+		}
+		$recap_list = $this->admin_model->get_customer_beli_terbanyak($tahun);
 
 		echo json_encode($recap_list);
 	}
 
 
 	function get_barang_jual_warna_terbanyak(){
-		$recap_list = $this->admin_model->get_barang_jual_warna_terbanyak(date('Y'));
+		$tahun = date('Y');
+
+		if ($this->input->get('tahun') != '') {
+			$tahun = $this->input->get('tahun');
+		}
+		$recap_list = $this->admin_model->get_barang_jual_warna_terbanyak($tahun);
 
 		echo json_encode($recap_list);
 	}

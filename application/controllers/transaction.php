@@ -3,6 +3,7 @@
 class Transaction extends CI_Controller {
 
 	private $data = [];
+	
 
 	function __construct() 
 	{
@@ -14,6 +15,9 @@ class Transaction extends CI_Controller {
 		}
 		$this->data['username'] = is_username();
 		$this->data['user_menu_list'] = is_user_menu(is_posisi_id());
+
+    //     $this->load->database('mysqli');
+
 		$this->load->model('transaction_model','tr_model',true);
 		$this->load->model('finance_model','fi_model',true);
 		
@@ -27,6 +31,9 @@ class Transaction extends CI_Controller {
 		$this->warna_list_aktif = $this->common_model->db_select('nd_warna where status_aktif = 1 ORDER BY warna_jual asc');
 		$this->barang_list_aktif = $this->common_model->get_barang_list_aktif();
 		$this->satuan_list_aktif = $this->common_model->db_select('nd_satuan where status_aktif = 1');
+		$this->barang_sku_aktif = $this->common_model->db_select('nd_barang_sku where status_aktif = 1');
+
+		$this->mysqli_conn = $this->db->conn_id;
 	}
 
 	function index(){
@@ -46,6 +53,61 @@ class Transaction extends CI_Controller {
 			print_r($baris);
 		}
 	}
+
+	function register_new_sku($barang_id, $warna_id, $is_eceran){
+
+		$get_sku = $this->common_model->db_select("nd_barang_sku where
+		 barang_id = $barang_id and warna_id = $warna_id and isEceran=$is_eceran");
+
+		$sku_id = 0;
+		foreach ($get_sku as $row) {
+			$sku_id = $row->id;
+		}
+
+		if($sku_id == 0){
+
+			$barang_data = $this->common_model->db_select("nd_barang WHERE id='$barang_id'");
+			$warna_data = $this->common_model->db_select("nd_warna WHERE id='$warna_id'");
+			$nama_barang = '';
+			$satuan_id = '';
+			$packaging_id = '';
+			$nama_satuan = '';
+			$nama_packaging = '';
+	
+			foreach ($barang_data as $row) {
+				$nama_barang = $row->nama_jual.' ';
+				$satuan_id = $row->satuan_id;
+				$packaging_id = $row->packaging_id;
+	
+			}
+			foreach ($warna_data as $row) {
+				$nama_barang .= $row->warna_jual;
+			}
+	
+			foreach ($this->satuan_list_aktif as $row) {
+				if ($row->id == $satuan_id) {
+					$nama_satuan = $row->nama;
+				}
+	
+				if ($row->id == $packaging_id) {
+					$nama_packaging = $row->nama;
+				}
+			}
+			
+			$nSku = array(
+				'barang_id' => $barang_id,
+				'warna_id' => $warna_id, 
+				'nama_barang' => $nama_barang.($is_eceran == 1 ? ' .' : ''),
+				'nama_satuan' => $nama_satuan, 
+				'nama_packaging' => $nama_packaging, 
+				'user_id' => is_user_id(),
+				'status_aktif'=> 1
+			);
+	
+			$this->common_model->db_insert("nd_barang_sku", $nSku);	
+		}
+
+	}  
 
 //===================================ajax_check=============================================
 
@@ -131,10 +193,10 @@ class Transaction extends CI_Controller {
         // paging
         $sLimit = "";
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -143,7 +205,7 @@ class Transaction extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -158,7 +220,7 @@ class Transaction extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -173,7 +235,7 @@ class Transaction extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -482,10 +544,10 @@ class Transaction extends CI_Controller {
         // paging
         $sLimit = "";
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -494,7 +556,7 @@ class Transaction extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -509,7 +571,7 @@ class Transaction extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -524,7 +586,7 @@ class Transaction extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -568,10 +630,10 @@ class Transaction extends CI_Controller {
         // paging
         $sLimit = "";
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -580,7 +642,7 @@ class Transaction extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -595,7 +657,7 @@ class Transaction extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -610,7 +672,7 @@ class Transaction extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -860,16 +922,23 @@ class Transaction extends CI_Controller {
 			$result_id = $this->common_model->db_insert('nd_pembelian_detail',$data);
             $pembelian_detail_id = $result_id;
 
+			//cek_sku_id
+			$this->register_new_sku($barang_id, $warna_id, 0);
             foreach ($rekap_qty as $key => $value) {
                 $qty_data = explode('??', $value);
-                $data_detail[$key] = array(
-                    'pembelian_detail_id' => $pembelian_detail_id ,
-                    'qty' => $qty_data[0],
-                    'jumlah_roll' => $qty_data[1] );
+				if ($qty_data[0] != 0 && $qty_data[1] != 0) {
+					$data_detail[$key] = array(
+						'pembelian_detail_id' => $pembelian_detail_id ,
+						'qty' => $qty_data[0],
+						'jumlah_roll' => $qty_data[1] 
+					);
+				}
             }
 
             $this->common_model->db_insert_batch('nd_pembelian_qty_detail', $data_detail);
 		}else{
+
+			$this->register_new_sku($barang_id, $warna_id,0  );
 			$this->common_model->db_update('nd_pembelian_detail',$data,'id',$pembelian_detail_id);
 		}
 
@@ -1184,6 +1253,9 @@ class Transaction extends CI_Controller {
         //     $status_aktif = $this->input->get('status_aktif');
         // }
 
+		$tanggal_start = date('Y-m-d', strtotime('-3 months'));
+		$tanggal_end = date('Y-m-d');
+
 		$data = array(
 			'content' =>'admin/transaction/penjualan_list',
 			'breadcrumb_title' => 'Transaction',
@@ -1192,12 +1264,22 @@ class Transaction extends CI_Controller {
 			'nama_submenu' => $menu[1],
 			'common_data'=> $this->data,
             'status_aktif' => $status_aktif,
+			'tanggal_start' => is_reverse_date($tanggal_start),
+			'tanggal_end' => is_reverse_date($tanggal_end),
 			'data_isi'=> $this->data );
 
 
 		$data['user_id'] = is_user_id();
-		$data['penjualan_list'] = $this->common_model->db_select('nd_penjualan order by tanggal desc'); 
-		$this->load->view('admin/template',$data);
+		// $data['penjualan_list'] = $this->common_model->db_select('nd_penjualan order by tanggal desc'); 
+		$data['penjualan_list'] = array();
+		if (is_posisi_id() != 1) {
+			$this->load->view('admin/template',$data);
+			# code...
+		}else{
+			// $data['content'] = 'admin/transaction/penjualan_list_test';
+			$this->load->view('admin/template',$data);
+
+		}
 	}
 
 	function data_penjualan(){
@@ -1208,11 +1290,21 @@ class Transaction extends CI_Controller {
         
         // paging
         $sLimit = "";
+
+		$tanggal_start = date('Y-m-d', strtotime('-3 months'));
+		$tanggal_end = date('Y-m-d');
+
+		if ($this->input->get('tanggal_start') == '' && $this->input->get('tanggal_end') == '') {
+			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
+			$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
+		}
+
+
         if ( isset( $_GET['iDisplayStart'] ) && $_GET['iDisplayLength'] != '-1' ){
-            $sLimit = "LIMIT ".mysql_real_escape_string( $_GET['iDisplayStart'] ).", ".
-                mysql_real_escape_string( $_GET['iDisplayLength'] );
+            $sLimit = "LIMIT ".$this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] ).", ".
+                $this->mysqli_conn->real_escape_string( $_GET['iDisplayLength'] );
         }
-        $numbering = mysql_real_escape_string( $_GET['iDisplayStart'] );
+        $numbering = $this->mysqli_conn->real_escape_string( $_GET['iDisplayStart'] );
         $page = 1;
         
         // ordering
@@ -1221,7 +1313,7 @@ class Transaction extends CI_Controller {
             for ( $i=0 ; $i<intval( $_GET['iSortingCols'] ) ; $i++ ){
                 if ( $_GET[ 'bSortable_'.intval($_GET['iSortCol_'.$i]) ] == "true" ){
                     $sOrder .= $aColumns[ intval( $_GET['iSortCol_'.$i] ) ]."
-                        ".mysql_real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
+                        ".$this->mysqli_conn->real_escape_string( $_GET['sSortDir_'.$i] ) .", ";
                 }
             }
             
@@ -1236,7 +1328,7 @@ class Transaction extends CI_Controller {
         if ( $_GET['sSearch'] != "" ){
             $sWhere = "WHERE (";
             for ( $i=0 ; $i<count($aColumns) ; $i++ ){
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string( $_GET['sSearch'] )."%' OR ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string( $_GET['sSearch'] )."%' OR ";
             }
             $sWhere = substr_replace( $sWhere, "", -3 );
             $sWhere .= ')';
@@ -1251,7 +1343,7 @@ class Transaction extends CI_Controller {
                 else{
                     $sWhere .= " AND ";
                 }
-                $sWhere .= $aColumns[$i]." LIKE '%".mysql_real_escape_string($_GET['sSearch_'.$i])."%' ";
+                $sWhere .= $aColumns[$i]." LIKE '%".$this->mysqli_conn->real_escape_string($_GET['sSearch_'.$i])."%' ";
             }
         }
 
@@ -1278,11 +1370,11 @@ class Transaction extends CI_Controller {
                 }
             }
         }
-        $rResult = $this->tr_model->get_penjualan_list_ajax($aColumns, $sWhere, $sOrder, $sLimit);        
+        $rResult = $this->tr_model->get_penjualan_list_ajax($aColumns, $sWhere, $sOrder, $sLimit, $tanggal_start, $tanggal_end);        
         
         
         $rResultTotal = $this->common_model->db_select_num_rows('nd_penjualan ');
-        $Filternya = $this->tr_model->get_penjualan_list_ajax($aColumns, $sWhere, $sOrder, '');
+        $Filternya = $this->tr_model->get_penjualan_list_ajax($aColumns, $sWhere, $sOrder, '', $tanggal_start, $tanggal_end);
         $iFilteredTotal = $Filternya->num_rows();
         // $iTotal = $rResultTotal;
         // $iFilteredTotal = $iTotal;
@@ -1312,12 +1404,18 @@ class Transaction extends CI_Controller {
 		$tanggal = is_date_formatter($this->input->post('tanggal'));
 		$tahun = date('Y', strtotime($tanggal));
 		$no_faktur = 1;
+		$ppn = 10;
         $ini = $this->input;
 		$penjualan_type_id = $ini->post('penjualan_type_id');
         $customer_id = ($penjualan_type_id != 3 ? $ini->post('customer_id') : 0) ;
         $data_get = $this->common_model->db_select("nd_penjualan where YEAR(tanggal)='".$tahun."' order by no_faktur desc limit 1 ");
 		foreach ($data_get as $row) {
 			$no_faktur = $row->no_faktur + 1;
+		}
+		
+		$ppn_get = $this->common_model->db_select("nd_ppn WHERE tanggal = ( SELECT max(tanggal) FROM nd_ppn WHERE tanggal <= '$tanggal' ) ");
+		foreach ($ppn_get as $row) {
+			$ppn = $row->ppn;
 		}
 
         $jt = is_date_formatter($ini->post('jatuh_tempo'));
@@ -1329,9 +1427,10 @@ class Transaction extends CI_Controller {
 
         // echo $jt;
         $data = array(
-			'toko_id' => 1,
+			// 'toko_id' => 1,
 			'penjualan_type_id' => $ini->post('penjualan_type_id') ,
 			'tanggal' => $tanggal,
+			'ppn' => $ppn,
 			// 'no_faktur' => $no_faktur,
 			'customer_id' => $customer_id,
 			'closed_by' => 0,
@@ -1373,10 +1472,15 @@ class Transaction extends CI_Controller {
         if ($penjualan_type_id == 3) {
             $customer_id = null;
         }
-		
+		$ppn = 10;
+		$ppn_get = $this->common_model->db_select("nd_ppn WHERE tanggal = ( SELECT max(tanggal) FROM nd_ppn WHERE tanggal <= '$tanggal' ) ");
+		foreach ($ppn_get as $row) {
+			$ppn = $row->ppn;
+		}
         $data = array(
 			'penjualan_type_id' => $ini->post('penjualan_type_id') ,
 			'tanggal' => $tanggal,
+			'ppn' => $ppn,
 			'customer_id' => $customer_id ,
 			'po_number' => $ini->post('po_number'),
 			'jatuh_tempo' => is_date_formatter($ini->post('jatuh_tempo')),
@@ -1410,6 +1514,9 @@ class Transaction extends CI_Controller {
 		$menu = is_get_url($this->uri->segment(1)) ;
 		// $id = $this->uri->segment(2);
 		$id = $this->input->get('id');
+		$is_toko = [];
+		
+
 
 		$data = array(
 			'content' =>'admin/transaction/penjualan_list_detail',
@@ -1418,15 +1525,28 @@ class Transaction extends CI_Controller {
 			'nama_menu' => $menu[0],
 			'nama_submenu' => $menu[1],
 			'common_data'=> $this->data,
+			'is_toko' => $is_toko,
 			'data_isi'=> $this->data,
 			'penjualan_type' => $this->common_model->db_select('nd_penjualan_type'),
 			'pembayaran_type' => $this->common_model->db_select('nd_pembayaran_type'),
 			'printer_list' => $this->common_model->db_select('nd_printer_list')
 			);
 
+		$data['dp_list_detail'] = array(); 
+		$data['penjualan_data'] = array();
+		$data['penjualan_detail'] = array();
+		$data['total_jual'] = 0;
+		$data['pembayaran_penjualan'] = array();
+		$data['saldo_awal'] = 0;
+		$data['data_giro'] = array();
+		$data['penjualan_print'] = array();
+		$data['data_toko'] = array();
+		$data['penjualan_invoice'] = [];
+
 
 		if ($id != '') {
 			$penjualan_data = $this->tr_model->get_data_penjualan($id);
+			$data['penjualan_invoice'] = $this->common_model->db_select("nd_penjualan_invoice where penjualan_id = $id");
 			$data['penjualan_data'] = $penjualan_data;
 			foreach ($penjualan_data as $row) {
 				$penjualan_type_id = $row->penjualan_type_id;
@@ -1438,7 +1558,15 @@ class Transaction extends CI_Controller {
 			}
 			$data['penjualan_detail'] = $this->tr_model->get_data_penjualan_detail($id);
 			$total_jual = 0;
+			foreach($this->toko_list_aktif as $row){
+				$is_toko[$row->id] = array(
+					"color"=> $row->color_code,
+					"nama" => $row->nama,
+					"item" => 0
+				);
+			}
 			foreach ($data['penjualan_detail'] as $row) {
+				$is_toko[$row->toko_id]["item"]++;
 				$total_jual += $row->qty * $row->harga_jual;
 			}
 			$data['total_jual'] = $total_jual;
@@ -1472,17 +1600,8 @@ class Transaction extends CI_Controller {
             if ($no_faktur != '') {
                 $data['next_nota']  = $this->common_model->get_next_faktur($no_faktur, $tanggal);
             }
+			$data['is_toko'] = $is_toko;
 
-		}else{
-            $data['dp_list_detail'] = array(); 
-			$data['penjualan_data'] = array();
-			$data['penjualan_detail'] = array();
-			$data['total_jual'] = 0;
-			$data['pembayaran_penjualan'] = array();
-			$data['saldo_awal'] = 0;
-			$data['data_giro'] = array();
-			$data['penjualan_print'] = array();
-			$data['data_toko'] = array();
 		}
 
 		$tipe = '';
@@ -1623,6 +1742,7 @@ class Transaction extends CI_Controller {
 						'qty' => $qty[0],
 						'jumlah_roll' => 1,
 						'stok_eceran_qty_id' => $qty[1],
+						'supplier_id' => $qty[3],
 						'eceran_source' => $qty[4]
 					);
 				}else{
@@ -1680,6 +1800,8 @@ class Transaction extends CI_Controller {
 
 	function update_penjualan_detail_harga(){
 		$id = $this->input->post('id');
+		$harga_jual = $this->input->post('harga_jual');
+		$harga_jual = str_replace('.', '', $harga_jual);
 		$data = array(
 			'harga_jual' => $this->input->post('harga_jual') );
 		$this->common_model->db_update('nd_penjualan_detail',$data,'id',$id);
@@ -1938,11 +2060,17 @@ class Transaction extends CI_Controller {
 	function penjualan_list_close()
 	{
 		$id = $this->input->get('id');
+		
+		// total toko adalah total item tiap toko (cth 1,1 artinya toko 1 ada 1 item dan toko 2 ada 1 item)
+		$total_toko = explode("," ,$this->input->get('total_toko'));
+		// list toko adalah list id toko yang ada dikaitkan dengan total toko
+		$list_toko = explode("," ,$this->input->get('list_toko'));
 		$no_faktur = 1;
 		$tanggal = $this->input->get('tanggal');
         $tahun = date('Y', strtotime($tanggal));
-		$bulan = date('m', strtotime($bulan));
+		$bulan = date('m', strtotime($tanggal));
 		$revisi = 1;
+
 
 		$get = $this->common_model->db_select("nd_penjualan where id=".$id);
 		foreach ($get as $row) {
@@ -1950,18 +2078,76 @@ class Transaction extends CI_Controller {
 			$revisi = $row->revisi+1;
 		}
 
-		if ($no_faktur == '') {
-			$data_get = $this->common_model->db_select("nd_penjualan where YEAR(tanggal)='".$tahun."' order by no_faktur desc limit 1 ");
-			foreach ($data_get as $row) {
-				$no_faktur = $row->no_faktur + 1;
+		$getInvoice = $this->common_model->db_select("nd_penjualan_invoice where penjualan_id=".$id);
+		$listNoInvoice = [];
+		foreach ($getInvoice as $row) {
+			$listNoInvoice[$row->toko_id] = array(
+				"no" => $row->no_faktur,
+				"id" => $row->id
+			);
+		}
+
+		$kode_toko = [];
+		foreach ($this->toko_list_aktif as $row) {
+			$kode_toko[$row->id] = $row->kode_toko;
+		}
+
+		$get_romani = $this->common_model->db_select("romani where id='".(int)$bulan."'");
+		foreach ($get_romani as $row) {
+			$romani = $row->romani;
+		}
+
+		/* echo $no_faktur;
+		echo '<br/> total toko';
+		print_r($total_toko);
+		echo '<br/> invoice';
+		print_r($listNoInvoice);
+		echo '<br/>';
+
+		foreach ($total_toko as $key => $value) {
+			$toko_id_cek = $list_toko[$key];
+			echo $toko_id_cek.'--'.$key.'-->'.$value.'<br/>';
+			// kalo ada item di toko tersebut 
+
+			if ($value > 0) {
+				if(!isset($listNoInvoice[$toko_id_cek])){
+					echo 'insert<br/>';
+				}else{
+					echo 'update<br/>';
+				}
+			}else if(isset($listNoInvoice[$toko_id_cek])){
+				echo 'update2';
 			}
-            if ($no_faktur == '') {
-                $no_faktur = 1;
-            }
+		} */
+
+
+		if ($no_faktur == '') {
+
+			if ($tanggal <= '2024-08-31') {
+				$data_get = $this->common_model->db_select("nd_penjualan where YEAR(tanggal)='".$tahun."' AND tanggal <= '2024-08-31' order by no_faktur desc limit 1 ");
+				foreach ($data_get as $row) {
+					$no_faktur = $row->no_faktur + 1;
+				}
+				if ($no_faktur == '') {
+					$no_faktur = 1;
+				}
+	
+				$no_faktur_lengkap = $tahun.'/CVSUN/INV/'.str_pad($no_faktur,4,"0",STR_PAD_LEFT);
+			}else{
+				$no_faktur = 1;
+				$data_get = $this->common_model->db_select("nd_penjualan where YEAR(tanggal)='".$tahun."' AND MONTH(tanggal)='".$bulan."' order by no_faktur desc limit 1 ");
+				foreach ($data_get as $row) {
+					$no_faktur = $row->no_faktur + 1;
+				}
+				
+				$no_faktur_lengkap = $tahun.'/'.$romani.'/'.str_pad($no_faktur,4,"0",STR_PAD_LEFT);
+			}
+
 			// echo $id;
 			$data = array(
 				'closed_by' => is_user_id() ,
 				'no_faktur' => $no_faktur,
+				'no_faktur_lengkap' => $no_faktur_lengkap,
 				'closed_date' => date('Y-m-d H:i:s'),
 				'revisi' => $revisi,
 				'status' => 0 );
@@ -1974,8 +2160,48 @@ class Transaction extends CI_Controller {
 				'status' => 0 );
 		}
 
+		$data_new_invoice = [];
+		foreach ($total_toko as $key => $value) {
+			$toko_id_cek = $list_toko[$key];
+			if ($value > 0) {
+				if(!isset($listNoInvoice[$toko_id_cek])){
+					$get_latest_invoice = $this->common_model->db_select("nd_penjualan_invoice where toko_id = ".$toko_id_cek." and YEAR(tanggal)='".$tahun."' and MONTH(tanggal)='".$bulan."' and status_aktif = 1 order by no_faktur desc limit 1");
+					$no_faktur_toko = 1;
+					foreach ($get_latest_invoice as $row) {
+						$no_faktur_toko = $row->no_faktur + 1;
+					}
+
+					$no_faktur_lengkap_toko = "INV/".$tahun."/".$romani."/".$kode_toko[$toko_id_cek]."/".str_pad($no_faktur_toko,5,"0",STR_PAD_LEFT);
+
+					array_push($data_new_invoice, array(
+						'penjualan_id' => $id,
+						'toko_id' => $toko_id_cek,
+						'no_faktur' => $no_faktur_toko,
+						'no_faktur_lengkap' => $no_faktur_lengkap_toko,
+						'tanggal' => $tanggal
+					));
+				}else{
+					$nData = array(
+						'tanggal' => $tanggal 
+					);
+					$this->common_model->db_update('nd_penjualan_invoice',$nData,'id',$listNoInvoice[$toko_id_cek]['id']);		
+				}
+			}else if(isset($listNoInvoice[$toko_id_cek])){
+				$nData = array(
+						'tanggal' => $tanggal ,
+						'status_aktif' => -1
+				);
+				$this->common_model->db_update('nd_penjualan_invoice',$nData,'id',$listNoInvoice[$toko_id_cek]['id']);
+			}
+		}
+
+		// print_r($data_new_invoice);
+
+		if (count($data_new_invoice) > 0) {
+			$this->common_model->db_insert_batch('nd_penjualan_invoice', $data_new_invoice);
+		}
 		$this->common_model->db_update('nd_penjualan',$data,'id',$id);
-		redirect($this->setting_link('transaction/penjualan_list_detail').'/?id='.$id);
+		redirect($this->setting_link('transaction/penjualan_list_detail').'/?id='.$id); 
 	}
 
 	function penjualan_request_open(){
@@ -1992,15 +2218,16 @@ class Transaction extends CI_Controller {
 		$barang_id = $this->input->post('barang_id');
 		$warna_id = $this->input->post('warna_id');
         $tanggal = is_date_formatter($this->input->post('tanggal'));
+		$toko_id = $this->input->post('toko_id');
         // $get_stok_opname = $this->common_model->db_select("nd_stok_opname where tanggal <= '".$tanggal."' ORDER BY tanggal desc LIMIT 1");
-        $get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id);
+        $get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id, $toko_id);
 		$tanggal_awal = '2018-01-01';
         $stok_opname_id = 0;
         foreach ($get_stok_opname as $row) {
             $tanggal_awal = $row->tanggal;
             $stok_opname_id = $row->id;
         }
-		$result = $this->tr_model->get_qty_stok_by_barang($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
+		$result = $this->tr_model->get_qty_stok_by_barang($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $toko_id);
 		// $result = $this->tr_model->get_qty_stok_by_barang_2($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
 		
         // print_r($this->input->post());
@@ -2013,10 +2240,11 @@ class Transaction extends CI_Controller {
         $gudang_id = $this->input->post('gudang_id');
         $barang_id = $this->input->post('barang_id');
         $warna_id = $this->input->post('warna_id');
+		$toko_id = $this->input->post('toko_id');
         $isEceran = $this->input->post('is_eceran');
         $tanggal = is_date_formatter($this->input->post('tanggal'));
         // $get_stok_opname = $this->common_model->db_select("nd_stok_opname where tanggal <= '".$tanggal."' ORDER BY tanggal desc LIMIT 1");
-        $get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id);
+        $get_stok_opname = $this->common_model->get_latest_so($tanggal, $barang_id, $warna_id, $gudang_id, $toko_id);
 		$tanggal_awal = '2018-01-01';
         $stok_opname_id = 0;
         foreach ($get_stok_opname as $row) {
@@ -2027,7 +2255,9 @@ class Transaction extends CI_Controller {
 		
 
 		// echo $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id;
-        $get = $this->tr_model->get_qty_stok_by_barang_detail($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
+        $getStok = $this->tr_model->get_qty_stok_by_barang_detail($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id);
+		$get = $getStok['result'];
+		$getQuery = $getStok['query'];
         $result[0] = $get->result();
 
 		$res = array(
@@ -2038,7 +2268,7 @@ class Transaction extends CI_Controller {
 
 		$detail_id = $this->input->post('penjualan_list_detail_id');
 		$detail_id = ($detail_id=='' ? 0 : $detail_id);
-        $get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id);
+        $get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id, $toko_id);
 
 		foreach ($get_stok_opname as $row) {
             $tanggal_awal = $row->tanggal;
@@ -2061,9 +2291,14 @@ class Transaction extends CI_Controller {
 			'var' => $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id, $tanggal
 		);
 
+		$result[4] = $getQuery;
+
 		
 		
 		echo json_encode($result);
+		// if (is_posisi_id() == 1) {
+		// 	echo $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id;
+		// }
         
         // print_r($result);
     }
@@ -2141,8 +2376,10 @@ class Transaction extends CI_Controller {
 		$data['data_penjualan'] = $this->tr_model->get_data_penjualan($penjualan_id);
 		foreach ($data['data_penjualan'] as $row) {
 			$toko_id = $row->toko_id;
+			$tanggal = $row->tanggal;
 		}
-
+		$data['ppn_berlaku'] = get_ppn_berlaku($tanggal);
+		
 		$data['toko_data'] = $this->common_model->db_select('nd_toko where id='.$toko_id);
 		$data['data_pembayaran'] = $this->tr_model->get_data_pembayaran($penjualan_id);
         // $data['data_penjualan_detail'] = $this->tr_model->get_data_penjualan_detail_group($penjualan_id);
@@ -2230,232 +2467,6 @@ class Transaction extends CI_Controller {
 
 		$this->load->view('admin/transaction/penjualan_sj_print',$data);
 		
-	}
-
-//===================================Retur=============================================
-
-	function retur_jual_list(){
-		$menu = is_get_url($this->uri->segment(1)) ;
-
-		$data = array(
-			'content' =>'admin/transaction/retur_jual_list',
-			'breadcrumb_title' => 'Transaction',
-			'breadcrumb_small' => 'Daftar Retur',
-			'nama_menu' => $menu[0],
-			'nama_submenu' => $menu[1],
-			'common_data'=> $this->data,
-			'data_isi'=> $this->data );
-
-
-		$data['retur_list'] = $this->tr_model->get_retur_list(); 
-		$this->load->view('admin/template',$data);
-	}
-
-	function penjualan_list_retur(){
-		$id = $this->input->get('id');
-		$data_jual = $this->common_model->db_select('nd_penjualan where id='.$id);
-
-		$tanggal = is_date_formatter($this->input->post('tanggal'));
-		$tahun = date('Y', strtotime($tanggal));
-		$no_faktur = 1;
-		$data_get = $this->common_model->db_select("nd_retur_jual where YEAR(tanggal)='".$tahun."' order by no_faktur desc limit 1 ");
-		foreach ($data_get as $row) {
-			$no_faktur = $row->no_faktur + 1;
-		}
-
-		foreach ($data_jual as $row) {
-			$data = array(
-				'retur_type_id' => $row->penjualan_type_id ,
-				'tanggal' => date('Y-m-d'),
-				'no_faktur' => $no_faktur,
-				'customer_id' => $row->customer_id ,
-				'nama_keterangan' => $this->input->post('nama_keterangan') ,
-				'user_id' => is_user_id(),
-				);
-
-		}
-		$result_id = $this->common_model->db_insert('nd_retur_jual', $data);
-
-		$data_jual_detail = $this->common_model->db_select('nd_penjualan_detail where penjualan_id='.$id);
-		foreach ($data_jual_detail as $row) {
-			$data_detail = array(
-				'retur_jual_id' => $result_id ,
-				'gudang_id' => $row->gudang_id,
-				'barang_id' => $row->barang_id,
-				'warna_id' => $row->warna_id ,
-				'harga' => $row->harga_jual
-				);
-
-			$result_detail_id = $this->common_model->db_insert('nd_retur_jual_detail', $data_detail);
-
-			$data_jual_qty = $this->common_model->db_select('nd_penjualan_qty_detail where penjualan_detail_id='.$row->id );
-
-			foreach ($data_jual_qty as $row) {
-				$data_qty = array(
-					'retur_jual_detail_id' => $result_detail_id,
-					'qty' => $row->qty,
-					'jumlah_roll' => $row->jumlah_roll );
-
-				$this->common_model->db_insert('nd_retur_jual_qty', $data_qty);
-			}
-		}
-
-		redirect($this->setting_link('transaction/retur_jual_detail').'/?id='.$result_id);
-
-	}
-
-	function retur_jual_list_insert(){
-		$tanggal = is_date_formatter($this->input->post('tanggal'));
-		$tahun = date('Y', strtotime($tanggal));
-		$no_faktur = 1;
-		$data_get = $this->common_model->db_select("nd_retur_jual where YEAR(tanggal)='".$tahun."' order by no_faktur desc limit 1 ");
-		foreach ($data_get as $row) {
-			$no_faktur = $row->no_faktur + 1;
-		}
-
-		$data = array(
-			'retur_type_id' => $this->input->post('retur_type_id') ,
-			'tanggal' => $tanggal,
-			'no_faktur' => $no_faktur,
-			'customer_id' => $this->input->post('customer_id') ,
-			'nama_keterangan' => $this->input->post('nama_keterangan') ,
-			'user_id' => is_user_id(),
-			);
-
-		// print_r($data);
-
-		$result_id = $this->common_model->db_insert('nd_retur_jual',$data);
-		redirect($this->setting_link('transaction/retur_jual_detail').'/?id='.$result_id);
-
-	}
-
-	function retur_jual_list_update(){
-		$tanggal = is_date_formatter($this->input->post('tanggal'));
-		$id = $this->input->post('id');
-		$data = array(
-			'retur_type_id' => $this->input->post('retur_type_id') ,
-			'tanggal' => $tanggal,
-			'customer_id' => $this->input->post('customer_id') ,
-			'nama_keterangan' => $this->input->post('nama_keterangan') ,
-			'user_id' => is_user_id(),
-			);
-
-		// print_r($data);
-
-		$result_id = $this->common_model->db_update('nd_retur_jual',$data,'id',$id);
-		redirect($this->setting_link('transaction/retur_jual_detail').'/?id='.$id);
-
-	}
-
-	function retur_jual_detail(){
-		$menu = is_get_url($this->uri->segment(1)) ;
-		$id = $this->input->get('id');
-
-		$data = array(
-			'content' =>'admin/transaction/retur_jual_detail',
-			'breadcrumb_title' => 'Transaction',
-			'breadcrumb_small' => 'Retur Jual',
-			'nama_menu' => $menu[0],
-			'nama_submenu' => $menu[1],
-			'common_data'=> $this->data,
-			'data_isi'=> $this->data );
-
-		if ($id != '') {
-			$data['retur_data'] = $this->tr_model->get_retur_data($id);
-			$data['retur_detail'] = $this->tr_model->get_retur_detail($id); 
-		}else{
-			$data['retur_data'] = array();
-			$data['retur_detail'] = array(); 
-		}
-		$this->load->view('admin/template',$data);
-	}
-
-	function retur_jual_list_detail_insert(){
-
-		$retur_jual_id = $this->input->post('retur_jual_id');
-
-		$data = array(
-			'retur_jual_id' => $retur_jual_id ,
-			'gudang_id' => $this->input->post('gudang_id'),
-			'barang_id' => $this->input->post('barang_id'),
-			'warna_id' => $this->input->post('warna_id') ,
-			'harga' => str_replace('.', '', $this->input->post('harga')),
-			'keterangan' => $this->input->post('keterangan')
-			);
-		$result_id = $this->common_model->db_insert('nd_retur_jual_detail',$data);
-
-		$rekap = explode('--', $this->input->post('rekap_qty'));
-		foreach ($rekap as $key => $value) {
-			$qty = explode('??', $value);
-			$data_qty[$key] = array(
-				'retur_jual_detail_id' => $result_id,
-				'qty' => $qty[0],
-				'jumlah_roll' => $qty[1] ); 
-		}
-
-		$this->common_model->db_insert_batch('nd_retur_jual_qty',$data_qty);
-
-		// print_r($data);
-
-		// $result_id = $this->common_model->db_insert('nd_retur_jual',$data);
-		redirect($this->setting_link('transaction/retur_jual_detail').'/?id='.$retur_jual_id);
-	}
-
-	function retur_jual_qty_update(){
-		$retur_jual_detail_id = $this->input->post('retur_jual_detail_id');
-		$qty = $this->input->post('rekap_qty');
-
-		$qty_list = explode('--', $qty);
-		foreach ($qty_list as $key => $value) {
-			$qty = explode('??', $value);
-			$data_qty[$key] = array(
-				'retur_jual_detail_id' => $retur_jual_detail_id,
-				'qty' => $qty[0] ,
-				'jumlah_roll' => $qty[1] );
-		}
-
-		$this->common_model->db_delete('nd_retur_jual_qty','retur_jual_detail_id',$retur_jual_detail_id);
-		$this->common_model->db_insert_batch('nd_retur_jual_qty',$data_qty);
-		// print_r($this->input->post());
-		echo 'OK';
-	}
-
-	function retur_jual_request_open(){
-		// print_r($this->input->post());
-		$retur_id = $this->input->post('retur_jual_id');
-		$data = array(
-			'status' => 1 );
-		$this->common_model->db_update('nd_retur_jual',$data,'id',$retur_id);
-		redirect(is_setting_link('transaction/retur_jual_detail').'?id='.$retur_id);
-	}
-
-	function retur_jual_print(){
-
-		$retur_jual_id = $this->input->get('retur_jual_id');
-		$nama_customer = '';
-		$tanggal = '';
-		$no_faktur = '';
-		
-		$data['data_retur'] = $this->tr_model->get_retur_data($retur_jual_id);
-		$data['data_retur_detail'] = $this->tr_model->get_retur_jual_detail($retur_jual_id);
-
-		$this->load->library('fpdf17/fpdf_css');
-		$this->load->library('fpdf17/fpdf');
-
-		$this->load->view('admin/transaction/retur_jual_print',$data);
-		
-	}
-
-	function retur_jual_list_close()
-	{
-		$id = $this->input->get('id');
-		$data = array(
-			'closed_by' => is_user_id() ,
-			'closed_date' => date('Y-m-d H:i:s'),
-			'status' => 0 );
-
-		$this->common_model->db_update('nd_retur_jual',$data,'id',$id);
-		redirect($this->setting_link('transaction/retur_jual_detail'));
 	}
 
 //===================================Dp=============================================

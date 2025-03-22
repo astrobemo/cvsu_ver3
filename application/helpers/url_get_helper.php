@@ -23,7 +23,7 @@ if ( ! function_exists('is_get_url')){
 if ( ! function_exists('get_color_toko')){
 	function get_color_toko(){
 		$CI =& get_instance();
-		$CI->load->model('common_model');
+		$CI->load->model('common_model');	
 
 		$colorToko = [];
 		foreach ($CI->common_model->db_select("nd_toko") as $row) {

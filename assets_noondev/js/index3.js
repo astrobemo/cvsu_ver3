@@ -32,8 +32,13 @@ var Index = function() {
 
             }
 
+            const tanggalStart = $("#tanggalStartInput").val().split("/").reverse().join("-");
+            const tanggalEnd = $("#tanggalEndInput").val().split("/").reverse().join("-");
+
             var url = "admin/get_penjualan_bulan";
             var data_st  ={};
+            data_st['tanggal_start'] = tanggalStart;
+            data_st['tanggal_end'] = tanggalEnd;
             var data_set = [];
             var i = 0;
             ajax_data_sync(url,data_st).done(function(data_respond /* ,textStatus, jqXHR */){

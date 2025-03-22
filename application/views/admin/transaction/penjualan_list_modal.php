@@ -224,6 +224,7 @@
 			                    * </span>
 			                    </label>
 			                    <div class="col-md-6">
+			                    	<span class='toko_id_before' hidden></span>
 			                    	<span class='barang_id_before' hidden></span>
 			                    	<span class='warna_id_before' hidden></span>
 			                    	<span class='gudang_id_before' hidden></span>
@@ -301,9 +302,9 @@
 			                    <div class="col-md-6">
 	                    			<select name="warna_id" class='form-control' id='warna_id_select'>
 		                				<option value=''>Pilihan..</option>
-			                    		<?foreach ($this->warna_list_aktif as $row) { ?>
+			                    		<?/* foreach ($this->warna_list_aktif as $row) { ?>
 			                    			<option value="<?=$row->id?>"><?=$row->warna_jual;?></option>
-			                    		<?}?>
+			                    		<?} */?>
 			                    	</select>
 			                    </div>
 			                </div>
@@ -541,7 +542,7 @@
 	                    		<tr>
 	                    			<td>HARGA JUAL</td>
 	                    			<td class='padding-rl-5'></td>
-	                    			<td><input id='harga_jual_edit' name='harga_jual' class='form-control amount_number_comma harga_jual_edit' ></td>
+	                    			<td><input id='harga_jual_edit' name='harga_jual' class='form-control harga_jual_edit' ></td>
 	                    		</tr>
 	                    	</table>
 							<input name='rekap_qty' <?=(is_posisi_id() != 1 ? 'hidden' : '' )?> >
@@ -673,7 +674,7 @@
 										</tr>
 									</table>
 									
-									<div class='stok-info edit-eceran' id='stok-eceran-add' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
+									<div class='stok-info edit-eceran' id='stok-eceran-edit' style='border:1px solid #ddd; padding:5px; margin-bottom:20px;'>
 										STOK Eceran : <span class='stok-qty-eceran'>0</span>
 									</div>
 

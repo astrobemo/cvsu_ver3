@@ -79,6 +79,13 @@
 	background:lightpink !important;
 }
 
+#kartu-stok-eceran{
+	display: none;
+}
+
+#kartu-stok-copy{
+	display: none;
+}
 
 </style>
 
@@ -100,6 +107,20 @@
 					<div class="modal-body">
 						<form action="<?=base_url('inventory/penyesuaian_stok_insert')?>" class="form-horizontal" id="form_add_data" method="post">
 							<h3 class='block'> Penyesuaian Barang</h3>
+
+							<div class="form-group">
+								<label class="control-label col-md-4">Toko<span class="required">
+								* </span>
+								</label>
+								<div class="col-md-6">
+									<select class='input1 form-control' style='font-weight:bold' name="toko_id">
+										<?foreach ($this->toko_list_aktif as $row) { ?>
+											<option <?=($row->id == 1 ? 'selected' : '');?> value="<?=$row->id?>"><?=$row->nama;?></option>
+										<? } ?>
+									</select>
+								</div>
+							</div>
+
 							
 							<div class="form-group">
 			                    <label class="control-label col-md-4">Tipe<span class="required">
@@ -427,8 +448,8 @@
 							<div class="actions">
 								<a href="#portlet-config" data-toggle='modal' class="btn btn-default btn-sm btn-form-add hidden-print">
 								<i class="fa fa-plus"></i> Tambah </a>
-								<a href="#portlet-config-eceran" data-toggle='modal' class="btn btn-default btn-sm hidden-print">
-								<i class="fa fa-plus"></i> Eceran </a>
+								<!-- <a href="#portlet-config-eceran" data-toggle='modal' class="btn btn-default btn-sm hidden-print">
+								<i class="fa fa-plus"></i> Eceran </a> -->
 							</div>
 						<?}?>
 					</div>
@@ -463,6 +484,7 @@
 
 						<hr/>
 						<button class='btn green btn-kartu'>Kartu Stok</button>
+						<button class='btn yellow-gold btn-kartu-eceran'>Kartu Stok Eceran</button>
 						<button class='btn blue btn-detail'>List Stok</button>
 						<hr/>
 						<?
@@ -472,6 +494,13 @@
 							?>
 
 						<div id='kartu-stok'>
+							<h3>
+								Kartu Stok
+								<button class="btn btn-xs green" onclick="copyTableAsHTML()">Copy Table</button>
+							</h3>
+							<!-- <button onclick="copyTableAsText()">Copy as Plain Text</button>
+							<button onclick="copyTableAsCSV()">Copy as CSV</button> -->
+
 							<table class="table table-striped table-bordered table-hover" id="general_table">
 								<thead>
 									<tr>
@@ -565,9 +594,9 @@
 												<?if ($row->tipe == 'a1' || $row->tipe == 'a2' || $row->tipe == 'a3') {
 													if (is_posisi_id() < 3) {
 														if ($row->tipe == 'a1') { ?>
-															<a terget='_blank' style="color:red" href="<?=base_url().is_setting_link('transaction/pembelian_list_detail').'/'.$row->trx_id;?>"><?=($row->no_faktur !='' ? $row->no_faktur : '???');?></a>
+															<a terget='_blank' style="color:red" href="<?=base_url().is_setting_link('transaction/pembelian_list_detail').'/'.$row->trx_id;?>"><?=($row->no_faktur !='' ? $row->no_faktur : 'pembelian');?></a>
 														<?}elseif ($row->tipe == 'a2') { ?>
-															<a terget='_blank' href="<?=base_url().is_setting_link('transaction/penjualan_list_detail').'?id='.$row->trx_id;?>"><?=($row->no_faktur !='' ? $row->no_faktur : '???');?></a>
+															<a terget='_blank' href="<?=base_url().is_setting_link('transaction/penjualan_list_detail').'?id='.$row->trx_id;?>"><?=($row->no_faktur !='' ? $row->no_faktur : 'penjualan');?></a>
 														<?}elseif ($row->tipe == 'a3') { ?>
 															<a terget='_blank' href="<?=base_url().is_setting_link('transaction/retur_jual_detail').'?id='.$row->trx_id;?>"><?=($row->no_faktur !='' ? $row->no_faktur : '???');?></a>
 														<?}
@@ -593,6 +622,10 @@
 													echo "mutasi barang dari ".$row->no_faktur." ke ".$nama_gudang;
 												}elseif ($row->tipe == 'b2') {
 													echo "mutasi barang dari ".$nama_gudang." ke ".$row->no_faktur."";
+												}elseif ($row->tipe == 'ask') {
+													echo $row->no_faktur;
+												}elseif ($row->tipe == 'asm') {
+													echo $row->no_faktur;
 												}else if($row->tipe == 0 && $row->tipe != 'b1' && $row->tipe != 'b2' && $row->tipe != 'z1' && $row->tipe != 'ecer1' && $row->tipe != 'so'){
 													echo "<b>Mutasi Stok Awal</b>";
 												}elseif ($row->tipe == 'z1') {
@@ -612,14 +645,17 @@
 												<?}?>
 											</td>
 											<td>
-												<?if ($row->tipe != 'z1') {?>
+												<?if ($row->tipe != 'z1' && $row->tipe != 1 && $row->tipe != 'so') {?>
 													<?=($row->qty_masuk == 0 ?  '-' : "<span class='qty'>".$row->qty_masuk."</span>" );?>
 													<?$qty += $row->qty_masuk;?>
 													<?$total_in += $row->qty_masuk;?>
-												<?}else if($row->tipe != 'so'){
-													
+												<?}else if($row->tipe == 1){?>
+													<?=($row->qty_masuk == 0 ?  '-' : "<span class='qty'>".$row->qty_masuk."</span>" );?>
+													<?$qty += ($row->qty_masuk*$row->jumlah_roll_masuk);?>
+													<?$total_in += ($row->qty_masuk*$row->jumlah_roll_masuk);
 												}else{
 													$qty_so = $row->qty_masuk - $qty;
+													$qty = $row->qty_masuk;
 													$total_in += $qty_so;
 													echo "<span class='qty'>".$qty_so."</span>";
 
@@ -639,7 +675,11 @@
 											<td>
 												<?	echo ($row->qty_keluar == 0 ? '-' : "<span class='qty'>".$row->qty_keluar."</span>" ); 
 													$qty -= $row->qty_keluar;
-													$total_out += $row->qty_keluar;
+													if ($row->tipe==2) {
+														$total_out += ($row->qty_keluar*$row->jumlah_roll_keluar);
+													}else{
+														$total_out += $row->qty_keluar;
+													}
 												?>
 												
 											</td>
@@ -676,6 +716,67 @@
 										<td></td>
 										<td></td>
 										<td></td>
+									</tr>
+
+								</tbody>
+							</table>
+						</div>
+
+						<?
+							$qty = 0;
+							$roll = 0;
+
+							?>
+
+						
+
+						<div id='kartu-stok-eceran'>
+							<h3>Kartu Stok Eceran</h3>
+							<table class="table table-striped table-bordered table-hover" id="general_table_eceran">
+								<thead>
+									<tr>
+										<th scope="col" rowspan='2'>
+											Tanggal
+										</th>
+										<th scope="col" rowspan='2'>
+											Keterangan
+										</th>
+										<th scope="col" class="text-center">
+											Masuk (<?=$nama_satuan?>)
+										</th>
+										<th scope="col" class="text-center">
+											Keluar (<?=$nama_satuan?>)
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?
+									$total_in_ecer = 0 ;
+									$total_out_ecer = 0 ;
+									foreach ($kartu_stok_eceran as $row) { 
+										$total_in_ecer += $row->qty_in;
+										$total_out_ecer += $row->qty_out;
+										?>
+										<tr>
+											<td>
+												<?=date('d F Y', strtotime($row->tanggal));?>
+											</td>
+											<td>
+												<?=$row->keterangan?>
+											</td>
+											<td class="text-center">
+												<?=($row->qty_in == 0 ? "" : (float)$row->qty_in)?>
+											</td>
+											<td class="text-center">
+												<?=($row->qty_out == 0 ? "" : (float)$row->qty_out)?>
+											</td>
+										</tr>
+									<? } ?>
+									<tr>
+										<td></td>
+										<td></td>
+										<td class="text-center"><?=$total_in_ecer;?></td>
+										<td class="text-center"><?=$total_out_ecer;?></td>
 									</tr>
 
 								</tbody>
@@ -846,7 +947,232 @@
 		                	<a href="javascript:window.open('','_self').close();" class="btn default button-previous hidden-print">Close</a>
 		                	<button onclick='window.print()' class="btn blue hidden-print"><i class='fa fa-print'></i> Print</button>
 						</div>
+						
+						<div id="kartu-stok-copy">
+							
+							<table id="general_table_copy">
+								<thead>
+									<tr>
+										<th>Tanggal</th>
+										<th colspan='7'><span><?=$tanggal_start.' - '.$tanggal_end;?></span></th>
+									</tr>
+									<tr>
+										<th>Barang</th>
+										<th colspan='7'><span><?=$nama_jual.' '.$warna_jual;?></span></th>
+									</tr>
+									<tr>
+										<th>Lokasi</th>
+										<th colspan="7"><?=$nama_gudang;?></th>
+									</tr>
+									<tr>
+										<th colspan="8"></th>
+									</tr>
+									<tr>
+										<th scope="col" rowspan='2'>
+											Tanggal
+										</th>
+										<th scope="col" rowspan='2'>
+											Keterangan
+										</th>
+										<th scope="col" colspan='2'>
+											Masuk
+										</th>
+										<th scope="col" colspan='2'>
+											Keluar
+										</th>
+										<th colspan='2'>
+											Saldo
+										</th>
+									</tr>
+									<tr>
+										<th scope="col">
+											<?=$nama_satuan?>
+										</th>
+										<th scope="col">
+											<?=$nama_packaging?>
+										</th>
+										<th scope="col">
+											<?=$nama_satuan?>
+										</th>
+										<th scope="col">
+											<?=$nama_packaging?>
+										</th>
+										<th scope="col">
+											<?=$nama_satuan?>
+										</th>
+										<th scope="col">
+											<?=$nama_packaging?>
+										</th>
+	
+									</tr>
+								</thead>
+								<tbody>
+									<?
+									$total_in = 0;
+									$total_out = 0;
+									// print_r($stok_awal);
+									foreach ($stok_awal as $row) { ?>
+										<tr>
+											<td>
+												<b>Stok Awal</b>
+											</td>
+											<td></td>
+											<td>
+												<?=($row->qty_masuk == 0 ?  '-' :  $row->qty_masuk );?>
+												<?$qty += $row->qty_masuk;?>
+												<?$total_in += $row->qty_masuk;?>
+											</td>
+											<td>
+												<?=($row->jumlah_roll_masuk == 0 ? '-' : $row->jumlah_roll_masuk ) ;?>
+												<?$roll += $row->jumlah_roll_masuk;?>
+	
+											</td>
+	
+											<td>
+												<?=($row->qty_keluar == 0 ? '-' : $row->qty_keluar );?>
+												<?$qty -= $row->qty_keluar;?>
+												<?$total_out += $row->qty_keluar;?>
+	
+	
+											</td>
+											<td>
+												<?=($row->jumlah_roll_keluar == 0 ? '-' : $row->jumlah_roll_keluar ) ;?>
+												<?$roll-= $row->jumlah_roll_keluar;?>
+	
+											</td>
+											<td <? if ($qty < 0): echo "style='color:red'"; endif ?>>
+												<b><?=number_format($qty,'2',',','.');?></b> 
+											</td>
+											<td <? if ($roll < 0): echo "style='color:red'"; endif ?>>
+												<b><?=number_format($roll,'0',',','.');?></b> 
+											</td>
+										</tr>
+									<?}?>
+									<?foreach ($stok_barang as $row) { ?>
+										<tr >
+											<td>
+												<?=date('d F Y', strtotime($row->tanggal));?>
+												<span class='tanggal' hidden><?=is_reverse_date($row->tanggal)?></span>
+											</td>
+											<td>
+												<?if ($row->tipe == 'a1' || $row->tipe == 'a2' || $row->tipe == 'a3') {
+													if (is_posisi_id() < 3) {
+														if ($row->tipe == 'a1') { ?>
+															<?=($row->no_faktur !='' ? $row->no_faktur : '???');?>
+														<?}elseif ($row->tipe == 'a2') { ?>
+															<?=($row->no_faktur !='' ? $row->no_faktur : '???');?>
+														<?}elseif ($row->tipe == 'a3') { ?>
+															<?=($row->no_faktur !='' ? $row->no_faktur : '???');?>
+														<?}
+													}else{
+														echo $row->no_faktur;
+													}
+												}else if ($row->tipe == '1' || $row->tipe == '2' ) {
+													$user = explode('??', $row->no_faktur);
+													?>
+													<!-- <?=$row->no_faktur;?> -->
+													Penyesuaian (<small class='keterangan'><?=$user[3]?></small>) oleh: <b><?=$user[0];?></b> 
+													<span class='user_id' hidden='hidden'><?=$user[1];?></span>
+													<span class='penyesuaian_stok_id' hidden='hidden'><?=$user[2];?></span>
+													<span class='tipe' hidden='hidden'><?=$row->tipe;?></span>
+													
+												<?}elseif ($row->tipe == 'b1') {
+													echo "mutasi barang dari ".$row->no_faktur." ke ".$nama_gudang;
+												}elseif ($row->tipe == 'b2') {
+													echo "mutasi barang dari ".$nama_gudang." ke ".$row->no_faktur."";
+												}elseif ($row->tipe == 'ask') {
+													echo $row->no_faktur;
+												}elseif ($row->tipe == 'asm') {
+													echo $row->no_faktur;
+												}else if($row->tipe == 0 && $row->tipe != 'b1' && $row->tipe != 'b2' && $row->tipe != 'z1' && $row->tipe != 'ecer1' && $row->tipe != 'so'){
+													echo "Mutasi Stok Awal";
+												}elseif ($row->tipe == 'z1') {
+													echo "Stok Opname";
+												}elseif ($row->tipe == 'ecer1') {
+													echo "Ubah ke stok eceran";
+												}elseif ($row->tipe == 'so') {?>
+													STOK OPNAME	
+												<?}?>
+											</td>
+											<td>
+												<?if ($row->tipe != 'z1' && $row->tipe != 1 && $row->tipe != 'so') {?>
+													<?=($row->qty_masuk == 0 ?  '-' : "<span class='qty'>".$row->qty_masuk."</span>" );?>
+													<?$qty += $row->qty_masuk;?>
+													<?$total_in += $row->qty_masuk;?>
+												<?}else if($row->tipe == 1){?>
+													<?=($row->qty_masuk == 0 ?  '-' : "<span class='qty'>".$row->qty_masuk."</span>" );?>
+													<?$qty += ($row->qty_masuk*$row->jumlah_roll_masuk);?>
+													<?$total_in += ($row->qty_masuk*$row->jumlah_roll_masuk);
+												}else{
+													$qty_so = $row->qty_masuk - $qty;
+													$qty = $row->qty_masuk;
+													$total_in += $qty_so;
+													echo "<span class='qty'>".$qty_so."</span>";
+	
+												}?>
+											</td>
+											<td>
+												<?if ($row->tipe != 'z1' && $row->tipe != 'so') {?>
+													<?=($row->jumlah_roll_masuk == 0 ? '-' : "<span class='jumlah_roll'>".$row->jumlah_roll_masuk."</span>" ) ;?>
+													<?$roll += $row->jumlah_roll_masuk;?>
+												<?}else{
+													$roll_so = $row->jumlah_roll_masuk - $roll;
+													$roll += $roll_so;
+													echo "<span class='jumlah_roll'>".$roll_so."</span>";
+												}?>
+											</td>
+	
+											<td>
+												<?	echo ($row->qty_keluar == 0 ? '-' : "<span class='qty'>".$row->qty_keluar."</span>" ); 
+													$qty -= $row->qty_keluar;
+													if ($row->tipe==2) {
+														$total_out += ($row->qty_keluar*$row->jumlah_roll_keluar);
+													}else{
+														$total_out += $row->qty_keluar;
+													}
+												?>
+												
+											</td>
+											<td>
+												<?=($row->jumlah_roll_keluar == 0 && $row->qty_keluar == 0 ? '-' : "<span class='jumlah_roll'>".$row->jumlah_roll_keluar."</span>" ) ;?>
+												<?$roll-= $row->jumlah_roll_keluar;?>
+											</td>
+											<td <? if ($qty < 0): echo "style='color:red'"; endif ?>>
+												<?if ($row->tipe != 'z1' && $row->tipe != 'so') {?>
+													<b><?=number_format($qty,'2',',','.');?></b> 
+												<?}else if ($row->tipe == 'so') {?>
+														<b><?=number_format($row->qty_masuk,'2',',','.');?></b> 
+												<?}else{?>
+													<b><?=number_format($row->qty_masuk,'2',',','.');?></b> 
+												<?}?>
+											</td>
+											<td <? if ($roll < 0): echo "style='color:red'"; endif ?>>
+												<?if ($row->tipe != 'z1' && $row->tipe != 'so') {?>
+													<b><?=number_format($roll,'2',',','.');?></b> 
+												<?}else if ($row->tipe == 'so') {?>
+													<b><?=number_format($row->jumlah_roll_masuk,'2',',','.');?></b> 
+												<?}else{?>
+												<b><?=number_format($row->jumlah_roll_masuk,'2',',','.');?></b> 
+												<?}?>
+											</td>
+										</tr>
+									<? } ?>
+									<tr>
+										<td></td>
+										<td></td>
+										<td><?=$total_in;?></td>
+										<td></td>
+										<td><?=$total_out;?></td>
+										<td></td>
+										<td></td>
+										<td></td>
+									</tr>
+	
+								</tbody>
+							</table>
+						</div>
 					</div>
+
 				</div>
 			</div>
 		</div>
@@ -916,11 +1242,20 @@ jQuery(document).ready(function() {
 
    	$('.btn-kartu').click(function(){
    		$('#kartu-stok').show();
+   		$('#kartu-stok-eceran').hide();
    		$('#detail-stok').hide();
    	});
 
+	$('.btn-kartu-eceran').click(function(){
+   		$('#kartu-stok').hide();
+   		$('#kartu-stok-eceran').show();
+   		$('#detail-stok').hide();
+   	});
+
+
    	$('.btn-detail').click(function(){
    		$('#detail-stok').show();
+   		$('#kartu-stok-eceran').hide();
    		$('#kartu-stok').hide();
    	});
 
@@ -1139,5 +1474,63 @@ function showEceranDetail(ecId){
 	$(`#eceran-${ecId}`).addClass('qty-eceran-aktif');
 }
 
+</script>
+
+<!-- Copy Paste -->
+<script>
+const table = document.querySelector("#kartu-stok-copy");
+function copyTableAsHTML() {
+
+	table.style.display = "block";
+
+	table.querySelectorAll("a").forEach(link => {
+		link.replaceWith(link.textContent);
+	});
+	
+  const range = document.createRange();
+  range.selectNode(table);
+  
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  
+  document.execCommand("copy");
+  selection.removeAllRanges();
+
+	table.style.display = "none";
+
+  
+  notific8("lime","Table berhasil do copy!");
+}
+
+function copyTableAsText() {
+  let text = "";
+  
+  for (let row of table.rows) {
+    let rowData = Array.from(row.cells).map(cell => cell.textContent).join("\t");
+    text += rowData + "\n";
+  }
+  
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Table copied as plain text!");
+  }).catch(err => {
+    console.error("Failed to copy table: ", err);
+  });
+}
+
+function copyTableAsCSV() {
+  let csv = "";
+  
+  for (let row of table.rows) {
+    let rowData = Array.from(row.cells).map(cell => `"${cell.textContent}"`).join(",");
+    csv += rowData + "\n";
+  }
+  
+  navigator.clipboard.writeText(csv).then(() => {
+    alert("Table copied as CSV!");
+  }).catch(err => {
+    console.error("Failed to copy table: ", err);
+  });
+}
 
 </script>

@@ -164,7 +164,7 @@
 													</ul>
 												</td>
 												<td>
-													<span class='no_faktur_lengkap'><?=$row->no_faktur_lengkap;?></span>
+													<span class='no_faktur_pertoko'><?=$row->no_faktur_pertoko;?></span>
 												</td>
 												<td>
 													<span class='amount'><?=number_format($row->amount,'0',',','.');?></span>
@@ -379,7 +379,9 @@
 											<td>
 												<a target='_blank' href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>?id=<?=$row->penjualan_id;?>">
 													<?=$row->no_faktur;?>
-												</a>
+												</a> / 
+												<span class='no_faktur_pertoko'><?=$row->no_faktur_pertoko;?></span>
+
 											</td>
 											<td>
 												<?=is_reverse_date($row->tanggal);?>
@@ -414,8 +416,64 @@
 												<?}?>
 											</td>
 										</tr>
+										<?
+										$i++; 
+									} ?>
+
 									<?
-									$i++; 
+										if (count($retur_jual) > 0) {?>
+											<tr>
+												<td colspan="9" style="background-color: yellow; text-align:center"> - retur jual -</td>
+											</tr>
+										<?}
+									?>
+									
+									<?foreach ($retur_jual as $row) { ?>
+										<tr>
+											<td>
+												<?=$i;?>
+											</td>
+											<td>
+												<a target='_blank' href="<?=base_url().is_setting_link('retur_jual/retur_jual_detail')?>?id=<?=$row->penjualan_id;?>">
+													<?=$row->no_faktur_lengkap;?>
+												</a>
+											</td>
+											<td>
+												<?=is_reverse_date($row->tanggal);?>
+											</td>
+											<td>
+												<?=number_format($row->amount,'0',',','.');?>
+											</td>
+											<td>
+												<?$total_piutang -= $row->sisa_piutang;?>
+												<?//=$row->sisa_piutang;?>
+												<?=number_format($row->sisa_piutang,'0',',','.');?>
+												<span class='piutang' hidden><?=number_format($row->sisa_piutang,'0',',','.');?></span>
+											</td>
+											<td>
+												
+											</td>
+											<td class='hidden-print'>
+												<?//=$row->penjualan_id;?>
+												<input <?=$readonly;?> data-retur='1' name='retur_<?=$row->penjualan_id;?>' class='amount-number bayar-piutang' value="<?=number_format($row->amount,'0',',','.');?>">
+											</td>
+											<td class='hidden-print'>
+												<?$sisa = $row->sisa_piutang - $row->amount;?>
+												<span data-retur='1' class='sisa-piutang amount-number'><?=number_format($sisa,'0',',','.');?></span>
+											</td>
+											<td class='hidden-print'>
+												<?if ($pembayaran_piutang_id != '') { ?>
+													<span class='pembayaran_piutang_detail_id' hidden><?=$row->id;?></span>
+												<?}?>
+												<input name='penjualan_id_<?=$row->penjualan_id;?>' hidden value="<?=$row->penjualan_id;?>"> 
+												<?if ($pembayaran_piutang_id == '') {?>
+													<label><input <?=$disabled;?> type='checkbox' <?if ($sisa == 0) { echo 'checked'; }?> name='status_<?=$row->penjualan_id?>' class='lunas-check amount-number' >
+													lunas </label>
+												<?}?>
+											</td>
+										</tr>
+										<?
+										$i++; 
 									} ?>
 									<tr style='font-size:1.2em; border-top:2px solid #ccc;border-bottom:2px solid #ccc;'>
 										<td></td>
@@ -844,7 +902,6 @@ jQuery(document).ready(function() {
 
 	$('#general_table').on('change','.bayar-piutang', function(){
 
-
 		var ini = $(this).closest('tr');
 		var piutang = reset_number_format(ini.find('.piutang').html());
 		var bayar = $(this).val();
@@ -902,7 +959,7 @@ jQuery(document).ready(function() {
 		update_total_bayar();
 	});
     
-    $('.btn-save-bayar').dblclick(function(){
+    $('.btn-save-bayar').click(function(){
     	// $('#form-bayar').submit();
     	var ini = $(this);
     	var bayar_id = $('[name=pembayaran_type_id]:checked').val();
@@ -1156,19 +1213,30 @@ function update_total_bayar(){
 
 	$('#general_table .bayar-piutang').each(function(){
 		var bayar = reset_number_format($(this).val());
+		const isRetur = $(this).attr('data-retur');
+
 		if (bayar == '') {
 			bayar = 0;
 		};
 
-		total_bayar += parseInt(bayar);
+		if(isRetur){
+			total_bayar -= parseInt(bayar);
+		}else{
+			total_bayar += parseInt(bayar);
+		};
 	});
 
 	$('#general_table .sisa-piutang').each(function(){
 		var sisa = reset_number_format($(this).html());
+		const isRetur = $(this).attr('data-retur');
 		if (sisa == '') {
 			sisa = 0;
 		};
-		total_piutang += parseInt(sisa);
+		if(isRetur){
+			total_piutang -= parseInt(sisa);
+		}else{
+			total_piutang += parseInt(sisa);
+		};
 		// alert($(this).html());
 	});
 	

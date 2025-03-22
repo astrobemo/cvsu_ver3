@@ -7,6 +7,9 @@ function print_kombinasi(printer_name){
 	$i = 1; $baris_print = 0;
 	$baris_idx = 16;
 
+	$ppn_pembagi = 1+($ppn_berlaku/100);
+
+
 	foreach ($data_penjualan_detail_group as $row) {
 
 		$nama_warna = explode('??', $row->nama_warna);
@@ -126,27 +129,30 @@ function print_kombinasi(printer_name){
 			   	<?
 			   	$total = 0; $total_roll = 0; $idx = 1;
 			   	$harga_raw_total = 0; $ppn_total = 0;
+				$diskon_total = 0;
 			   	foreach ($penjualan_detail as $row) {
-			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
+			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
 			   		$total_roll += $row->jumlah_roll;?>
 			   			'\x1B' + '\x21' + '\x04'+ // em mode on
 			   			<?="'".sprintf('%-4.2s', $idx)."'";?>+
-			   			<?="'".sprintf('%-45.45s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
+			   			<?="'".sprintf('%-35.35s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
 					   	<?="'".sprintf('%8.8s', (float)$row->qty )."'";?>+' '+
 					   	<?="'".sprintf('%6.3s', $row->nama_satuan )."'";?>+
 					   	<?="'".sprintf('%8.8s', (float)$row->jumlah_roll)."'";?>+' '+
 					   	<?="'".sprintf('%-6.3s', $row->nama_packaging )."'";?>+'\x09'+
 					   	
 					   	<?
-					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
-					   	$harga_raw = $harga_total/1.1;
-					   	$harga_raw_satuan = $row->harga_jual/1.1;
+						$diskon_total += $row->subdiskon;
+					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
+					   	$harga_raw = $harga_total/$ppn_pembagi;
+					   	$harga_raw_satuan = $row->harga_jual/$ppn_pembagi;
 					   	$harga_raw_total += $harga_raw;
 					   	$ppn = $harga_total - $harga_raw;
 					   	$ppn_total += $ppn;
 					   	?>
 					   	<?="'".sprintf('%-13.13s', number_format($harga_raw_satuan,'2',',','.'))."'";?>+'\x09'+
 					   	<?="'".sprintf('%-14.14s', number_format($harga_raw,'2',',','.'))."'";?>+'\x09'+
+					   	<?="'".sprintf('%-11.11s', number_format($row->subdiskon,'2',',','.'))."'";?>+
 					   	<?="'".sprintf('%-13.13s', number_format($ppn,'2',',','.'))."'";?>+
 					   	'\x0A'+
 
@@ -162,11 +168,12 @@ function print_kombinasi(printer_name){
 			   		//23
 			   	'\x0A'+
 			   	'\x1B' + '\x21' + '\x04'+ // em mode on
-			   	<?="'".sprintf('%-74.74s', 'Terima Kasih telah berbelanja')."'";?>+'\x09'+
+			   	<?="'".sprintf('%-64.64s', 'Terima Kasih telah berbelanja')."'";?>+'\x09'+
 			   	<?="'".sprintf('%8.8s', 'Subtotal' )."'";?>+'\x09'+
 			   	
 				<?="'".sprintf('%-6.6s', '')."'";?>+ '\x09'+
 				<?="'".sprintf('%-14.14s', number_format($harga_raw_total,'2',',','.'))."'";?>+ '\x09'+
+			   	<?="'".sprintf('%-11.11s', number_format($diskon_total,'2',',','.'))."'";?>+ 
 			   	<?="'".sprintf('%-13.13s', number_format($ppn_total,'2',',','.'))."'";?>+ 
 
 			   	//==============================================================================
@@ -341,7 +348,7 @@ function print_kombinasi(printer_name){
 					   	<?="'".sprintf('%-2.2s', '|')."'";?>+
 					   	<?="'".sprintf('%3.3s', $total_roll_show)."'";?>+ '\x09'+
 					   	<?="'".sprintf('%9.9s', $total_show)."'";?>+ '\x09'+
-					   	<?="'".sprintf('%-1.1s', '|')."'";?>+
+					   	<?="'".sprintf('%-1.1', '|')."'";?>+
 
 					   		<?for ($n=0; $n < 10; $n++) { 
 					   			$k = 10 * $m + $n;
@@ -405,7 +412,7 @@ function print_kombinasi(printer_name){
 			   	<?="'".sprintf('%-2.2s', '|')."'";?>+
 			   	<?="'".sprintf('%3.3s', $g_total_roll)."'";?>+ '\x09'+
 			   	<?="'".sprintf('%9.9s', $g_total_qty)."'";?>+ '\x09'+
-			   	<?="'".sprintf('%-1.1s', '|')."'";?>+
+			   	<?="'".sprintf('%-1.1', '|')."'";?>+
 
 
 			   	//==============================================================================
@@ -499,27 +506,30 @@ function print_kombinasi(printer_name){
 			   	<?
 			   	$total = 0; $total_roll = 0; $idx = 1;
 			   	$harga_raw_total = 0; $ppn_total = 0;
+				$diskon_total = 0;
 			   	foreach ($penjualan_detail as $row) {
-			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
+			   		$total += ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
 			   		$total_roll += $row->jumlah_roll;?>
 			   			'\x1B' + '\x21' + '\x04'+ // em mode on
 			   			<?="'".sprintf('%-4.2s', $idx)."'";?>+
-			   			<?="'".sprintf('%-45.45s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
+			   			<?="'".sprintf('%-35.35s', $row->nama_barang.' '.$row->nama_warna)."'";?>+'\x09'+
 					   	<?="'".sprintf('%8.8s', (float)$row->qty )."'";?>+' '+
 					   	<?="'".sprintf('%6.3s', $row->nama_satuan )."'";?>+
 					   	<?="'".sprintf('%8.8s', (float)$row->jumlah_roll)."'";?>+' '+
 					   	<?="'".sprintf('%-6.3s', $row->nama_packaging )."'";?>+'\x09'+
 					   	
 					   	<?
-					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual;
-					   	$harga_raw = $harga_total/1.1;
-					   	$harga_raw_satuan = $row->harga_jual/1.1;
+						$diskon_total += $row->subdiskon;
+					   	$harga_total = ($row->pengali_harga == 1 ? $row->qty : $row->jumlah_roll ) *$row->harga_jual - $row->subdiskon;
+					   	$harga_raw = $harga_total/$ppn_pembagi;
+					   	$harga_raw_satuan = $row->harga_jual/$ppn_pembagi;
 					   	$harga_raw_total += $harga_raw;
 					   	$ppn = $harga_total - $harga_raw;
 					   	$ppn_total += $ppn;
 					   	?>
 					   	<?="'".sprintf('%-13.13s', number_format($harga_raw_satuan,'2',',','.'))."'";?>+'\x09'+
 					   	<?="'".sprintf('%-14.14s', number_format($harga_raw,'2',',','.'))."'";?>+'\x09'+
+					   	<?="'".sprintf('%-11.11s', number_format($row->subdiskon,'2',',','.'))."'";?>+
 					   	<?="'".sprintf('%-13.13s', number_format($ppn,'2',',','.'))."'";?>+
 					   	'\x0A'+
 
@@ -535,11 +545,12 @@ function print_kombinasi(printer_name){
 			   	//23
 			   	'\x0A'+
 			   	'\x1B' + '\x21' + '\x04'+ // em mode on
-			   	<?="'".sprintf('%-74.74s', 'Terima Kasih telah berbelanja CV. Setia Usaha Nusantara,')."'";?>+'\x09'+
+			   	<?="'".sprintf('%-64.64s', 'Terima Kasih telah berbelanja CV. Setia Usaha Nusantara,')."'";?>+'\x09'+
 			   	<?="'".sprintf('%8.8s', 'Subtotal' )."'";?>+'\x09'+
 			   	
 				<?="'".sprintf('%-6.6s', '')."'";?>+ '\x09'+
 				<?="'".sprintf('%-14.14s', number_format($harga_raw_total,'2',',','.'))."'";?>+ '\x09'+
+			   	<?="'".sprintf('%-11.11s', number_format($diskon_total,'2',',','.'))."'";?>+ 
 			   	<?="'".sprintf('%-13.13s', number_format($ppn_total,'2',',','.'))."'";?>+ 
 
 			   	//==============================================================================

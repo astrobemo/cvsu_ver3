@@ -30,6 +30,9 @@
 									<th scope="col">
 										Hutang
 									</th>
+									<th style="display: none;">
+										Hutang
+									</th>
 									<th scope="col">
 										Actions
 									</th>
@@ -41,12 +44,15 @@
 										<td>
 											<?=$row->nama_supplier;?>
 										</td>
+										<td style="display: none;">
+											<?=$row->sisa_hutang;?>
+										</td>
 										<td>
 											<?=number_format($row->sisa_hutang,'0',',','.');?>
 										</td>
 										<td>
 											<!-- <a target="_blank" href="<?=base_url().rtrim(base64_encode('finance/hutang_list_detail'),'=').'/?supplier_id='.$row->supplier_id;?>" class="btn btn-xs blue" onclick="window.open(this.href, 'newwindow', 'width=1050, height=750'); return false;"><i class='fa fa-search'></i></a> -->
-											<a target='_blank' href="<?=base_url().is_setting_link('finance/hutang_payment_form').'/?supplier_id='.$row->supplier_id;?>&toko_id=<?=$row->toko_id;?>&tanggal_start=<?=$row->tanggal_start;?>&tanggal_end=<?=$row->tanggal_end;?>" class="btn btn-xs blue"> Lihat / Pelunasan</a>
+											<a target='_blank' href="<?=base_url().is_setting_link('finance/hutang_payment_form').'/?supplier_id='.$row->supplier_id;?>&toko_id=<?=$row->toko_id;?>&tanggal_start=<?=is_reverse_date($row->tanggal_start);?>&tanggal_end=<?=is_reverse_date($row->tanggal_end);?>" class="btn btn-xs blue"> Lihat / Pelunasan</a>
 
 										</td>
 									</tr>

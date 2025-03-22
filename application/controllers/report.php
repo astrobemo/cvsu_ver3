@@ -35,6 +35,17 @@ class Report extends CI_Controller {
 
 	function penjualan_list_report(){
 		$menu = is_get_url($this->uri->segment(1)) ;
+		$tanggal_start = date('Y-m-d');
+		$tanggal_end = date('Y-m-d');
+		$status_excel = '0';
+		$tipe_search = 1;
+		$customer_id = 0;
+		$supplier_id = 0;
+		$toko_id = 0;
+		$barang_id = 0;
+		$warna_id = 0;
+		$gudang_id = 0;
+		$penjualan_type_id = "";
 
 		if ($this->input->get('tanggal_start') && $this->input->get('tanggal_end') != '') {
 			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
@@ -42,6 +53,10 @@ class Report extends CI_Controller {
 			$tipe_search = $this->input->get('tipe_search');
 			$customer_id = $this->input->get('customer_id');
 			$supplier_id = $this->input->get('supplier_id');
+
+
+			
+			$penjualan_type_id = $this->input->get('penjualan_type_id');
 			if ($tipe_search > 6 || $tipe_search < 1) {
 				$tipe_search = 1;
 			}
@@ -50,17 +65,6 @@ class Report extends CI_Controller {
 			$barang_id = $this->input->get('barang_id');
 			$warna_id = $this->input->get('warna_id');
 			$gudang_id = $this->input->get('gudang_id');
-		}else{
-			$tanggal_start = date('Y-m-d');
-			$tanggal_end = date('Y-m-d');
-			$status_excel = '0';
-			$tipe_search = 1;
-			$customer_id = 0;
-			$supplier_id = 0;
-			$toko_id = 0;
-			$barang_id = 0;
-			$warna_id = 0;
-			$gudang_id = 0;
 		}
 
 		$cond = '';
@@ -68,6 +72,7 @@ class Report extends CI_Controller {
 		$cond_toko = "";
 		$supplier_cond = "";
 		$cond_barang_warna = '';
+		$penjualan_type_cond = "";
 		if ($tipe_search == 2) {
 			$cond = "AND pembayaran_type_id LIKE '%2%' AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) >= 0";
 		}elseif ($tipe_search == 3) {
@@ -96,6 +101,10 @@ class Report extends CI_Controller {
 			$cond_barang_warna = "WHERE barang_id =".$barang_id;
 		}
 
+		if ($penjualan_type_id != '') {
+			$penjualan_type_cond = " AND penjualan_type_id = $penjualan_type_id";
+		}
+
 		if ($warna_id != 0) {
 			if ($barang_id != 0) {
 				$cond_barang_warna .= "AND warna_id =".$warna_id;
@@ -120,11 +129,13 @@ class Report extends CI_Controller {
 			'supplier_id' => $supplier_id,
 			'toko_id' => $toko_id,
 			'barang_id' => $barang_id,
+			'penjualan_type' => $this->common_model->db_select('nd_penjualan_type'),
 			'warna_id' => $warna_id,
 			'gudang_id' => $gudang_id,
 			'tipe_bayar' => $this->common_model->db_select('nd_pembayaran_type'),
-			'penjualan_list' => $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna, $supplier_cond)
-			);
+			'penjualan_type_id' => $penjualan_type_id,
+			'penjualan_list' => $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna, $supplier_cond, $penjualan_type_cond)
+		);
 
 		// echo $tanggal_start.'<hr/>'. $tanggal_end.'<hr/>'. $cond.'<hr/>'.$customer_cond.'<hr/>'. $cond_toko.'<hr/>'. $cond_barang_warna.'<hr/>'. $cond_supplier;
 
@@ -434,6 +445,8 @@ class Report extends CI_Controller {
 		$objWriter->save('php://output');
 	}
 
+	
+
 //=====================================pembelian report==================================================
 
 	function pembelian_list_report(){
@@ -530,220 +543,33 @@ class Report extends CI_Controller {
 		$cond_warna = ($warna_id != 0 ? " AND warna_id = ".$warna_id : '');
 
 		$pembelian_list = $this->rpt_model->get_pembelian_report_excel($tanggal_start, $tanggal_end, $cond, $cond_barang, $cond_warna);
+		// $pembelian_list = $this->rpt_model->get_pembelian_report($tanggal_start, $tanggal_end, $cond, $cond_barang, $cond_warna);
+
 		
 		$this->load->library('Excel/PHPExcel');
 
 		ini_set("memory_limit", "600M");
 
-		/** Caching to discISAM*/
 		$cacheMethod = PHPExcel_CachedObjectStorageFactory:: cache_to_discISAM;
 		$cacheSettings = array('');;
 
 		PHPExcel_Settings::setCacheStorageMethod($cacheMethod, $cacheSettings);
 
-		$objPHPExcel = new PHPExcel();
+		$data['objPHPExcel'] = new PHPExcel();
+		$data['tanggal_start'] = $tanggal_start;
+		$data['tanggal_end'] = $tanggal_end;
 
-		$styleArray = array(
-			'font'=>array(
-				'bold'=>true,
-				'size'=>12,
-				)
-			);
+		$data['toko_id'] = $toko_id;
+		$data['gudang_id'] = $gudang_id;
+		$data['barang_id'] = $barang_id;
+		$data['warna_id'] = $warna_id;
+		$data['supplier_id'] = $supplier_id;
+		$data['nama_supplier'] = $nama_supplier;
+		$data['pembelian_list'] = $pembelian_list;
+		$data['nama_toko'] = $nama_toko;
 
-		$objPHPExcel->getActiveSheet()->mergeCells("A1:L1");
-		$objPHPExcel->getActiveSheet()->mergeCells("A2:L2");
+		$this->load->view('admin/report/pembelian_list_report_excel',$data);
 
-		
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', ' LAPORAN PEMBELIAN '.$nama_toko.$nama_supplier)
-		->setCellValue('A2', ' Periode '.date('d F Y', strtotime($tanggal_start)).' s/d '.date('d F Y', strtotime($tanggal_end)))
-		->setCellValue('A4', 'No')
-		->setCellValue('B4', 'No Faktur')
-		->setCellValue('C4', 'Tanggal')
-		->setCellValue('D4', 'Qty')
-		->setCellValue('E4', 'Jumlah Roll')
-		->setCellValue('F4', 'Nama Barang')
-		->setCellValue('G4', 'Nama Jual')
-		->setCellValue('H4', 'Harga Beli')
-		->setCellValue('I4', 'Diskon')
-		->setCellValue('J4', 'Total')
-		->setCellValue('K4', 'Supplier')
-		->setCellValue('L4', 'Lokasi')
-		->setCellValue('M4', 'Jatuh Tempo')
-		->setCellValue('N4', 'Keterangan')
-		;
-
-		$objPHPExcel->getActiveSheet()->getStyle('A1:N4')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-		$objPHPExcel->getActiveSheet()->getStyle('A1:N4')->applyFromArray($styleArray);
-
-
-		// print_r($pembelian_list);
-		$idx = 1; $row_no = 5; $g_total = 0;
-		$yard_total = 0;
-		$roll_total = 0;
-		foreach ($pembelian_list as $row) {
-			$total = array();
-
-			$qty = explode('??', $row->qty);
-			$harga_beli = explode('??', $row->harga_beli);
-			$jumlah_roll = explode('??', $row->jumlah_roll);
-			$nama_barang = explode('??', $row->nama_barang);
-			$nama_jual = explode('??', $row->nama_jual);
-			$count = count($qty);
-			// $g_total = 0;
-
-
-			$coll = "A";
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$idx);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(7);
-			$coll++;
-
-			// echo $coll.$row_no.':'.$coll.$row_end.'--'.$isi.'<br>';
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$row->no_faktur);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(20);
-			$coll++;
-
-			$tanggal = date('d-m-Y',strtotime($row->tanggal));
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$tanggal);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-			$coll++;
-
-			$coll_start = $coll;
-			$row_start = $row_no;
-
-			
-
-			foreach ($harga_beli as $key => $value) {
-				$coll = $coll_start;
-				$yard_total += $qty[$key];
-				$roll_total += $jumlah_roll[$key];
-				// $objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, str_replace("??","\n",$row->qty));
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, $qty[$key]);				
-				// $objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setWrapText(true);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(10);
-				$coll++;
-
-				// $objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, str_replace('??',"\n",$row->jumlah_roll));
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, $jumlah_roll[$key]);
-				// $objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setWrapText(true);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(12);
-				$coll++;
-
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, $nama_barang[$key]);				
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(30);
-				$coll++;
-
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, $nama_jual[$key]);				
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(30);
-				$coll++;
-
-				// $objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, str_replace('??',"\n",$row->harga_beli));
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, $harga_beli[$key]);				
-				// $objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setWrapText(true);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-				$coll++;
-
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_start, $row->diskon);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setWrapText(true);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-				$coll++;
-
-				$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no, $qty[$key] * $harga_beli[$key] - $row->diskon);
-				// $objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setWrapText(true);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-				$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-				$coll++;
-
-				if ($key != $count -1) {
-					$row_no++;
-				}
-				$g_total += $qty[$key] * $harga_beli[$key];
-			}
-
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_start, $row->nama_supplier);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setWrapText(true);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-			$coll++;
-
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_start, $row->nama_gudang);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setWrapText(true);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-			$coll++;
-
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_start, date('d-m-Y', strtotime($row->jatuh_tempo)));
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setWrapText(true);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(30);
-			$coll++;
-
-			$status = '';
-			if ($row->keterangan < 0) {
-				$status = 'belum lunas';
-			}else if ($row->keterangan >= 0){
-				$status = 'lunas';
-			} 
-
-			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_start, $status);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setWrapText(true);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_start)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(30);
-			$coll++;
-
-			$idx++;
-			$last_row = $row_no;
-			$row_no++;
-			
-		}
-
-		//=======================================================================================		
-
-		$objPHPExcel->getActiveSheet()->setCellValue('B'.$row_no, 'TOTAL');
-		$objPHPExcel->getActiveSheet()->setCellValue('D'.$row_no, $yard_total);
-		$objPHPExcel->getActiveSheet()->setCellValue('E'.$row_no, $roll_total);
-		$objPHPExcel->getActiveSheet()->setCellValue('H'.$row_no, "=SUM( H5:H".$last_row.')');
-		$objPHPExcel->getActiveSheet()->setCellValue('I'.$row_no, "=SUM( I5:I".$last_row.')');
-		$objPHPExcel->getActiveSheet()->setCellValue('J'.$row_no, "=SUM( J5:J".$last_row.')');
-		// $objPHPExcel->getActiveSheet()->setCellValue('I'.$row_no, $g_total);
-		$objPHPExcel->getActiveSheet()->getStyle('A'.$row_no.':J'.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-		$objPHPExcel->getActiveSheet()->getStyle('A'.$row_no.':J'.$row_no)->applyFromArray($styleArray);
-
-		
-		// $objPHPExcel->getActiveSheet()->setTitle('Rit 1');
-
-
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
-
-		ob_end_clean();
-
-		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-		header("Content-Disposition: attachment;filename=Laporan_Pembelian_".str_replace(' ', '_', $nama_toko)."_".date("dmY",strtotime($tanggal_start))."sd_".date("dmY",strtotime($tanggal_end)).".xls");
-		header('Cache-Control: max-age=0');
-		$objWriter->save('php://output');
 	}
 
 
@@ -838,11 +664,16 @@ class Report extends CI_Controller {
 		
 		$tanggal_start = date('Y-m-01');
 		$tanggal_end = date('Y-m-t');
+		$tahun = date('Y');
 
 		if ($this->input->get('tanggal_start') && $this->input->get('tanggal_start') != '' && $this->input->get('tanggal_end') != '') {
 			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
 			$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
+			if ($this->input->get('tahun') != '') {
+				$tahun = $this->input->get('tahun');
+			}
 		}
+
 
 		$bulan = date('d M y', strtotime($tanggal_start)).' s/d '.date('d M y', strtotime($tanggal_end));
 
@@ -855,6 +686,7 @@ class Report extends CI_Controller {
 			'tanggal_start' => is_reverse_date($tanggal_start),
 			'tanggal_end' => is_reverse_date($tanggal_end),
 			'ket_tgl' => $bulan,
+			'tahun' => $tahun,
 			'common_data'=> $this->data );
 
 
@@ -990,7 +822,111 @@ class Report extends CI_Controller {
 
 		$data['barang_list'] = $this->rpt_model->get_barang_masuk_detail_report($tanggal_start, $tanggal_end, $cond, $cond2);
 		$this->load->view('admin/template_no_sidebar',$data);
+		
 	}
+//=====================================barang keluar report==================================================	
+
+	function barang_keluar_list_report(){
+		$menu = is_get_url($this->uri->segment(1)) ;
+
+		if ($this->input->get('tanggal_start') && $this->input->get('tanggal_end') != '') {
+			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
+			$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
+			$status_excel = '1';
+			$toko_id = $this->input->get('toko_id');
+			$customer_id = $this->input->get('customer_id');
+			$barang_id = $this->input->get('barang_id');
+			$warna_id = $this->input->get('warna_id');
+		}else{
+			$tanggal_start = date('Y-m-d');
+			$tanggal_end = date('Y-m-d');
+			$status_excel = '0';
+			$toko_id = 1;
+			$customer_id = 0;
+			$barang_id = 0;
+		}
+
+		$data = array(
+			'content' =>'admin/report/barang_keluar_list_report',
+			'breadcrumb_title' => 'Laporan',
+			'breadcrumb_small' => 'Barang keluar',
+			'nama_menu' => $menu[0],
+			'nama_submenu' => $menu[1],
+			'common_data' => $this->data,
+			'tanggal_start' => is_reverse_date($tanggal_start),
+			'tanggal_end' => is_reverse_date($tanggal_end),
+			'status_excel' => $status_excel,
+			'toko_id' => $toko_id,
+			'customer_id' => $customer_id,
+			'barang_id' => $barang_id
+			);
+
+		$cond = '';
+		if ($toko_id != 0) {
+			$cond .= "AND toko_id = $toko_id";
+		}
+
+		if ($customer_id != 0) {
+			$cond .= " AND customer_id = $customer_id";
+		}
+
+		$cond2 = '';
+		if ($barang_id != 0) {
+			$cond2 = " WHERE barang_id = $barang_id";
+		}
+
+		$data['barang_list'] = $this->rpt_model->get_barang_keluar_report($tanggal_start, $tanggal_end, $cond, $cond2);
+		$this->load->view('admin/template',$data);
+	}
+
+	function barang_keluar_list_detail_report(){
+		$menu = is_get_url($this->uri->segment(1)) ;
+
+		$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
+		$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
+		$toko_id = $this->input->get('toko_id');
+		$customer_id = $this->input->get('customer_id');
+		$barang_id = $this->input->get('barang_id');
+		$warna_id = $this->input->get('warna_id');
+
+		$get = $this->common_model->db_select('nd_barang where id='.$barang_id);
+		foreach ($get as $row) {
+			$nama_barang = $row->nama;
+		}
+		$get = $this->common_model->db_select('nd_warna where id='.$warna_id);
+		foreach ($get as $row) {
+			$nama_warna = $row->warna_beli;
+		}
+		$data = array(
+			'content' =>'admin/report/barang_keluar_list_detail_report' ,
+			'breadcrumb_title' => 'Laporan',
+			'breadcrumb_small' => 'barang keluar detail',
+			'nama_menu' => $menu[0],
+			'nama_submenu' => $menu[1],
+			'common_data'=> $this->data,
+			'tanggal_start' => is_reverse_date($tanggal_start),
+			'tanggal_end' => is_reverse_date($tanggal_end),
+			'barang_id' => $barang_id,
+			'warna_id' => $warna_id,
+			'nama_barang' => $nama_barang,
+			'nama_warna' => $nama_warna,
+			'customer_list_aktif'=>$this->customer_list_aktif );
+
+		$cond = '';
+		if ($toko_id != 0) {
+			$cond .= "AND toko_id = $toko_id";
+		}
+
+		if ($customer_id != 0) {
+			$cond .= " AND customer_id = $customer_id";
+		}
+
+		$cond2 = " WHERE barang_id = $barang_id AND warna_id = $warna_id";
+
+		$data['barang_list'] = $this->rpt_model->get_barang_keluar_detail_report($tanggal_start, $tanggal_end, $cond, $cond2);
+		$this->load->view('admin/template_no_sidebar',$data);
+	}
+
 
 //=====================================buku laporan piutang==================================================	
 
