@@ -103,8 +103,13 @@ class Transaction extends CI_Controller {
 				'user_id' => is_user_id(),
 				'status_aktif'=> 1
 			);
+
+			try {
+				$this->common_model->db_insert("nd_barang_sku", $nSku);	
+			} catch (Exception $th) {
+				//throw $th;
+			}
 	
-			$this->common_model->db_insert("nd_barang_sku", $nSku);	
 		}
 
 	}  
