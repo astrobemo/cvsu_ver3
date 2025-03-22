@@ -2485,16 +2485,22 @@ class Inventory extends CI_Controller {
 		$tanggal_start = date("Y-m-d", strtotime('-3days'));
 		$menu = is_get_url($this->uri->segment(1));
 
+		$cond_filter = "";
+		$conf_filter_gudang = "";
+		
 		if ($this->input->get('barang_id') != '') {
 			$barang_id = $this->input->get('barang_id');
+			$cond_filter = "WHERE barang_id=".$barang_id;
 		}
 
 		if ($this->input->get('warna_id') != '') {
 			$warna_id = $this->input->get('warna_id');
+			$cond_filter = ($cond_filter == "" ? "WHERE" : "AND")." warna_id=".$warna_id;
 		}
 
 		if ($this->input->get('gudang_id') != '') {
 			$gudang_id = $this->input->get('gudang_id');
+			$cond_filter_gudang = "AND gudang_id=".$gudang_id;
 		}
 
 		if ($this->input->get('tanggal_start') && $this->input->get('tanggal_start') != '' && $this->input->get('tanggal_end') != '') {
@@ -2532,7 +2538,7 @@ class Inventory extends CI_Controller {
 		}
 		
 		$data['stok_barang'] = $this->inv_model->get_stok_barang_list_2($select_update, $tanggal_end, $tanggal_awal,"");
-		$data['assembly_list'] = $this->inv_model->get_assembly_list($tanggal_end, $tanggal_start);
+		$data['assembly_list'] = $this->inv_model->get_assembly_list($tanggal_end, $tanggal_start, $cond_filter, $cond_filter_gudang);
 		$this->load->view('admin/template',$data);		
 	}
 
