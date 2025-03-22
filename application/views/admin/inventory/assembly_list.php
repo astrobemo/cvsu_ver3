@@ -364,7 +364,7 @@
 									<td class='padding-rl-5'> : </td>
 									<td>
 										<b>
-											<select name='barang_id'  id='barang-id' style='width:205px;'>
+											<select name='barang_id'  id='barang_id_filter' style='width:205px;'>
 												<option <?=($barang_id == ''  ? 'selected' : "")?>  value="" >Pilih</option>
 												<?foreach ($this->barang_list_aktif as $row) {?>
 													<option <?=($barang_id == $row->id ? 'selected' : "")?>  value="<?=$row->id;?>" ><?=$row->nama_jual;?><?=(is_posisi_id()==1 ? $barang_id.'-'.$row->id : '')?></option>
@@ -381,7 +381,7 @@
 									<td class='padding-rl-5'> : </td>
 									<td>
 										<b>
-											<select name='warna_id'  id='warna-id' style='width:205px;'>
+											<select name='warna_id'  id='warna_id_filter' style='width:205px;'>
 												<option <?=($warna_id == ''  ? 'selected' : "")?>  value="" >Pilih</option>
 												<?foreach ($this->warna_list_aktif as $row) {?>
 													<option <?=($warna_id == $row->id ? 'selected' :"")?>  value="<?=$row->id;?>" ><?=$row->warna_jual;?></option>
@@ -616,7 +616,7 @@ function tokoBG(){
 }
 
 jQuery(document).ready(function(){
-	$('#barang_id_new_sumber, #barang_id_new_hasil, #warna_id_new_hasil').select2();
+	$('#barang_id_new_sumber, #barang_id_new_hasil, #warna_id_new_hasil, #barang_id_filter, #warna_id_filter').select2();
 
 	addTanggal.change(function(){
 		tempItem.tanggal = addTanggal.val().split('/').reverse().join('-');
