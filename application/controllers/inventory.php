@@ -94,7 +94,11 @@ class Inventory extends CI_Controller {
 				'status_aktif'=> 1
 			);
 	
-			$this->common_model->db_insert("nd_barang_sku", $nSku);	
+			try {
+				$this->common_model->db_insert("nd_barang_sku", $nSku);	
+			} catch (Exception $th) {
+				//throw $th;
+			}
 		}
 
 	}
