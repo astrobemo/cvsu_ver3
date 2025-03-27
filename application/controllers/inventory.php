@@ -685,8 +685,8 @@ class Inventory extends CI_Controller {
 		if (is_posisi_id()==1) {
 			# code...
 			// print_r($data['stok_barang_eceran']);
-			// echo $gudang_id.'<br/>'. $barang_id.'<br/>'. $warna_id.'<br/>'.$tanggal_start.'<br/>'. $tanggal_end.'<br/>'. $tanggal_awal.'<br/>'. $stok_opname_id;
-			$this->load->view('admin/template_no_sidebar',$data);
+			echo $gudang_id.'<br/>'. $barang_id.'<br/>'. $warna_id.'<br/>'.$tanggal_start.'<br/>'. $tanggal_end.'<br/>'. $tanggal_awal.'<br/>'. $stok_opname_id;
+			// $this->load->view('admin/template_no_sidebar',$data);
 			$this->output->enable_profiler(TRUE);
 
 		}else{
@@ -784,7 +784,7 @@ class Inventory extends CI_Controller {
 
 		// $data['stok_detail'] = $this->sg_model->get_stok_barang_detail_eceran($gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
 		$data['stok_barang_eceran'] = $this->sg_model->get_stok_barang_eceran_list_detail_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_awal_eceran, $stok_opname_id);
-		$data['kartu_stok_eceran'] = $this->sg_model->kartu_stok_eceran_pertoko($gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_start, $stok_opname_id);
+		$data['kartu_stok_eceran'] = $this->sg_model->kartu_stok_eceran_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_start, $stok_opname_id);
 
 
 		// $data['stok_barang'] = array();

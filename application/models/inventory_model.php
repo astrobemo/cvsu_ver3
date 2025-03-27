@@ -3549,7 +3549,7 @@ class Inventory_Model extends CI_Model {
 		// return $this->db->last_query();
 	}
 
-	function kartu_stok_eceran($gudang_id, $barang_id,$warna_id, $tanggal_end, $tanggal_start){
+	function kartu_stok_eceran($gudang_id, $barang_id,$warna_id, $tanggal_end, $tanggal_start, $stok_opname_id){
 		$query = $this->db->query("SELECT tA.*, username
 		FROM (
 			(
