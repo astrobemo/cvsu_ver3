@@ -729,7 +729,7 @@
 						
 
 						<div id='kartu-stok-eceran'>
-							<h3>Kartu Stok Eceran</h3>
+							<h3>Kartu Stok Eceran <?=$tanggal_start ?> - <?=$tanggal_end?> </h3>
 							<table class="table table-striped table-bordered table-hover" id="general_table_eceran">
 								<thead>
 									<tr>
@@ -776,6 +776,41 @@
 										<td class="text-center"><?=$total_in_ecer;?></td>
 										<td class="text-center"><?=$total_out_ecer;?></td>
 									</tr>
+
+								</tbody>
+							</table>
+						</div>
+
+						<div id='kartu-stok-eceran-detail' <?=(is_posisi_id() != 1 ? 'hidden' : '')?> >
+							<h3>Kartu Stok Eceran Detail <?=$tanggal_start ?> - <?=$tanggal_end?> </h3>
+							<table class="table table-striped table-bordered table-hover" id="general_table_eceran_detail">
+								<thead>
+									<tr>
+										<th scope="col" rowspan='2'>
+											Tanggal
+										</th>
+										<th scope="col" rowspan='2'>
+											Keterangan
+										</th>
+										<th scope="col" class="text-center">
+											Masuk (<?=$nama_satuan?>)
+										</th>
+										<th scope="col" class="text-center">
+											Keluar (<?=$nama_satuan?>)
+										</th>
+										<th scope="col" class="text-center">
+											Saldo
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?
+									foreach ($kartu_stok_eceran_detail as $row) { ?>
+										<tr>
+											<td></td>
+										</tr>
+									<? } ?>
+									
 
 								</tbody>
 							</table>

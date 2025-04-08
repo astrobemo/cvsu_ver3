@@ -1019,13 +1019,13 @@ class Inventory_Model extends CI_Model {
 	}
 
 	function get_stok_barang_eceran_list($tanggal){
-		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id,  sum(tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0) ) as qty_stok
+		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id,  sum(tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0) ) as qty_stok, toko_id
 				FROM (
 				    	SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
-						if(tanggal >= ifnull(tanggal_so,'2018-01-01'),qty, 0 ) as qty, tipe
+						if(tanggal >= ifnull(tanggal_so,'2018-01-01'),qty, 0 ) as qty, tipe, tX.toko_id
 			        	FROM (
 							(
-								SELECT t1.id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal
+								SELECT t1.id, toko_id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal
 								FROM (
 									SELECT *
 									FROM nd_mutasi_stok_eceran
@@ -1035,7 +1035,7 @@ class Inventory_Model extends CI_Model {
 								LEFT JOIN nd_mutasi_stok_eceran_qty t2
 								ON t2.mutasi_stok_eceran_id = t1.id
 							)UNION(
-								SELECT tB.id, barang_id, warna_id, tA.id as stok_eceran_qty_id, qty, 2 , gudang_id, tanggal
+								SELECT tB.id, toko_id, barang_id, warna_id, tA.id as stok_eceran_qty_id, qty, 2 , gudang_id, tanggal
 								FROM nd_stok_opname_eceran tA
 								LEFT JOIN (
 									SELECT *
@@ -1048,7 +1048,7 @@ class Inventory_Model extends CI_Model {
 							)
 						)tX
 						LEFT JOIN (
-							SELECT barang_id, warna_id, gudang_id, max(tanggal) as tanggal_so
+							SELECT barang_id, warna_id, gudang_id, max(tanggal) as tanggal_so, toko_id
 							FROM nd_stok_opname_eceran tA
 							LEFT JOIN (
 								SELECT *
@@ -1063,9 +1063,10 @@ class Inventory_Model extends CI_Model {
 						ON tX.barang_id = tY.barang_id
 						AND tX.warna_id = tY.warna_id
 						AND tX.gudang_id = tY.gudang_id
+						AND tX.toko_id = tY.toko_id
 					)tA
 					LEFT JOIN (
-						SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source
+						SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual
 						FROM (
 							SELECT *
 							FROM nd_penjualan_qty_detail
@@ -1081,6 +1082,7 @@ class Inventory_Model extends CI_Model {
 					)tB
 					ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
 					AND tA.tipe = tB.eceran_source
+					AND tA.toko_id = tB.toko_id_jual
 					LEFT JOIN (
 							SELECT sum(qty) as qty_mutasi, mutasi_stok_eceran_qty_source_id
 							FROM nd_mutasi_stok_eceran_qty
@@ -1089,11 +1091,94 @@ class Inventory_Model extends CI_Model {
 					)tC
 					ON tA.stok_eceran_qty_id = tC.mutasi_stok_eceran_qty_source_id
                     WHERE tA.qty > 0
-					GROUP BY barang_id, warna_id, gudang_id
+					GROUP BY barang_id, warna_id, gudang_id, toko_id
 				");
 		
 		return $query->result();	
 	}
+
+	function get_stok_barang_eceran_detail($barang_id, $warna_id, $toko_id, $tanggal, $tanggal_awal){
+		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty , 
+		ifnull(tB.qty,0) , ifnull(qty_mutasi,0) , toko_id, toko_id_jual, ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa
+			FROM (
+				SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
+				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id
+				FROM (
+					(
+						SELECT t1.id, toko_id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal
+						FROM (
+							SELECT *
+							FROM nd_mutasi_stok_eceran
+							WHERE tanggal <= '$tanggal'
+							AND status_aktif = 1
+						)t1
+						LEFT JOIN nd_mutasi_stok_eceran_qty t2
+						ON t2.mutasi_stok_eceran_id = t1.id
+					)UNION(
+						SELECT tB.id, toko_id, barang_id, warna_id, tA.id as stok_eceran_qty_id, qty, 2 , gudang_id, tanggal
+						FROM nd_stok_opname_eceran tA
+						LEFT JOIN (
+							SELECT *
+							FROM nd_stok_opname
+							WHERE status_aktif = 1
+							AND tanggal <= '$tanggal'
+						)tB
+						ON tA.stok_opname_id = tB.id
+						WHERE tB.id is not null
+					)
+				)tX
+				LEFT JOIN (
+					SELECT barang_id, warna_id, gudang_id, max(tanggal) as tanggal_so, toko_id
+					FROM nd_stok_opname_eceran tA
+					LEFT JOIN (
+						SELECT *
+						FROM nd_stok_opname
+						WHERE tanggal <= '$tanggal'
+						AND status_aktif = 1
+					) tB
+					ON tA.stok_opname_id = tB.id
+					WHERE tB.id is not null
+					GROUP BY barang_id, warna_id, gudang_id
+				) tY
+				ON tX.barang_id = tY.barang_id
+				AND tX.warna_id = tY.warna_id
+				AND tX.gudang_id = tY.gudang_id
+				AND tX.toko_id = tY.toko_id
+			)tA
+			LEFT JOIN (
+				SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual
+				FROM (
+					SELECT *
+					FROM nd_penjualan_qty_detail
+					WHERE stok_eceran_qty_id is not null
+					)t1
+					LEFT JOIN nd_penjualan_detail t2
+					ON t1.penjualan_detail_id=t2.id
+					LEFT JOIN nd_penjualan t3
+					ON t2.penjualan_id=t3.id
+					WHERE status_aktif=1
+					GROUP BY stok_eceran_qty_id, eceran_source, toko_id_jual
+
+			)tB
+			ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
+			AND tA.tipe = tB.eceran_source
+			AND tA.toko_id = tB.toko_id_jual
+			LEFT JOIN (
+					SELECT sum(qty) as qty_mutasi, mutasi_stok_eceran_qty_source_id
+					FROM nd_mutasi_stok_eceran_qty
+					WHERE mutasi_stok_eceran_qty_source_id is not null
+					GROUP BY mutasi_stok_eceran_qty_source_id
+			)tC
+			ON tA.stok_eceran_qty_id = tC.mutasi_stok_eceran_qty_source_id
+			WHERE tA.qty > 0
+			AND barang_id = '$barang_id'
+			AND warna_id = '$warna_id'
+			AND toko_id = '$toko_id'
+			");
+			
+			return $query->result();
+	}
+
 //===============================================================================================
 
 	function get_stok_barang_all_detail($tanggal_end, $tanggal_awal){

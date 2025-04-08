@@ -266,7 +266,7 @@
 							</thead>
 							<tbody>
 								<?foreach ($stok_barang_eceran as $row) {
-									$stok_eceran[$row->gudang_id][$row->barang_id][$row->warna_id] = $row->qty_stok;
+									$stok_eceran[$row->gudang_id][$row->barang_id][$row->warna_id][$row->toko_id] = $row->qty_stok;
 								}?>
 								
 								<?foreach ($stok_barang_warning as $row) {
@@ -294,9 +294,9 @@
 											$roll_gudang[$row->satuan_id.$row->packaging_id][$isi->id] += $row->$nama_roll;
 											$stok_e = '';
 											$sub_warning = $subtotal_qty;
-											if(isset($stok_eceran[$isi->id][$row->barang_id][$row->warna_id])){
-												$subtotal_eceran += $stok_eceran[$isi->id][$row->barang_id][$row->warna_id];
-												$stok_e = $stok_eceran[$isi->id][$row->barang_id][$row->warna_id];
+											if(isset($stok_eceran[$isi->id][$row->barang_id][$row->warna_id][$row->toko_id])){
+												$subtotal_eceran += $stok_eceran[$isi->id][$row->barang_id][$row->warna_id][$row->toko_id];
+												$stok_e = $stok_eceran[$isi->id][$row->barang_id][$row->warna_id][$row->toko_id];
 												$sub_warning += $stok_e;
 												$stok_e = str_replace(",00","",number_format($stok_e,'2',',','.'));
 											}
@@ -400,9 +400,9 @@
 													$qty_gudang[$row->satuan_id.$row->packaging_id][$isi->id] += $row->$nama_qty;
 													$roll_gudang[$row->satuan_id.$row->packaging_id][$isi->id] += $row->$nama_roll;
 													$stok_e = '';
-													if(isset($stok_eceran[$isi->id][$row->barang_id][$row->warna_id])){
-														$subtotal_eceran += $stok_eceran[$isi->id][$row->barang_id][$row->warna_id];
-														$stok_e = $stok_eceran[$isi->id][$row->barang_id][$row->warna_id];
+													if(isset($stok_eceran[$isi->id][$row->barang_id][$row->warna_id][$row->toko_id])){
+														$subtotal_eceran += $stok_eceran[$isi->id][$row->barang_id][$row->warna_id][$row->toko_id];
+														$stok_e = $stok_eceran[$isi->id][$row->barang_id][$row->warna_id][$row->toko_id];
 														$stok_e = str_replace(",00","",number_format($stok_e,'2',',','.'));
 													}
 													
