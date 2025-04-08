@@ -344,7 +344,7 @@ class Stok_general_model extends CI_Model {
         tbl_a.barang_id, tbl_a.warna_id, tbl_b.status_aktif as status_barang, 
         tbl_d.nama as nama_satuan, satuan_id, tbl_e.nama as nama_packaging, packaging_id,
         tbl_a.toko_id, tbl_a.supplier_id, tbl_a.gudang_id
-        $select
+        -- $select
         FROM(
             (
                     SELECT barang_id, warna_id, nd_pembelian.gudang_id, sum(qty) as qty_masuk, sum(jumlah_roll) as jumlah_roll_masuk, CAST(0 as DECIMAL(15,2)) as qty_keluar, 0 as jumlah_roll_keluar, tanggal, 1 as tipe, toko_id, ifnull(supplier_id,0) as supplier_id
