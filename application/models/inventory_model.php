@@ -1101,7 +1101,7 @@ class Inventory_Model extends CI_Model {
 		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty as qty_masuk, 
 		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, 
 		ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual, tanggal, 
-		penjualan_id, tanggal_jual, no_faktur_ecer, if(tA.tipe = 1.'mutasi', 'stok_opname') as tipe_stok
+		penjualan_id, tanggal_jual, no_faktur_ecer, if(tA.tipe = 1,'mutasi', 'stok_opname') as tipe_stok
 			FROM (
 				SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
 				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id, tanggal

@@ -90,6 +90,7 @@
 .eceran-jual-detail{
 	padding: 5px;
 	margin: 10px;
+	display: none;
 }
 
 .eceran-jual-detail li{
@@ -485,8 +486,7 @@
 										</b>
 									</td>
 								</tr>
-							</table>
-							
+							</table>							
 						</form>
 
 						<hr/>
@@ -737,7 +737,7 @@
 
 						
 
-						<div id='kartu-stok-eceran'>
+						<div id='kartu-stok-detail' <?=(is_posisi_id() != 1 ? 'hidden' : '')?> >
 							<h3>Kartu Stok Eceran <?=$tanggal_start ?> - <?=$tanggal_end?> </h3>
 							<table class="table table-striped table-bordered table-hover" id="general_table_eceran">
 								<thead>
@@ -790,7 +790,7 @@
 							</table>
 						</div>
 
-						<div id='kartu-stok-eceran-detail' <?=(is_posisi_id() != 1 ? 'hidden' : '')?> >
+						<div id='kartu-stok-eceran' >
 							<h3>Stok Eceran Detail <?=$tanggal_start ?> - <?=$tanggal_end?> </h3>
 							<table class="table table-striped table-bordered table-hover" id="general_table_eceran_detail">
 								<thead>
@@ -834,7 +834,8 @@
 											<td class="text-center">
 												<?=(float)$row->qty_jual?>
 												<?if($row->qty_jual > 0){?>
-													<ul class="eceran-jual-detail">
+													<button class="btn btn-xs green" onclick="toggleEceranDetail('<?=$row->stok_eceran_qty_id;?>')"><i class="fa fa-caret-down"></i></button>
+													<ul class="eceran-jual-detail" id="ecerDetail-<?=$row->stok_eceran_qty_id?>">
 														<?foreach ($qty_data_jual_ecer as $key => $value) {?>
 															<li><?=$tanggal_jual_ecer[$key]?> : <?=floatval($value)?> 
 																<a target="_blank" href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>?id=<?=$penjualan_id_ecer[$key]?>" 
@@ -1396,6 +1397,10 @@ jQuery(document).ready(function() {
 	})
 });
 
+function toggleEceranDetail(ecerId){
+	const ecerDetail = $(`#ecerDetail-${ecerId}`);
+	ecerDetail.toggle(300);
+}
 
 function submitEceran(){
 	btn_disabled_load($(".btn-save-eceran"));
