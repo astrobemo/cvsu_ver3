@@ -1101,7 +1101,7 @@ class Inventory_Model extends CI_Model {
 		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty as qty_masuk, 
 		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, 
 		ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual, tanggal, 
-		penjualan_id, tanggal_jual, no_faktur_jual
+		penjualan_id, tanggal_jual, no_faktur_ecer
 			FROM (
 				SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
 				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id, tanggal
@@ -1152,7 +1152,7 @@ class Inventory_Model extends CI_Model {
 				group_concat(qty ORDER BY penjualan_id asc) as qty_data_jual, 
 				group_concat(penjualan_id ORDER BY penjualan_id asc) as penjualan_id,
 				group_concat(tanggal ORDER BY penjualan_id asc) as tanggal_jual,
-				group_concat(no_faktur_lengkap ORDER BY penjualan_id asc) as no_faktur_jual
+				group_concat(no_faktur_lengkap ORDER BY penjualan_id asc) as no_faktur_ecer
 				FROM (
 					SELECT *
 					FROM nd_penjualan_qty_detail

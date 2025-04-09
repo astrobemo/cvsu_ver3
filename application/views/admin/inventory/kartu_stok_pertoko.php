@@ -817,6 +817,7 @@
 										$qty_data_jual_ecer = explode(",", $row->qty_data_jual);
 										$tanggal_jual_ecer = explode(",", $row->tanggal_jual);
 										$penjualan_id_ecer = explode(",", $row->penjualan_id);
+										$no_faktur_ecer = explode(",", $row->no_faktur_ecer);
 										?>
 										<tr>
 											<td><?=$row->tanggal?></td>
@@ -829,7 +830,7 @@
 														<li><?=$tanggal_jual_ecer[$key]?> : <?=floatval($value)?> 
 															<a target="_blank" href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>?id=<?=$penjualan_id_ecer[$key]?>" 
 															class="btn btn-xs">
-																<i class="fa fa-chain"></i> <?=$penjualan_id_ecer[$key]?>
+																<i class="fa fa-chain"></i> <?=$no_faktur_ecer[$key]?>
 															</a> 
 														</li>	
 													<?}?>
