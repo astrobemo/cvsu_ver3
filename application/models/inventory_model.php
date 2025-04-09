@@ -1098,8 +1098,8 @@ class Inventory_Model extends CI_Model {
 	}
 
 	function get_stok_barang_eceran_detail($barang_id, $warna_id, $toko_id, $tanggal, $tanggal_awal){
-		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty , 
-		ifnull(tB.qty,0) , ifnull(qty_mutasi,0) , toko_id, toko_id_jual, ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa
+		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty as qty_masuk, 
+		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual
 			FROM (
 				SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
 				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id
@@ -1146,7 +1146,7 @@ class Inventory_Model extends CI_Model {
 				AND tX.toko_id = tY.toko_id
 			)tA
 			LEFT JOIN (
-				SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual
+				SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual, group_concat(qty) as qty_data_jual
 				FROM (
 					SELECT *
 					FROM nd_penjualan_qty_detail

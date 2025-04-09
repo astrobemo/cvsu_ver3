@@ -805,8 +805,13 @@
 								</thead>
 								<tbody>
 									<?
-									foreach ($kartu_stok_eceran_detail as $row) { ?>
+									foreach ($kartu_stok_eceran_detail as $row) {
+										print_r($row); ?>
 										<tr>
+											<td></td>
+											<td></td>
+											<td><?=(float)$row->qty_masuk?></td>
+											<td><?=(float)$row->qty_jual?></td>
 											<td></td>
 										</tr>
 									<? } ?>
