@@ -814,11 +814,19 @@
 								</thead>
 								<tbody>
 									<?
+									$total_masuk_ecer = 0;
+									$total_jual_ecer = 0;
+									$total_mutasi_ecer = 0;
+									$total_sisa_ecer = 0;
 									foreach ($kartu_stok_eceran_detail as $row) {
 										$qty_data_jual_ecer = explode(",", $row->qty_data_jual);
 										$tanggal_jual_ecer = explode(",", $row->tanggal_jual);
 										$penjualan_id_ecer = explode(",", $row->penjualan_id);
 										$no_faktur_ecer = explode(",", $row->no_faktur_ecer);
+										$total_masuk_ecer += $row->qty_masuk;
+										$total_jual_ecer += $row->qty_jual;
+										$total_mutasi_ecer += $row->qty_mutasi;
+										$total_sisa_ecer += $row->sisa;
 										?>
 										<tr>
 											<td><?=$row->tanggal?></td>
@@ -842,9 +850,16 @@
 											<td class="text-center"><?=floatval($row->sisa)?></td>
 										</tr>
 									<? } ?>
-									
-
 								</tbody>
+								<tfoot>
+									<tr>
+										<td></td>
+										<td class="text-center"><?=$total_masuk_ecer;?></td>
+										<td class="text-center"><?=$total_jual_ecer;?></td>
+										<td class="text-center"><?=$total_mutasi_ecer;?></td>
+										<td class="text-center"><?=$total_sisa_ecer;?></td>
+									</tr>
+								</tfoot>
 							</table>
 						</div>
 						

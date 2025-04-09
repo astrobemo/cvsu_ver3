@@ -1077,7 +1077,7 @@ class Inventory_Model extends CI_Model {
 							LEFT JOIN nd_penjualan t3
 							ON t2.penjualan_id=t3.id
 							WHERE status_aktif=1
-							GROUP BY stok_eceran_qty_id, eceran_source
+							GROUP BY stok_eceran_qty_id, eceran_source, toko_id
 
 					)tB
 					ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
@@ -1182,6 +1182,7 @@ class Inventory_Model extends CI_Model {
 			AND gudang_id = '$gudang_id'
 			AND toko_id = '$toko_id'
 			AND ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) > 0
+			ORDER BY tanggal ASC
 			");
 			
 			return $query->result();
