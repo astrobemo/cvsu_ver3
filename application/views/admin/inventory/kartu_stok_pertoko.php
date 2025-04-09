@@ -92,6 +92,10 @@
 	margin: 10px;
 }
 
+.eceran-jual-detail li{
+	list-style-type: none;
+}
+
 </style>
 
 <div class="page-content">
@@ -794,9 +798,6 @@
 										<th scope="col" rowspan='2'>
 											Tanggal Masuk
 										</th>
-										<th scope="col" rowspan='2'>
-											Keterangan
-										</th>
 										<th scope="col" class="text-center">
 											Masuk 
 										</th>
@@ -821,23 +822,24 @@
 										?>
 										<tr>
 											<td><?=$row->tanggal?></td>
-											<td></td>
-											<td><?=(float)$row->qty_masuk?></td>
-											<td>
+											<td class="text-center"><?=(float)$row->qty_masuk?></td>
+											<td class="text-center">
 												<?=(float)$row->qty_jual?>
-												<ol class="eceran-jual-detail">
-													<?foreach ($qty_data_jual_ecer as $key => $value) {?>
-														<li><?=$tanggal_jual_ecer[$key]?> : <?=floatval($value)?> 
-															<a target="_blank" href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>?id=<?=$penjualan_id_ecer[$key]?>" 
-															class="btn btn-xs">
-																<i class="fa fa-chain"></i> <?=$no_faktur_ecer[$key]?>
-															</a> 
-														</li>	
-													<?}?>
-												</ol>
+												<?if($row->qty_jual > 0){?>
+													<ul class="eceran-jual-detail">
+														<?foreach ($qty_data_jual_ecer as $key => $value) {?>
+															<li><?=$tanggal_jual_ecer[$key]?> : <?=floatval($value)?> 
+																<a target="_blank" href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>?id=<?=$penjualan_id_ecer[$key]?>" 
+																class="btn btn-xs">
+																	<i class="fa fa-chain"></i> <?=$no_faktur_ecer[$key]?>
+																</a> 
+															</li>	
+														<?}?>
+													</ul>
+												<?}?>
 											</td>
-											<td><?=floatval($row->qty_mutasi)?></td>
-											<td><?=floatval($row->sisa)?></td>
+											<td class="text-center"> <?=floatval($row->qty_mutasi)?></td>
+											<td class="text-center"><?=floatval($row->sisa)?></td>
 										</tr>
 									<? } ?>
 									
