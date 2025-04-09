@@ -811,8 +811,16 @@
 											<td></td>
 											<td></td>
 											<td><?=(float)$row->qty_masuk?></td>
-											<td><?=(float)$row->qty_jual?></td>
-											<td></td>
+											<td>
+												<?=(float)$row->qty_jual?>
+												<ul>
+													<?foreach (explode(",",$row->qty_data_jual) as $key => $value) {?>
+														<ol><?=floatval($value)?></ol>	
+													<?}?>
+												</ul>
+											</td>
+											<td><?=floatval($row->qty_mutasi)?></td>
+											<td><?=floatval($row->sisa)?></td>
 										</tr>
 									<? } ?>
 									
