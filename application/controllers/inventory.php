@@ -787,7 +787,7 @@ class Inventory extends CI_Controller {
 		// $data['stok_detail'] = $this->sg_model->get_stok_barang_detail_eceran($gudang_id, $barang_id, $warna_id, '2019-01-01', $tanggal_end, $tanggal_awal, $stok_opname_id); 
 		$data['stok_barang_eceran'] = $this->sg_model->get_stok_barang_eceran_list_detail_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_awal_eceran, $stok_opname_id);
 		$data['kartu_stok_eceran'] = $this->sg_model->kartu_stok_eceran_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_end, $tanggal_start, $stok_opname_id);
-		$data['kartu_stok_eceran_detail'] = $this->inv_model->get_stok_barang_eceran_detail($barang_id, $warna_id, $toko_id, $tanggal_start, $tanggal_awal_eceran);
+		$data['kartu_stok_eceran_detail'] = $this->inv_model->get_stok_barang_eceran_detail($barang_id, $warna_id, $gudang_id, $toko_id, $tanggal_start, $tanggal_awal_eceran);
 
 
 		// $data['stok_barang'] = array();

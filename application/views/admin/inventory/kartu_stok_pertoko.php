@@ -791,7 +791,7 @@
 						</div>
 
 						<div id='kartu-stok-eceran-detail' <?=(is_posisi_id() != 1 ? 'hidden' : '')?> >
-							<h3>Kartu Stok Eceran Detail <?=$tanggal_start ?> - <?=$tanggal_end?> </h3>
+							<h3>Stok Eceran Detail <?=$tanggal_start ?> - <?=$tanggal_end?> </h3>
 							<table class="table table-striped table-bordered table-hover" id="general_table_eceran_detail">
 								<thead>
 									<tr>

@@ -1097,7 +1097,7 @@ class Inventory_Model extends CI_Model {
 		return $query->result();	
 	}
 
-	function get_stok_barang_eceran_detail($barang_id, $warna_id, $toko_id, $tanggal, $tanggal_awal){
+	function get_stok_barang_eceran_detail($barang_id, $warna_id, $gudang_id, $toko_id, $tanggal, $tanggal_awal){
 		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty as qty_masuk, 
 		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, 
 		ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual, tanggal, 
@@ -1179,7 +1179,9 @@ class Inventory_Model extends CI_Model {
 			WHERE tA.qty > 0
 			AND barang_id = '$barang_id'
 			AND warna_id = '$warna_id'
+			AND gudang_id = '$gudang_id'
 			AND toko_id = '$toko_id'
+			AND ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) > 0
 			");
 			
 			return $query->result();
