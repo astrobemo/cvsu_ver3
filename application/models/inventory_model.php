@@ -1099,10 +1099,12 @@ class Inventory_Model extends CI_Model {
 
 	function get_stok_barang_eceran_detail($barang_id, $warna_id, $toko_id, $tanggal, $tanggal_awal){
 		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty as qty_masuk, 
-		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual
+		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, 
+		ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual, tanggal, 
+		penjualan_id, tanggal_jual, no_faktur_jual
 			FROM (
 				SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
-				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id
+				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id, tanggal
 				FROM (
 					(
 						SELECT t1.id, toko_id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal
@@ -1146,18 +1148,22 @@ class Inventory_Model extends CI_Model {
 				AND tX.toko_id = tY.toko_id
 			)tA
 			LEFT JOIN (
-				SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual, group_concat(qty) as qty_data_jual
+				SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual, 
+				group_concat(qty ORDER BY penjualan_id asc) as qty_data_jual, 
+				group_concat(penjualan_id ORDER BY penjualan_id asc) as penjualan_id,
+				group_concat(tanggal ORDER BY penjualan_id asc) as tanggal_jual,
+				group_concat(no_faktur_lengkap ORDER BY penjualan_id asc) as no_faktur_jual
 				FROM (
 					SELECT *
 					FROM nd_penjualan_qty_detail
 					WHERE stok_eceran_qty_id is not null
-					)t1
-					LEFT JOIN nd_penjualan_detail t2
-					ON t1.penjualan_detail_id=t2.id
-					LEFT JOIN nd_penjualan t3
-					ON t2.penjualan_id=t3.id
-					WHERE status_aktif=1
-					GROUP BY stok_eceran_qty_id, eceran_source, toko_id_jual
+				)t1
+				LEFT JOIN nd_penjualan_detail t2
+				ON t1.penjualan_detail_id=t2.id
+				LEFT JOIN nd_penjualan t3
+				ON t2.penjualan_id=t3.id
+				WHERE status_aktif=1
+				GROUP BY stok_eceran_qty_id, eceran_source, toko_id_jual
 
 			)tB
 			ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id

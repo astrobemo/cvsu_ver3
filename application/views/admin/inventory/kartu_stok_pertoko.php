@@ -87,6 +87,11 @@
 	display: none;
 }
 
+.eceran-jual-detail{
+	padding: 5px;
+	margin: 10px;
+}
+
 </style>
 
 <div class="page-content">
@@ -787,37 +792,48 @@
 								<thead>
 									<tr>
 										<th scope="col" rowspan='2'>
-											Tanggal
+											Tanggal Masuk
 										</th>
 										<th scope="col" rowspan='2'>
 											Keterangan
 										</th>
 										<th scope="col" class="text-center">
-											Masuk (<?=$nama_satuan?>)
+											Masuk 
 										</th>
 										<th scope="col" class="text-center">
-											Keluar (<?=$nama_satuan?>)
+											Keluar 
 										</th>
 										<th scope="col" class="text-center">
-											Saldo
+											Mutasi 
+										</th>
+										<th scope="col" class="text-center">
+											Sisa
 										</th>
 									</tr>
 								</thead>
 								<tbody>
 									<?
 									foreach ($kartu_stok_eceran_detail as $row) {
-										print_r($row); ?>
+										$qty_data_jual_ecer = explode(",", $row->qty_data_jual);
+										$tanggal_jual_ecer = explode(",", $row->tanggal_jual);
+										$penjualan_id_ecer = explode(",", $row->penjualan_id);
+										?>
 										<tr>
-											<td></td>
+											<td><?=$row->tanggal?></td>
 											<td></td>
 											<td><?=(float)$row->qty_masuk?></td>
 											<td>
 												<?=(float)$row->qty_jual?>
-												<ul>
-													<?foreach (explode(",",$row->qty_data_jual) as $key => $value) {?>
-														<ol><?=floatval($value)?></ol>	
+												<ol class="eceran-jual-detail">
+													<?foreach ($qty_data_jual_ecer as $key => $value) {?>
+														<li><?=$tanggal_jual_ecer[$key]?> : <?=floatval($value)?> 
+															<a target="_blank" href="<?=base_url().is_setting_link('transaction/penjualan_list_detail')?>?id=<?=$penjualan_id_ecer[$key]?>" 
+															class="btn btn-xs">
+																<i class="fa fa-chain"></i> <?=$penjualan_id_ecer[$key]?>
+															</a> 
+														</li>	
 													<?}?>
-												</ul>
+												</ol>
 											</td>
 											<td><?=floatval($row->qty_mutasi)?></td>
 											<td><?=floatval($row->sisa)?></td>
