@@ -601,20 +601,21 @@ jQuery(document).ready(function() {
 				baris_gudang += `<tr>
 					<td style='width:50px' class='text-center'>${idx}</td>
 					<td style='width:100px' class='text-center'><input name='qty' autocomplete='off' value="${parseFloat(v.qty)}" tabindex="${(idx*2)-1}" class='qty'></td>
-					<td style='width:100px; padding-left:5px;' class='subtotal text-center'>${parseFloat(v.qty*v.jumlah_roll)}</td>
 					<td hidden><span class='id'>${v.id}</span></td>
 				</tr>`;
 				idx++;
 			});
+			// <td style='width:100px; padding-left:5px;' class='subtotal text-center'>${parseFloat(v.qty*v.jumlah_roll)}</td>
+
 			
 			for (var i = idx; i < (idx+100); i++) {
 				baris_gudang += `<tr>
 					<td style='width:50px' class='text-center'>${i}</td>
 					<td style='width:100px' class='text-center'><input name='qty' autocomplete='off' tabindex="${(i*2)-1}" class='qty'></td>
-					<td style='width:100px; padding-left:5px;' class='subtotal text-center'></td>
 					<td hidden></td>
-				</tr>`;
-			};
+					</tr>`;
+				};
+				// <td style='width:100px; padding-left:5px;' class='subtotal text-center'></td>
 			$('#gudangecer'+gudang_id).find('.table-body').html(baris_gudang);
 			tbl_body = $('#gudangecer'+gudang_id).find('.table-body');
 	    	data_result = table_qty_update(tbl_body).split('=*=');

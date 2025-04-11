@@ -91,6 +91,7 @@ class Inventory extends CI_Controller {
 				'nama_satuan' => $nama_satuan, 
 				'nama_packaging' => $nama_packaging, 
 				'user_id' => is_user_id(),
+				'isEceran' => $is_eceran,
 				'status_aktif'=> 1
 			);
 	
@@ -2186,6 +2187,14 @@ class Inventory extends CI_Controller {
 		}
 		$result['data'] = $data;
 		$result['dataEcer'] = $dataEcer;
+		$result['param'] = array(
+			'stok_opname_id' => $stok_opname_id,
+			'toko_id' => $toko_id,
+			'barang_id' => $barang_id,
+			'warna_id' => $warna_id,
+			'supplier_id' => $supplier_id,
+			'tanggal' => $tanggal
+			);
 		echo json_encode($result);
 	}
 
@@ -2295,6 +2304,7 @@ class Inventory extends CI_Controller {
 	function stok_opname_detail_ecer(){
 		$stok_opname_id = $this->input->post('stok_opname_id');
 		$barang_id = $this->input->post('barang_id');
+		$toko_id = $this->input->post('toko_id');
 		$warna_id = $this->input->post('warna_id');
 		$supplier_id = $this->input->post('supplier_id');
 		$gudang_id = $this->input->post('gudang_id');
@@ -2306,6 +2316,7 @@ class Inventory extends CI_Controller {
 					$data[$key] = array(
 						'stok_opname_id' => $stok_opname_id ,
 						'barang_id' => $barang_id,
+						'toko_id' => $toko_id,
 						'warna_id' => $warna_id,
 						'gudang_id' => $gudang_id,
 					'supplier_id' => $supplier_id,
@@ -2317,6 +2328,7 @@ class Inventory extends CI_Controller {
 				$data_update = array(
 					'stok_opname_id' => $stok_opname_id ,
 					'barang_id' => $barang_id,
+					'toko_id' => $toko_id,
 					'warna_id' => $warna_id,
 					'gudang_id' => $gudang_id,
 					'supplier_id' => $supplier_id,
