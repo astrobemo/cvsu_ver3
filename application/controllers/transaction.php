@@ -1299,7 +1299,7 @@ class Transaction extends CI_Controller {
 		$tanggal_start = date('Y-m-d', strtotime('-3 months'));
 		$tanggal_end = date('Y-m-d');
 
-		if ($this->input->get('tanggal_start') == '' && $this->input->get('tanggal_end') == '') {
+		if ($this->input->get('tanggal_start') != '' && $this->input->get('tanggal_end') != '') {
 			$tanggal_start = is_date_formatter($this->input->get('tanggal_start'));
 			$tanggal_end = is_date_formatter($this->input->get('tanggal_end'));
 		}
@@ -1388,7 +1388,9 @@ class Transaction extends CI_Controller {
             "sEcho" => intval($_GET['sEcho']),
             "iTotalRecords" => $rResultTotal,
             "iTotalDisplayRecords" => $iFilteredTotal,
-            "aaData" => array()
+            "aaData" => array(),
+			"range" => $this->input->get('tanggal_start').' s/d '.$this->input->get('tanggal_end'),
+			"range2" => $tanggal_start.' s/d '.$tanggal_end,
         );
         
         foreach ($rResult->result_array() as $aRow){
@@ -2275,14 +2277,16 @@ class Transaction extends CI_Controller {
 		$detail_id = ($detail_id=='' ? 0 : $detail_id);
         $get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id, $toko_id);
 
+		$tanggal_awal_ecer = '2018-01-01';
+        $stok_opname_id_ecer = 0;
 		foreach ($get_stok_opname as $row) {
-            $tanggal_awal = $row->tanggal;
-            $stok_opname_id = $row->stok_opname_id;
+            $tanggal_awal_ecer = $row->tanggal;
+            $stok_opname_id_ecer = $row->stok_opname_id;
         }
 
 		
 		if($isEceran){
-			$result[1] = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
+			$result[1] = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal_ecer, $stok_opname_id_ecer, $detail_id);
 			$result[1] = $result[1]->result();
 		}
 
@@ -2296,7 +2300,12 @@ class Transaction extends CI_Controller {
 			'var' => $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id, $tanggal
 		);
 
-		$result[4] = $getQuery;
+		$result[4] = array(
+			'tgl'=>$tanggal_awal_ecer,
+			'sid' =>$stok_opname_id_ecer
+		);
+
+		// $result[4] = $getQuery;
 
 		
 		

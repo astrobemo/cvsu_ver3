@@ -775,7 +775,7 @@ class Inventory extends CI_Controller {
 		$data['stok_awal'] = $this->sg_model->get_stok_barang_satuan_awal_pertoko($toko_id, $gudang_id, $barang_id, $warna_id, $tanggal_start, $tanggal_awal, $stok_opname_id);
 
 		$tanggal_awal_eceran = '2018-01-01';
-		$getOpname = $this->common_model->get_latest_so_eceran_pertoko($toko_id, $tanggal_start, $barang_id, $warna_id, $gudang_id);
+		$getOpname = $this->common_model->get_latest_so_eceran_pertoko($toko_id, $tanggal_end, $barang_id, $warna_id, $gudang_id);
 		foreach ($getOpname as $row) {
 			$tanggal_awal_eceran = $row->tanggal;
 			$stok_opname_id = $row->stok_opname_id;

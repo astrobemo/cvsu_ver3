@@ -1090,7 +1090,7 @@ class Inventory_Model extends CI_Model {
 							GROUP BY mutasi_stok_eceran_qty_source_id
 					)tC
 					ON tA.stok_eceran_qty_id = tC.mutasi_stok_eceran_qty_source_id
-                    WHERE tA.qty > 0
+                    WHERE (tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0) ) > 0
 					GROUP BY barang_id, warna_id, gudang_id, toko_id
 				");
 		
@@ -1101,13 +1101,14 @@ class Inventory_Model extends CI_Model {
 		$query = $this->db->query("SELECT barang_id,warna_id, gudang_id, tA.stok_eceran_qty_id,  tA.qty as qty_masuk, 
 		ifnull(tB.qty,0) as qty_jual , ifnull(qty_mutasi,0) as qty_mutasi , toko_id, toko_id_jual, 
 		ROUND((tA.qty - ifnull(tB.qty,0) - ifnull(qty_mutasi,0)),0) as sisa, qty_data_jual, tanggal, 
-		penjualan_id, tanggal_jual, no_faktur_ecer, if(tA.tipe = 1,'mutasi', 'stok_opname') as tipe_stok
+		penjualan_id, tanggal_jual, no_faktur_ecer, if(tA.tipe = 1,'mutasi', 'stok_opname') as tipe_stok,
+		nd_supplier.nama as nama_supplier
 			FROM (
 				SELECT stok_eceran_qty_id, tX.barang_id, tX.warna_id, tX.gudang_id, 
-				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id, tanggal
+				if(tanggal >= ifnull(tanggal_so,'$tanggal_awal'),qty, 0 ) as qty, tipe, tX.toko_id, tanggal, supplier_id
 				FROM (
 					(
-						SELECT t1.id, toko_id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal
+						SELECT t1.id, toko_id, barang_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, tanggal, t2.supplier_id
 						FROM (
 							SELECT *
 							FROM nd_mutasi_stok_eceran
@@ -1117,7 +1118,7 @@ class Inventory_Model extends CI_Model {
 						LEFT JOIN nd_mutasi_stok_eceran_qty t2
 						ON t2.mutasi_stok_eceran_id = t1.id
 					)UNION(
-						SELECT tB.id, toko_id, barang_id, warna_id, tA.id as stok_eceran_qty_id, qty, 2 , gudang_id, tanggal
+						SELECT tB.id, toko_id, barang_id, warna_id, tA.id as stok_eceran_qty_id, qty, 2 , gudang_id, tanggal, supplier_id
 						FROM nd_stok_opname_eceran tA
 						LEFT JOIN (
 							SELECT *
@@ -1176,6 +1177,8 @@ class Inventory_Model extends CI_Model {
 					GROUP BY mutasi_stok_eceran_qty_source_id
 			)tC
 			ON tA.stok_eceran_qty_id = tC.mutasi_stok_eceran_qty_source_id
+			LEFT JOIN nd_supplier
+			ON tA.supplier_id = nd_supplier.id
 			WHERE tA.qty > 0
 			AND barang_id = '$barang_id'
 			AND warna_id = '$warna_id'

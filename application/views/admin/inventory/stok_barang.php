@@ -328,10 +328,10 @@
 											
 											<td style='text-align:left'>
 													<?=$row->nama_barang_jual;?> <?=$row->nama_warna_jual;?>
-												<?if ($toko_id != 'join') {?>
-													<?//=$row->barang_id?> <?//=$row->warna_id;?> 
-													<?//=$row->sku_id?> 
-													<?=$row->nama_toko;?>
+													<?if ($toko_id != 'join') {?>
+														<?//=$row->sku_id?> 
+														<?=$row->nama_toko;?>
+														<?=(is_posisi_id()==1 ? "[".$row->barang_id."][".$row->warna_id."]" : "");?> 
 												<?}?>
 												<span hidden><?=($is_warning != '' ? 'has-warning' : '');?></span>
 											</td>

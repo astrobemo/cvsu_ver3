@@ -89,15 +89,17 @@ class Stok_general extends CI_Controller {
 		$tanggal_awal = '2018-01-01';
 		$detail_id = $this->input->post('penjualan_list_detail_id');
 		$detail_id = ($detail_id=='' ? 0 : $detail_id);
-		$get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id);
+		$get_stok_opname = $this->common_model->get_latest_so_eceran_pertoko($toko_id, $tanggal, $barang_id, $warna_id, $gudang_id);
 
+		$tanggal_awal_ecer = '2018-01-01';
+		$stok_opname_id_ecer = 0;
 		foreach ($get_stok_opname as $row) {
-			$tanggal_awal = $row->tanggal;
-			$stok_opname_id = $row->stok_opname_id;
+			$tanggal_awal_ecer = $row->tanggal;
+			$stok_opname_id_ecer = $row->stok_opname_id;
 		}
 		
 		if($isEceran){
-			$result[1] = $this->sg_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
+			$result[1] = $this->sg_model->get_qty_stok_by_barang_detail_eceran_pertoko($toko_id, $gudang_id, $barang_id,$warna_id, $tanggal_awal_ecer, $stok_opname_id_ecer, $detail_id);
 			$result[1] = $result[1]->result();
 		}
 
@@ -116,7 +118,11 @@ class Stok_general extends CI_Controller {
 		$result[3] = array(
 			'res'=>$res,
 			'var' => $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id, $tanggal,
-			'barang_head' => $dt
+			'barang_head' => $dt,
+			'eceran' => array(
+				'tanggal_awal_ecer' => $tanggal_awal_ecer,
+				'stok_opname_id_ecer' => $stok_opname_id_ecer
+			)
 		);
 		
 		// echo $tanggal_awal;

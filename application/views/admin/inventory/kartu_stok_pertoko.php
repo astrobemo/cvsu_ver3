@@ -830,7 +830,11 @@
 										?>
 										<tr>
 											<td><?=$row->tanggal?></td>
-											<td class="text-center"><?=(float)$row->qty_masuk?> <br/> (<?=$row->tipe_stok?>)</td>
+											<td class="text-center">
+												<?=(float)$row->qty_masuk?> <br/> 
+												(<?=$row->tipe_stok?>) <br/>
+												<?=(is_posisi_id()==1 ? $row->nama_supplier : "")?>
+											</td>
 											<td class="text-center">
 												<?=(float)$row->qty_jual?>
 												<?if($row->qty_jual > 0){?>

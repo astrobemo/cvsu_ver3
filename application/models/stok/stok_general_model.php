@@ -584,6 +584,70 @@ class Stok_general_model extends CI_Model {
 		// return $this->db->last_query();
 	}
 
+	function get_qty_stok_by_barang_detail_eceran_pertoko($toko_id, $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $penjualan_detail_id){
+		$query = $this->db->query("SELECT tA.stok_eceran_qty_id, tA.qty - ifnull(tB.qty,0) as qty, tA.tipe, ifnull(tC.qty,0) as qty_jual, 
+        ifnull(tC.id,0) as penjualan_qty_detail_id, tA.supplier_id, nd_supplier.nama as nama_supplier
+				FROM (
+					(
+						SELECT barang_id, toko_id, warna_id, t2.id as stok_eceran_qty_id, qty, 1 as tipe, gudang_id, t2.supplier_id
+						FROM (
+							SELECT *
+							FROM nd_mutasi_stok_eceran
+							WHERE tanggal >= '$tanggal_awal'
+							AND barang_id = $barang_id
+							AND warna_id = $warna_id
+							AND gudang_id = $gudang_id
+							AND status_aktif = 1
+						)t1
+						LEFT JOIN nd_mutasi_stok_eceran_qty t2
+						ON t2.mutasi_stok_eceran_id = t1.id
+					)UNION(
+						SELECT barang_id, toko_id, warna_id, id as stok_eceran_qty_id, qty, 2 , gudang_id, supplier_id
+						FROM nd_stok_opname_eceran
+						WHERE barang_id = $barang_id
+						AND warna_id = $warna_id
+						AND gudang_id = $gudang_id
+						AND stok_opname_id = $stok_opname_id
+					)
+				)tA
+				LEFT JOIN (
+					SELECT stok_eceran_qty_id, sum(qty) as qty, eceran_source, toko_id as toko_id_jual
+					FROM (
+						SELECT *
+						FROM nd_penjualan_qty_detail
+						WHERE stok_eceran_qty_id is not null
+					)t1
+						LEFT JOIN nd_penjualan_detail t2
+						ON t1.penjualan_detail_id=t2.id
+						LEFT JOIN nd_penjualan t3
+						ON t2.penjualan_id=t3.id
+						WHERE status_aktif=1
+						AND t2.id != $penjualan_detail_id
+						GROUP BY stok_eceran_qty_id, eceran_source, toko_id
+
+				)tB
+				ON tA.stok_eceran_qty_id = tB.stok_eceran_qty_id
+				AND tA.tipe = tB.eceran_source
+				AND tA.toko_id = tB.toko_id_jual
+				LEFT JOIN (
+					SELECT *
+					FROM nd_penjualan_qty_detail
+					WHERE penjualan_detail_id = $penjualan_detail_id
+				) tC
+				ON tA.stok_eceran_qty_id = tC.stok_eceran_qty_id
+				AND tA.tipe = tC.eceran_source
+                LEFT JOIN nd_supplier
+                ON tA.supplier_id = nd_supplier.id
+				WHERE barang_id is not null
+				AND warna_id is not null
+				AND toko_id = $toko_id	
+				AND tA.qty - ifnull(tB.qty,0) > 0
+				");
+		
+		return $query;
+		// return $this->db->last_query();
+	}
+
     function get_stok_barang_list_2($select, $tanggal_end, $tanggal_awal){
 		$query = $this->db->query("SELECT tbl_g.nama as nama_gudang, tbl_b.nama as nama_barang,tbl_b.nama_jual as nama_barang_jual, 
         tbl_c.warna_beli as nama_warna,tbl_c.warna_jual as nama_warna_jual,

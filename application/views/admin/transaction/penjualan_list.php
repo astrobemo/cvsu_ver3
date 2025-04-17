@@ -147,6 +147,7 @@
 									<input name="tanggal_start" id="tanggalStart" type="text" class="date-picker" value="<?=$tanggal_start?>"> s/d
 									<input name="tanggal_end" id="tanggalEnd" type="text" class="date-picker" value="<?=$tanggal_end?>">
 								</td>
+								<td><button id="filterTanggalBtn" class="btn btn-sm default">OK</button></td>
 							</tr>
 						</table>
 						<hr>
@@ -321,8 +322,15 @@ jQuery(document).ready(function() {
 		const tanggal_start = $(`#tanggalStart`).val();
 		const tanggal_end = $(`#tanggalEnd`).val();
 		// alert(status_aktif);
-		oTable.fnReloadAjax(baseurl + "transaction/data_penjualan?status_aktif="+status_aktif+`&tanggal_start=${tangga	l_start}&tanggal_end=${tanggal_end}`);
+		oTable.fnReloadAjax(baseurl + "transaction/data_penjualan?status_aktif="+status_aktif+`&tanggal_start=${tanggal_start}&tanggal_end=${tanggal_end}`);
 		// alert('test');
+	});
+
+	$(`#filterTanggalBtn`).click(function(){
+		let status_aktif = $(`#status_select`).val();
+		const tanggal_start = $(`#tanggalStart`).val();
+		const tanggal_end = $(`#tanggalEnd`).val();
+		oTable.fnReloadAjax(baseurl + "transaction/data_penjualan?status_aktif="+status_aktif+`&tanggal_start=${tanggal_start}&tanggal_end=${tanggal_end}`);
 	});
 
 	$('.supplier-input, .gudang-input').click(function(){

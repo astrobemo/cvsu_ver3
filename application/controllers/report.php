@@ -504,6 +504,9 @@ class Report extends CI_Controller {
 
 		$data['pembelian_list'] = $this->rpt_model->get_pembelian_report($tanggal_start, $tanggal_end, $cond, $cond_barang, $cond_warna);
 		$this->load->view('admin/template',$data);
+		if(is_posisi_id()==1){
+			$this->output->enable_profiler(TRUE);
+		}
 	}
 
 	function pembelian_list_export_excel(){
