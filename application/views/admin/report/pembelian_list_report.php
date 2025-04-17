@@ -277,7 +277,7 @@
 											<?=is_reverse_date($row->jatuh_tempo);?>
 										</td>
 										<td>
-											<?if ($row->keterangan < 0) { ?>
+											<?if ($row->keterangan < 0 || $row->keterangan == '') { ?>
 												<span style='color:red'>belum lunas</span>
 											<?}else if ($row->keterangan >= 0){
 												$pembayaran_hutang_id = explode(',', $row->pembayaran_hutang_id);
