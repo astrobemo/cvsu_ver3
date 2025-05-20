@@ -160,6 +160,8 @@ class Report extends CI_Controller {
 		$nama_customer = "";
 		$cond_toko = "";
 		$cond_barang_warna = '';
+		$supplier_cond = '';
+		$penjualan_type_cond = '';
 		
 		if ($tipe_search == 2) {
 			$cond = "WHERE pembayaran_type_id LIKE '%2%' AND  (ifnull(total_bayar,0) - (ifnull(g_total,0) - ifnull(diskon,0)) + ifnull(ongkos_kirim,0)) >= 0";
@@ -198,7 +200,9 @@ class Report extends CI_Controller {
 			}
 		}
 		
-		$penjualan_list = $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna);
+		//'penjualan_list' => $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna, $supplier_cond, $penjualan_type_cond)
+
+		$penjualan_list = $this->rpt_model->get_penjualan_report($tanggal_start, $tanggal_end, $cond,$customer_cond, $cond_toko, $cond_barang_warna, $supplier_cond, $penjualan_type_cond);
 		$tipe_bayar = $this->common_model->db_select("nd_pembayaran_type");
 
 		$this->load->library('Excel/PHPExcel');
@@ -229,17 +233,18 @@ class Report extends CI_Controller {
 		->setCellValue('A2', ' Periode '.date('d F Y', strtotime($tanggal_start)).' s/d '.date('d F Y', strtotime($tanggal_end)))
 		->setCellValue('A4', 'No')
 		->setCellValue('B4', 'No Faktur')
-		->setCellValue('C4', 'Tanggal')
-		->setCellValue('D4', 'Qty')
-		->setCellValue('E4', 'Jumlah Roll')
-		->setCellValue('F4', 'Nama Barang')
-		->setCellValue('G4', 'Nama Jual')
-		->setCellValue('H4', 'Harga Jual')
-		->setCellValue('I4', 'Total')
+		->setCellValue('C4', 'No Faktur')
+		->setCellValue('D4', 'Tanggal')
+		->setCellValue('E4', 'Qty')
+		->setCellValue('F4', 'Jumlah Roll')
+		->setCellValue('G4', 'Nama Barang')
+		->setCellValue('H4', 'Nama Jual')
+		->setCellValue('I4', 'Harga Jual')
+		->setCellValue('J4', 'Total')
 		// ->setCellValue('J4', 'Diskon')
 		// ->setCellValue('J4', 'Ongkos Kirim')
-		->setCellValue('J4', 'Nama Customer')
-		->setCellValue('K4', 'Keterangan')
+		->setCellValue('K4', 'Nama Customer')
+		->setCellValue('L4', 'Keterangan')
 		;
 
 		$coll_now = "L";
@@ -281,6 +286,13 @@ class Report extends CI_Controller {
 			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(20);
 			$coll++;
+
+			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$row->no_faktur_pertoko);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
+			$objPHPExcel->getActiveSheet()->getStyle($coll.$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(20);
+			$coll++;
+			
 
 			$tanggal = date('d-m-Y',strtotime($row->tanggal));
 			$objPHPExcel->getActiveSheet()->setCellValue($coll.$row_no,$tanggal);
@@ -396,22 +408,22 @@ class Report extends CI_Controller {
 			$last_row = $row_no;
 			$row_no++;
 
-			$objPHPExcel->getActiveSheet()->setCellValue('H'.$row_no, "SUBTOTAL");
-			$objPHPExcel->getActiveSheet()->getStyle("H".$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$objPHPExcel->getActiveSheet()->setCellValue('I'.$row_no, $sub_total);
+			$objPHPExcel->getActiveSheet()->setCellValue('I'.$row_no, "SUBTOTAL");
 			$objPHPExcel->getActiveSheet()->getStyle("I".$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$objPHPExcel->getActiveSheet()->setCellValue('J'.$row_no, $sub_total);
+			$objPHPExcel->getActiveSheet()->getStyle("J".$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 			$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-			$objPHPExcel->getActiveSheet()->getStyle('H'.$row_no.':I'.$row_no)->applyFromArray($styleArray);
+			$objPHPExcel->getActiveSheet()->getStyle('I'.$row_no.':J'.$row_no)->applyFromArray($styleArray);
 			$row_no++;
 
 			if ($row->diskon != '' && $row->diskon != 0) {
 				$g_total = $g_total - $row->diskon;
-				$objPHPExcel->getActiveSheet()->setCellValue('H'.$row_no, "DISKON");
-				$objPHPExcel->getActiveSheet()->getStyle("H".$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-				$objPHPExcel->getActiveSheet()->setCellValue('I'.$row_no, $row->diskon);
+				$objPHPExcel->getActiveSheet()->setCellValue('I'.$row_no, "DISKON");
 				$objPHPExcel->getActiveSheet()->getStyle("I".$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+				$objPHPExcel->getActiveSheet()->setCellValue('J'.$row_no, $row->diskon);
+				$objPHPExcel->getActiveSheet()->getStyle("J".$row_no)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 				$objPHPExcel->getActiveSheet()->getColumnDimension($coll)->setWidth(15);
-				$objPHPExcel->getActiveSheet()->getStyle('H'.$row_no.':I'.$row_no)->applyFromArray($styleArray);
+				$objPHPExcel->getActiveSheet()->getStyle('I'.$row_no.':J'.$row_no)->applyFromArray($styleArray);
 				$row_no++;
 			}
 

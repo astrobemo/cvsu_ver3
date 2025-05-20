@@ -144,7 +144,7 @@ class Stok_general_model extends CI_Model {
 				        	AND warna_id = $warna_id
 				        	AND gudang_id = $gudang_id
 				        	AND stok_opname_id = $stok_opname_id
-							GROUP BY qty, barang_id, warna_id, gudang_id, stok_opname_id
+							GROUP BY qty, barang_id, warna_id, gudang_id, stok_opname_id, toko_id
                         ) t1
                         LEFT JOIN nd_stok_opname t2
                         ON t1.stok_opname_id = t2.id

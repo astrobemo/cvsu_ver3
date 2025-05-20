@@ -68,7 +68,7 @@ class Report_Model extends CI_Model {
 					SELECT GROUP_CONCAT(no_faktur_lengkap ORDER BY toko_id asc SEPARATOR '??') as no_faktur_pertoko, 
 					group_concat(toko_id ORDER BY toko_id asc SEPARATOR '??') as toko_info, penjualan_id
 					FROM nd_penjualan_invoice
-					WHERE status_aktif = 1
+					$cond_toko
 					GROUP BY penjualan_id
 				) tbl_f
 				ON tbl_f.penjualan_id = tbl_a.id

@@ -86,7 +86,6 @@ class Stok_general extends CI_Controller {
 			'stok_opname_id' => $stok_opname_id
 		);
 
-		$tanggal_awal = '2018-01-01';
 		$detail_id = $this->input->post('penjualan_list_detail_id');
 		$detail_id = ($detail_id=='' ? 0 : $detail_id);
 		$get_stok_opname = $this->common_model->get_latest_so_eceran_pertoko($toko_id, $tanggal, $barang_id, $warna_id, $gudang_id);

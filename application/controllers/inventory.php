@@ -1037,7 +1037,17 @@ class Inventory extends CI_Controller {
         }
 
 		$data = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, "0");
-		echo json_encode($data->result());
+		$result['params'] = array(
+			'barang_id' => $barang_id,
+			'warna_id' => $warna_id,
+			'gudang_id' => $gudang_id,
+			'tanggal' => $tanggal,
+			'tanggal_awal' => $tanggal_awal,
+			'stok_opname_id' => $stok_opname_id
+		);
+		$result['data'] = $data->result();
+		
+		echo json_encode($result);
 	}
 
 	function mutasi_barang_insert(){
@@ -2505,7 +2515,7 @@ class Inventory extends CI_Controller {
 		$menu = is_get_url($this->uri->segment(1));
 
 		$cond_filter = "";
-		$conf_filter_gudang = "";
+		$cond_filter_gudang = "";
 		
 		if ($this->input->get('barang_id') != '') {
 			$barang_id = $this->input->get('barang_id');
@@ -2561,7 +2571,10 @@ class Inventory extends CI_Controller {
 	
 		$this->load->view('admin/template',$data);		
 
-		// $this->output->enable_profiler(TRUE);
+		if(is_posisi_id() == 1){
+			$this->output->enable_profiler(TRUE);
+
+		}
 
 		// echo $cond_filter." ".$cond_filter_gudang;
 	}
