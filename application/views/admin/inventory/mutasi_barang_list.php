@@ -787,7 +787,9 @@ jQuery(document).ready(function() {
 					data['tanggal'] = $('#form_add_data [name=tanggal]').val();
 					var url = 'inventory/get_stok_eceran';
 					ajax_data_sync(url,data).done(function(data_respond  /*,textStatus, jqXHR*/ ){
-						const v = JSON.parse(data_respond);
+						const respond = JSON.parse(data_respond);
+						console.log(respond.params);
+						const v = respond.data;
 						for (let i = 0; i < v.length; i++) {
 							if (v[i].qty > 0) {
 								qty_eceran += parseFloat(v[i].qty);

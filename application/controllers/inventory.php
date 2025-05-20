@@ -1018,6 +1018,7 @@ class Inventory extends CI_Controller {
 
 	function get_stok_eceran(){
 		$sku_id = $this->input->post("sku_id");
+		$toko_id = $this->input->post("toko_id");
 		$barang_data = $this->common_model->db_select("nd_barang_sku where id=$sku_id");
 		foreach ($barang_data as $row) {
 			$barang_id = $row->barang_id;
@@ -1027,7 +1028,9 @@ class Inventory extends CI_Controller {
 		$tanggal = is_date_formatter($this->input->post("tanggal"));
 		$stok_opname_id = is_date_formatter($this->input->post("stok_opname_id"));
 
-		$get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id);
+		// $get_stok_opname = $this->common_model->get_latest_so_eceran($tanggal, $barang_id, $warna_id, $gudang_id);
+		$get_stok_opname = $this->common_model->get_latest_so_eceran_pertoko($toko_id, $tanggal, $barang_id, $warna_id, $gudang_id);
+		
 
 		$tanggal_awal = "2020-01-01";
 		$stok_opname_id = 0;
@@ -1036,10 +1039,12 @@ class Inventory extends CI_Controller {
             $stok_opname_id = $row->stok_opname_id;
         }
 
-		$data = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, "0");
+		// $data = $this->tr_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, "0");
+		$data = $this->sg_model->get_qty_stok_by_barang_detail_eceran_pertoko($toko_id, $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, 0);
+		
 		$result['params'] = array(
 			'barang_id' => $barang_id,
-			'warna_id' => $warna_id,
+			'warna_id' => $warna_id,	
 			'gudang_id' => $gudang_id,
 			'tanggal' => $tanggal,
 			'tanggal_awal' => $tanggal_awal,
@@ -1390,9 +1395,13 @@ class Inventory extends CI_Controller {
 		}
 		
 		if($isEceran){
-			$result[1] = $this->sg_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
+			// $result[1] = $this->sg_model->get_qty_stok_by_barang_detail_eceran($gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
+			$result[1] = $this->sg_model->get_qty_stok_by_barang_detail_eceran_pertoko($toko_id, $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, $detail_id);
 			$result[1] = $result[1]->result();
 		}
+
+		// $data = $this->sg_model->get_qty_stok_by_barang_detail_eceran_pertoko($toko_id, $gudang_id, $barang_id,$warna_id, $tanggal_awal, $stok_opname_id, 0);
+
 
 
 		$result[2] = array(
